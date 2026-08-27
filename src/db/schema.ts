@@ -130,7 +130,7 @@ class MiauDelierDB extends Dexie {
       consumosPeca: '++id, pecaId, materialId',
       eventosPeca: '++id, pecaId, tipo, criadoEm',
       clientes: '++id, nome',
-      pedidos: '++id, clienteId, status',
+      pedidos: '++id, clienteId, status, *pecaIds',
       transacoes: '++id, contaId, tipo, data',
       contas: '++id, nome',
       configuracoes: '++id, &chave',
