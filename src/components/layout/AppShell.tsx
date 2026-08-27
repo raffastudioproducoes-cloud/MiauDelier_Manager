@@ -7,6 +7,7 @@ import { Button } from '../ui/Button'
 const ITENS_MENU = [
   { rotulo: 'Início', rota: '/' },
   { rotulo: 'Materiais', rota: '/materiais' },
+  { rotulo: 'Formas', rota: '/formas' },
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
