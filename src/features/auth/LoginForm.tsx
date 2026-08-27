@@ -57,11 +57,11 @@ export function LoginForm() {
           </h1>
           <TextField
             id="senha"
-            label="Senha"
+            rotulo="Senha"
             type="password"
             value={senha}
             onChange={(evento) => setSenha(evento.target.value)}
-            error={erro ?? undefined}
+            erro={erro ?? undefined}
           />
           <Button type="submit" disabled={enviando}>
             {contaConfigurada ? 'Entrar' : 'Criar senha'}

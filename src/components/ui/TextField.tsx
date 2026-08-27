@@ -3,31 +3,31 @@ import { cn } from '../../lib/cn'
 
 interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   id: string
-  label: string
-  error?: string
+  rotulo: string
+  erro?: string
 }
 
-export function TextField({ id, label, error, className, ...resto }: TextFieldProps) {
+export function TextField({ id, rotulo, erro, className, ...resto }: TextFieldProps) {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium text-[var(--color-ink)]">
-        {label}
+        {rotulo}
       </label>
       <input
         id={id}
         className={cn(
           'rounded-lg px-3 py-2 elevation-inset text-[var(--color-ink)]',
           'focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]',
-          error && 'ring-2 ring-[var(--color-danger)]',
+          erro && 'ring-2 ring-[var(--color-danger)]',
           className,
         )}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? `${id}-erro` : undefined}
+        aria-invalid={Boolean(erro)}
+        aria-describedby={erro ? `${id}-erro` : undefined}
         {...resto}
       />
-      {error && (
+      {erro && (
         <p id={`${id}-erro`} role="alert" className="text-sm text-[var(--color-danger)]">
-          {error}
+          {erro}
         </p>
       )}
     </div>

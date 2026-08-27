@@ -23,7 +23,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         ))}
         <div className="md:mt-auto">
-          <Button variant="ghost" onClick={sair}>Sair</Button>
+          <Button variante="ghost" onClick={sair}>Sair</Button>
         </div>
       </nav>
       <main className="flex-1 order-1 md:order-2 p-4">{children}</main>
