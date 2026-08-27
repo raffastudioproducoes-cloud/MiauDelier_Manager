@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-base: #FAF6EF;
+  --color-surface: #F3EEE3;
+  --color-ink: #2B2620;
+  --color-ink-muted: #6B6459;
+  --color-accent: #2F5D5A;
+  --color-accent-soft: #DCEAE8;
+  --color-danger: #B3432E;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+
+  --shadow-raised: 6px 6px 12px rgba(43,38,32,0.12), -6px -6px 12px rgba(255,255,255,0.7);
+  --shadow-inset: inset 4px 4px 8px rgba(43,38,32,0.12), inset -4px -4px 8px rgba(255,255,255,0.7);
+  --shadow-pressed: inset 2px 2px 4px rgba(43,38,32,0.18), inset -2px -2px 4px rgba(255,255,255,0.6);
+}
+
+@layer utilities {
+  .elevation-base { background-color: var(--color-base); }
+  .elevation-raised { background-color: var(--color-surface); box-shadow: var(--shadow-raised); }
+  .elevation-inset { background-color: var(--color-surface); box-shadow: var(--shadow-inset); }
+  .elevation-pressed { background-color: var(--color-surface); box-shadow: var(--shadow-pressed); }
+  .border-thin { border-width: 1px; }
+  .border-regular { border-width: 2px; }
+  .border-thick { border-width: 4px; }
+}
