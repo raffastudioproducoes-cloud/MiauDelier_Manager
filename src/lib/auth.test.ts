@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '../db/schema'
 import {
   hasAccountConfigured,
@@ -7,6 +7,7 @@ import {
   getSessionKey,
   clearSession,
   CHAVE_VERIFICADOR,
+  ContaBloqueadaError,
 } from './auth'
 
 describe('auth de usuário único', () => {
@@ -76,5 +77,68 @@ describe('auth de usuário único', () => {
 
     await expect(login('senha-certa')).rejects.toThrow(/corrompida/i)
     expect(getSessionKey()).toBeNull()
+  })
+
+  describe('limite de tentativas de login', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('bloqueia a 6ª tentativa mesmo com a senha certa após 5 erradas seguidas', async () => {
+      await setupAccount('senha-certa')
+      clearSession()
+
+      for (let i = 0; i < 5; i++) {
+        expect(await login('senha-errada')).toBeNull()
+      }
+
+      await expect(login('senha-certa')).rejects.toThrow(ContaBloqueadaError)
+      expect(getSessionKey()).toBeNull()
+    })
+
+    it('desbloqueia com a senha certa depois que o tempo de bloqueio passa', async () => {
+      const agora = vi.spyOn(Date, 'now').mockReturnValue(0)
+
+      await setupAccount('senha-certa')
+      clearSession()
+
+      for (let i = 0; i < 5; i++) {
+        await login('senha-errada')
+      }
+      await expect(login('senha-certa')).rejects.toThrow(ContaBloqueadaError)
+
+      agora.mockReturnValue(31_000)
+
+      const key = await login('senha-certa')
+      expect(key).not.toBeNull()
+      expect(getSessionKey()).toBe(key)
+    })
+
+    it('login bem-sucedido antes do limite não deixa resíduo de bloqueio', async () => {
+      await setupAccount('senha-certa')
+      clearSession()
+
+      expect(await login('senha-errada')).toBeNull()
+      expect(await login('senha-errada')).toBeNull()
+
+      const key = await login('senha-certa')
+      expect(key).not.toBeNull()
+
+      clearSession()
+      for (let i = 0; i < 4; i++) {
+        expect(await login('senha-errada')).toBeNull()
+      }
+      const chaveDeNovo = await login('senha-certa')
+      expect(chaveDeNovo).not.toBeNull()
+    })
+
+    it('conta corrompida continua tendo prioridade sobre senha errada, mesmo sem bloqueio ativo', async () => {
+      await setupAccount('senha-certa')
+      const verificador = await db.configuracoes.where('chave').equals(CHAVE_VERIFICADOR).first()
+      await db.configuracoes.delete(verificador!.id!)
+      clearSession()
+
+      await expect(login('senha-errada')).rejects.toThrow(/corrompida/i)
+    })
   })
 })
