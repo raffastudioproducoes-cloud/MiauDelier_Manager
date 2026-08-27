@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../db/schema'
-import { hasAccountConfigured, setupAccount, login, getSessionKey, clearSession } from './auth'
+import {
+  hasAccountConfigured,
+  setupAccount,
+  login,
+  getSessionKey,
+  clearSession,
+  CHAVE_VERIFICADOR,
+} from './auth'
 
 describe('auth de usuário único', () => {
   beforeEach(async () => {
@@ -30,9 +37,18 @@ describe('auth de usuário único', () => {
     expect(getSessionKey()).toBeNull()
   })
 
-  it('permite reconfigurar a conta sem duplicar linhas em configuracoes', async () => {
+  it('recusa criar conta por cima de uma conta existente', async () => {
     await setupAccount('senha-antiga')
-    await setupAccount('senha-nova-2026')
+
+    await expect(setupAccount('senha-nova-2026')).rejects.toThrow(/já existe uma conta/i)
+
+    const key = await login('senha-antiga')
+    expect(key).not.toBeNull()
+  })
+
+  it('sobrescreve salt e verificador por chave, sem duplicar linhas em configuracoes', async () => {
+    await setupAccount('senha-antiga')
+    await setupAccount('senha-nova-2026', { apagandoDadosExistentes: true })
 
     const linhas = await db.configuracoes.toArray()
     expect(linhas).toHaveLength(2)
@@ -43,5 +59,22 @@ describe('auth de usuário único', () => {
     clearSession()
     const keyComSenhaAntiga = await login('senha-antiga')
     expect(keyComSenhaAntiga).toBeNull()
+  })
+
+  it('grava salt e verificador atomicamente', async () => {
+    await setupAccount('senha-atomica')
+
+    const linhas = await db.configuracoes.toArray()
+    expect(linhas.map((linha) => linha.chave).sort()).toEqual(['auth.salt', 'auth.verificador'])
+  })
+
+  it('não confunde conta corrompida (salt sem verificador) com senha errada', async () => {
+    await setupAccount('senha-certa')
+    const verificador = await db.configuracoes.where('chave').equals(CHAVE_VERIFICADOR).first()
+    await db.configuracoes.delete(verificador!.id!)
+    clearSession()
+
+    await expect(login('senha-certa')).rejects.toThrow(/corrompida/i)
+    expect(getSessionKey()).toBeNull()
   })
 })

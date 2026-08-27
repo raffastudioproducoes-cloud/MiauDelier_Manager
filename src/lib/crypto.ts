@@ -20,13 +20,13 @@ export async function deriveKey(password: string, salt: Uint8Array): Promise<Cry
   )
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
+export function bytesToBase64(bytes: Uint8Array): string {
   let binary = ''
   for (const byte of bytes) binary += String.fromCharCode(byte)
   return btoa(binary)
 }
 
-function base64ToBytes(base64: string): Uint8Array {
+export function base64ToBytes(base64: string): Uint8Array {
   const binary = atob(base64)
   return Uint8Array.from(binary, (char) => char.charCodeAt(0))
 }

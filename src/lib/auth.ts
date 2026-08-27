@@ -1,21 +1,18 @@
 import { db } from '../db/schema'
-import { deriveKey, generateSalt, encryptText, decryptText } from './crypto'
+import {
+  deriveKey,
+  generateSalt,
+  encryptText,
+  decryptText,
+  bytesToBase64,
+  base64ToBytes,
+} from './crypto'
 
-const CHAVE_SALT = 'auth.salt'
-const CHAVE_VERIFICADOR = 'auth.verificador'
+export const CHAVE_SALT = 'auth.salt'
+export const CHAVE_VERIFICADOR = 'auth.verificador'
 const TEXTO_VERIFICACAO = 'miaudelier-ok'
 
 let sessionKey: CryptoKey | null = null
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-
-function base64ToBytes(base64: string): Uint8Array {
-  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
-}
 
 async function salvarConfiguracao(chave: string, valor: string): Promise<void> {
   const registro = await db.configuracoes.where('chave').equals(chave).first()
@@ -31,13 +28,29 @@ export async function hasAccountConfigured(): Promise<boolean> {
   return registro !== undefined
 }
 
-export async function setupAccount(password: string): Promise<CryptoKey> {
+export async function setupAccount(
+  password: string,
+  opcoes: { apagandoDadosExistentes?: boolean } = {},
+): Promise<CryptoKey> {
+  if (!opcoes.apagandoDadosExistentes && (await hasAccountConfigured())) {
+    throw new Error(
+      'já existe uma conta configurada neste dispositivo; re-chavear tornaria todo dado cifrado ' +
+        'indecifrável para sempre. Use setupAccount(senha, { apagandoDadosExistentes: true }) se ' +
+        'essa perda for intencional.',
+    )
+  }
+
   const salt = generateSalt()
   const key = await deriveKey(password, salt)
   const verificador = await encryptText(key, TEXTO_VERIFICACAO)
 
-  await salvarConfiguracao(CHAVE_SALT, bytesToBase64(salt))
-  await salvarConfiguracao(CHAVE_VERIFICADOR, verificador)
+  // Salt e verificador precisam nascer juntos: sem transação, uma aba fechada entre as duas
+  // gravações deixaria salt sem verificador, e o app pediria "Entrar" para uma conta que
+  // nenhuma senha abre — num produto sem recuperação de senha.
+  await db.transaction('rw', db.configuracoes, async () => {
+    await salvarConfiguracao(CHAVE_SALT, bytesToBase64(salt))
+    await salvarConfiguracao(CHAVE_VERIFICADOR, verificador)
+  })
 
   sessionKey = key
   return key
@@ -46,7 +59,16 @@ export async function setupAccount(password: string): Promise<CryptoKey> {
 export async function login(password: string): Promise<CryptoKey | null> {
   const saltRegistro = await db.configuracoes.where('chave').equals(CHAVE_SALT).first()
   const verificadorRegistro = await db.configuracoes.where('chave').equals(CHAVE_VERIFICADOR).first()
-  if (!saltRegistro || !verificadorRegistro) return null
+  if (!saltRegistro) return null
+  if (!verificadorRegistro) {
+    // Estado impossível de produzir via setupAccount (que grava os dois em transação): só
+    // sobra banco corrompido ou editado por fora. Não é senha errada, e mentir dizendo que é
+    // faria a usuária tentar senhas para sempre em vez de restaurar um backup.
+    throw new Error(
+      'conta corrompida: existe salt mas não existe verificador. Nenhuma senha abre este banco — ' +
+        'restaure um backup JSON.',
+    )
+  }
 
   const salt = base64ToBytes(saltRegistro.valor)
   const key = await deriveKey(password, salt)

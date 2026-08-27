@@ -32,6 +32,8 @@ export function LoginForm() {
         setMensagem('Conta criada com sucesso.')
         setContaExiste(true)
       }
+    } catch (falha) {
+      setErro(falha instanceof Error ? falha.message : 'Falha inesperada ao autenticar.')
     } finally {
       setEnviando(false)
     }
