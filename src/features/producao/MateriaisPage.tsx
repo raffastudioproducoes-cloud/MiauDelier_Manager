@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -26,13 +26,22 @@ export function MateriaisPage() {
   const [custoUnitario, setCustoUnitario] = useState('')
   const [erro, setErro] = useState<string | null>(null)
 
+  const montado = useRef(true)
+
   async function recarregar() {
-    setCategorias(await listarCategoriasMaterial())
-    setMateriais(await listarMateriais())
+    const categoriasCarregadas = await listarCategoriasMaterial()
+    const materiaisCarregados = await listarMateriais()
+    if (!montado.current) return
+    setCategorias(categoriasCarregadas)
+    setMateriais(materiaisCarregados)
   }
 
   useEffect(() => {
+    montado.current = true
     recarregar()
+    return () => {
+      montado.current = false
+    }
   }, [])
 
   async function handleSubmit(evento: React.FormEvent) {
@@ -55,6 +64,7 @@ export function MateriaisPage() {
     if (!categoriaId) categoriaId = await criarCategoriaMaterial('Geral')
 
     await criarMaterial({ ...resultado.data, categoriaId })
+    if (!montado.current) return
     mostrarToast('Material cadastrado com sucesso')
     setNome('')
     setUnidade('')
