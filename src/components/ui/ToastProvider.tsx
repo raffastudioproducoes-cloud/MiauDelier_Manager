@@ -1,0 +1,46 @@
+import { createContext, useCallback, useState, type ReactNode } from 'react'
+import { cn } from '../../lib/cn'
+
+interface Toast {
+  id: number
+  mensagem: string
+  tipo: 'sucesso' | 'erro'
+}
+
+export interface ToastContextValue {
+  mostrarToast: (mensagem: string, tipo?: Toast['tipo']) => void
+}
+
+export const ToastContext = createContext<ToastContextValue | null>(null)
+
+const DURACAO_TOAST_MS = 4000
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  const mostrarToast = useCallback((mensagem: string, tipo: Toast['tipo'] = 'sucesso') => {
+    const id = Date.now()
+    setToasts((atual) => [...atual, { id, mensagem, tipo }])
+    setTimeout(() => setToasts((atual) => atual.filter((t) => t.id !== id)), DURACAO_TOAST_MS)
+  }, [])
+
+  return (
+    <ToastContext.Provider value={{ mostrarToast }}>
+      {children}
+      <div className="fixed bottom-4 right-4 flex flex-col gap-2">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            role="status"
+            className={cn(
+              'rounded-lg px-4 py-2 elevation-raised',
+              toast.tipo === 'erro' && 'text-[var(--color-danger)]',
+            )}
+          >
+            {toast.mensagem}
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  )
+}
