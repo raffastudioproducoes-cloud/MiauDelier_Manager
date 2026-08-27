@@ -1,14 +1,23 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { db } from '../../db/schema'
-import { setupAccount, getSessionKey, clearSession } from '../../lib/auth'
-import { LoginForm } from './LoginForm'
+import { useAuthStore } from '../../stores/authStore'
+import { setupAccount, clearSession } from '../../lib/auth'
+
+const navegarMock = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navegarMock,
+}))
+
+const { LoginForm } = await import('./LoginForm')
 
 describe('LoginForm', () => {
   beforeEach(async () => {
     await db.delete()
     await db.open()
     clearSession()
+    useAuthStore.setState({ autenticado: false, contaConfigurada: null })
+    navegarMock.mockClear()
   })
 
   it('mostra formulário de criação de conta quando não há conta configurada', async () => {
@@ -16,25 +25,26 @@ describe('LoginForm', () => {
     expect(await screen.findByRole('heading', { name: /criar senha/i })).toBeInTheDocument()
   })
 
-  it('cria conta e mostra mensagem de sucesso', async () => {
+  it('cria conta e navega para a rota inicial', async () => {
     render(<LoginForm />)
     const input = await screen.findByLabelText(/senha/i)
     fireEvent.change(input, { target: { value: 'senha-forte-123' } })
     fireEvent.click(screen.getByRole('button', { name: /criar senha/i }))
 
-    await waitFor(() => expect(screen.getByText(/conta criada/i)).toBeInTheDocument())
+    await waitFor(() => expect(navegarMock).toHaveBeenCalledWith({ to: '/' }))
   })
 
-  it('conta já configurada + senha errada: mostra erro e não abre sessão', async () => {
-    await setupAccount('senha-correta-123')
+  it('conta já configurada + senha errada: mostra erro e não navega nem abre sessão', async () => {
+    await setupAccount('senha-certa')
     clearSession()
+    useAuthStore.setState({ autenticado: false, contaConfigurada: true })
 
     render(<LoginForm />)
     const input = await screen.findByLabelText(/senha/i)
-    fireEvent.change(input, { target: { value: 'senha-errada-999' } })
+    fireEvent.change(input, { target: { value: 'senha-errada' } })
     fireEvent.click(screen.getByRole('button', { name: /entrar/i }))
 
-    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
-    expect(getSessionKey()).toBeNull()
+    expect(await screen.findByRole('alert')).toHaveTextContent(/senha incorreta/i)
+    expect(navegarMock).not.toHaveBeenCalled()
   })
 })

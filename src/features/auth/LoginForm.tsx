@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react'
-import { hasAccountConfigured, setupAccount, login } from '../../lib/auth'
+import { useNavigate } from '@tanstack/react-router'
+import { useAuthStore } from '../../stores/authStore'
 
 export function LoginForm() {
-  const [contaExiste, setContaExiste] = useState<boolean | null>(null)
+  const navigate = useNavigate()
+  const contaConfigurada = useAuthStore((estado) => estado.contaConfigurada)
+  const carregarEstadoInicial = useAuthStore((estado) => estado.carregarEstadoInicial)
+  const entrar = useAuthStore((estado) => estado.entrar)
+  const criarConta = useAuthStore((estado) => estado.criarConta)
+
   const [senha, setSenha] = useState('')
-  const [mensagem, setMensagem] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
   useEffect(() => {
-    hasAccountConfigured().then(setContaExiste)
-  }, [])
+    carregarEstadoInicial()
+  }, [carregarEstadoInicial])
 
-  if (contaExiste === null) return <p>Carregando...</p>
+  if (contaConfigurada === null) return <p>Carregando...</p>
 
   async function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
@@ -20,20 +25,18 @@ export function LoginForm() {
     setEnviando(true)
     setErro(null)
     try {
-      if (contaExiste) {
-        const chave = await login(senha)
-        if (!chave) {
+      if (contaConfigurada) {
+        const sucesso = await entrar(senha)
+        if (!sucesso) {
           setErro('Senha incorreta.')
           return
         }
-        setMensagem('Login realizado.')
       } else {
-        await setupAccount(senha)
-        setMensagem('Conta criada com sucesso.')
-        setContaExiste(true)
+        await criarConta(senha)
       }
+      navigate({ to: '/' })
     } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Falha inesperada ao autenticar.')
+      setErro(falha instanceof Error ? falha.message : 'Falha inesperada.')
     } finally {
       setEnviando(false)
     }
@@ -41,7 +44,7 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h1>{contaExiste ? 'Entrar' : 'Criar senha'}</h1>
+      <h1>{contaConfigurada ? 'Entrar' : 'Criar senha'}</h1>
       <label htmlFor="senha">Senha</label>
       <input
         id="senha"
@@ -50,9 +53,8 @@ export function LoginForm() {
         onChange={(evento) => setSenha(evento.target.value)}
       />
       <button type="submit" disabled={enviando}>
-        {contaExiste ? 'Entrar' : 'Criar senha'}
+        {contaConfigurada ? 'Entrar' : 'Criar senha'}
       </button>
-      {mensagem && <p>{mensagem}</p>}
       {erro && <p role="alert">{erro}</p>}
     </form>
   )
