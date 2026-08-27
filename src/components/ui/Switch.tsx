@@ -29,7 +29,7 @@ export function Switch({ id, label, checked, onChange }: SwitchProps) {
           )}
         />
       </button>
-      <label htmlFor={id} className="text-sm text-[var(--color-ink)] cursor-pointer" onClick={() => onChange(!checked)}>
+      <label htmlFor={id} className="text-sm text-[var(--color-ink)] cursor-pointer">
         {label}
       </label>
     </div>

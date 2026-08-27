@@ -19,4 +19,11 @@ describe('Switch', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Notificações' }))
     expect(aoMudar).toHaveBeenCalledWith(true)
   })
+
+  it('chama onChange apenas uma vez ao clicar no texto do label', () => {
+    const aoMudar = vi.fn()
+    render(<Switch id="notificacoes" label="Notificações" checked={false} onChange={aoMudar} />)
+    fireEvent.click(screen.getByText('Notificações'))
+    expect(aoMudar).toHaveBeenCalledTimes(1)
+  })
 })

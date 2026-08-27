@@ -22,10 +22,11 @@ export function TextField({ id, label, error, className, ...resto }: TextFieldPr
           className,
         )}
         aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${id}-erro` : undefined}
         {...resto}
       />
       {error && (
-        <p role="alert" className="text-sm text-[var(--color-danger)]">
+        <p id={`${id}-erro`} role="alert" className="text-sm text-[var(--color-danger)]">
           {error}
         </p>
       )}

@@ -17,4 +17,11 @@ describe('TextField', () => {
     render(<TextField id="nome" label="Nome" value="" onChange={() => {}} />)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it('associa o erro ao input via aria-describedby', () => {
+    render(<TextField id="nome" label="Nome" value="" onChange={() => {}} error="Campo obrigatório" />)
+    const input = screen.getByLabelText('Nome')
+    const erro = screen.getByRole('alert')
+    expect(input).toHaveAttribute('aria-describedby', erro.id)
+  })
 })
