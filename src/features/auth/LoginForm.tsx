@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAuthStore } from '../../stores/authStore'
+import { Card } from '../../components/ui/Card'
+import { TextField } from '../../components/ui/TextField'
+import { Button } from '../../components/ui/Button'
 
 export function LoginForm() {
   const navigate = useNavigate()
@@ -46,19 +49,25 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>{contaConfigurada ? 'Entrar' : 'Criar senha'}</h1>
-      <label htmlFor="senha">Senha</label>
-      <input
-        id="senha"
-        type="password"
-        value={senha}
-        onChange={(evento) => setSenha(evento.target.value)}
-      />
-      <button type="submit" disabled={enviando}>
-        {contaConfigurada ? 'Entrar' : 'Criar senha'}
-      </button>
-      {erro && <p role="alert">{erro}</p>}
-    </form>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-base)] p-4">
+      <Card className="w-full max-w-sm">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <h1 className="text-xl font-semibold text-[var(--color-ink)]">
+            {contaConfigurada ? 'Entrar' : 'Criar senha'}
+          </h1>
+          <TextField
+            id="senha"
+            label="Senha"
+            type="password"
+            value={senha}
+            onChange={(evento) => setSenha(evento.target.value)}
+            error={erro ?? undefined}
+          />
+          <Button type="submit" disabled={enviando}>
+            {contaConfigurada ? 'Entrar' : 'Criar senha'}
+          </Button>
+        </form>
+      </Card>
+    </div>
   )
 }
