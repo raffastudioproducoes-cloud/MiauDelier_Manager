@@ -134,6 +134,19 @@ describe('backup JSON', () => {
     expect(getSessionKey()).toBeNull()
   })
 
+  it('registra um item em db.backups com o checksum do backup gerado', async () => {
+    await setupAccount('senha-do-backup-2026')
+    await semearMaterial()
+
+    const json = await exportarBackup()
+    const parsed = JSON.parse(json)
+
+    const registros = await db.backups.toArray()
+    expect(registros).toHaveLength(1)
+    expect(registros[0].checksum).toBe(parsed.checksum)
+    expect(registros[0].tamanhoBytes).toBeGreaterThan(0)
+  })
+
   it('rejeita JSON válido que não é um envelope de backup', async () => {
     await expect(importarBackup('{"qualquer":"coisa"}')).rejects.toThrow(/backup inválido/i)
     await expect(importarBackup('não é json')).rejects.toThrow(/não é JSON/i)

@@ -70,8 +70,11 @@ export async function exportarBackup(): Promise<string> {
 
   const dadosSerializados = JSON.stringify(dados)
   const checksum = fnv1aHash(dadosSerializados)
+  const criadoEm = new Date().toISOString()
 
-  return JSON.stringify({ dados, checksum, criadoEm: new Date().toISOString() })
+  await db.backups.add({ criadoEm, checksum, tamanhoBytes: dadosSerializados.length })
+
+  return JSON.stringify({ dados, checksum, criadoEm })
 }
 
 export async function importarBackup(json: string): Promise<void> {
