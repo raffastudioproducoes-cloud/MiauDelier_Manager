@@ -52,4 +52,18 @@ describe('repositório de peças', () => {
     expect(materiais[0].quantidadeEstoque).toBe(100)
     expect(await listarPecas()).toHaveLength(0)
   })
+
+  it('rejeita consumo maior que o estoque e não grava nada (estoque intacto)', async () => {
+    const formaId = await criarForma({ nome: 'Y', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const materialId = await criarMaterial({ nome: 'Resina Cristal', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 880, custoUnitario: 0.1 })
+
+    await expect(
+      criarPeca({ nome: 'Peça gigante', formaId, consumos: [{ materialId, quantidade: 5000 }] }),
+    ).rejects.toThrow(/estoque insuficiente/i)
+
+    const materiais = await db.materiais.toArray()
+    expect(materiais[0].quantidadeEstoque).toBe(880)
+    expect(await listarPecas()).toHaveLength(0)
+    expect(await db.consumosPeca.count()).toBe(0)
+  })
 })

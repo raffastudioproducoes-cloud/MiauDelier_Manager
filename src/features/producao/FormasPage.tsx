@@ -46,11 +46,17 @@ export function FormasPage() {
     evento.preventDefault()
     if (!nome.trim() || volumeCalculado === null) return
 
-    await criarForma({
-      nome,
-      geometria: 'cilindrico',
-      dimensoesCm: { raio: Number(raio), altura: Number(altura) },
-    })
+    try {
+      await criarForma({
+        nome,
+        geometria: 'cilindrico',
+        dimensoesCm: { raio: Number(raio), altura: Number(altura) },
+      })
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao salvar.', 'erro')
+      return
+    }
     if (!montado.current) return
     mostrarToast('Forma cadastrada com sucesso')
     setNome('')

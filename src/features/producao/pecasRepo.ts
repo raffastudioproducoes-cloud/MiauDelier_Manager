@@ -28,6 +28,11 @@ export async function criarPeca(nova: NovaPeca): Promise<number> {
     for (const consumo of nova.consumos) {
       const material = await db.materiais.get(consumo.materialId)
       if (!material) throw new Error(`material ${consumo.materialId} não encontrado`)
+      if (consumo.quantidade > material.quantidadeEstoque) {
+        throw new Error(
+          `Estoque insuficiente de "${material.nome}": disponível ${material.quantidadeEstoque}, solicitado ${consumo.quantidade}`,
+        )
+      }
 
       await db.consumosPeca.add({ pecaId, materialId: consumo.materialId, quantidade: consumo.quantidade })
       await db.materiais.update(consumo.materialId, {

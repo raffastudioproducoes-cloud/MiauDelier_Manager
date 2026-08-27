@@ -46,11 +46,17 @@ export function PecasPage() {
     evento.preventDefault()
     if (!nome.trim() || !formaId || !materialId || !quantidade) return
 
-    await criarPeca({
-      nome,
-      formaId: Number(formaId),
-      consumos: [{ materialId: Number(materialId), quantidade: Number(quantidade) }],
-    })
+    try {
+      await criarPeca({
+        nome,
+        formaId: Number(formaId),
+        consumos: [{ materialId: Number(materialId), quantidade: Number(quantidade) }],
+      })
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao salvar.', 'erro')
+      return
+    }
     if (!montado.current) return
     mostrarToast('Peça cadastrada com sucesso')
     setNome('')
@@ -60,10 +66,17 @@ export function PecasPage() {
     await recarregar()
   }
 
+  const faltamPreRequisitos = formas.length === 0 || materiais.length === 0
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Peças</h1>
       <Card>
+        {faltamPreRequisitos && (
+          <p role="alert" className="mb-3 text-sm text-[var(--color-ink-muted)]">
+            Cadastre pelo menos um material e uma forma antes de criar uma peça.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <TextField id="nome-peca" rotulo="Nome da peça" value={nome} onChange={(e) => setNome(e.target.value)} />
 
@@ -85,7 +98,7 @@ export function PecasPage() {
 
           <TextField id="quantidade-consumida" rotulo="Quantidade consumida" type="number" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} />
 
-          <Button type="submit">Cadastrar peça</Button>
+          <Button type="submit" disabled={faltamPreRequisitos}>Cadastrar peça</Button>
         </form>
       </Card>
 

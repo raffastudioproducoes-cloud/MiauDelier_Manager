@@ -60,10 +60,15 @@ export function MateriaisPage() {
       return
     }
 
-    let categoriaId = categorias[0]?.id
-    if (!categoriaId) categoriaId = await criarCategoriaMaterial('Geral')
-
-    await criarMaterial({ ...resultado.data, categoriaId })
+    try {
+      let categoriaId = categorias[0]?.id
+      if (!categoriaId) categoriaId = await criarCategoriaMaterial('Geral')
+      await criarMaterial({ ...resultado.data, categoriaId })
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao salvar.', 'erro')
+      return
+    }
     if (!montado.current) return
     mostrarToast('Material cadastrado com sucesso')
     setNome('')

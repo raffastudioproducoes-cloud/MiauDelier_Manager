@@ -26,4 +26,29 @@ describe('PecasPage', () => {
     await waitFor(() => expect(screen.getByText('Chaveiro gato')).toBeInTheDocument())
     expect(screen.getByText(/planejada/i)).toBeInTheDocument()
   })
+
+  it('desabilita o cadastro e orienta a usuária quando não há forma nem material', async () => {
+    await db.formas.clear()
+    await db.materiais.clear()
+
+    render(<ToastProvider><PecasPage /></ToastProvider>)
+
+    await waitFor(() =>
+      expect(screen.getByText(/cadastre pelo menos um material e uma forma/i)).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: /cadastrar peça/i })).toBeDisabled()
+  })
+
+  it('mostra mensagem de erro quando o consumo excede o estoque', async () => {
+    render(<ToastProvider><PecasPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/nome da peça/i), { target: { value: 'Peça gigante' } })
+    fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText(/^material$/i), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText(/quantidade consumida/i), { target: { value: '5000' } })
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar peça/i }))
+
+    await waitFor(() => expect(screen.getByText(/estoque insuficiente/i)).toBeInTheDocument())
+    expect(screen.queryByText('Peça gigante')).not.toBeInTheDocument()
+  })
 })
