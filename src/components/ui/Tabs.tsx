@@ -12,16 +12,17 @@ interface TabsProps {
   abaInicial?: string
   abaAtiva?: string
   onMudarAba?: (id: string) => void
+  className?: string
 }
 
-export function Tabs({ abas, abaInicial, abaAtiva, onMudarAba }: TabsProps) {
+export function Tabs({ abas, abaInicial, abaAtiva, onMudarAba, className }: TabsProps) {
   const props =
     abaAtiva !== undefined
       ? { value: abaAtiva, onValueChange: onMudarAba }
       : { defaultValue: abaInicial ?? abas[0]?.id }
 
   return (
-    <TabsPrimitivo.Root {...props}>
+    <TabsPrimitivo.Root {...props} className={className}>
       <TabsPrimitivo.List className="flex gap-1 border-b border-thin">
         {abas.map((aba) => (
           <TabsPrimitivo.Trigger

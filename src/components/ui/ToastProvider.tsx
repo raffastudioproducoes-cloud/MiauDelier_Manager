@@ -15,7 +15,13 @@ export const ToastContext = createContext<ToastContextValue | null>(null)
 
 const DURACAO_TOAST_MS = 4000
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
   const mostrarToast = useCallback((mensagem: string, tipo: Toast['tipo'] = 'sucesso') => {
@@ -27,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ mostrarToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 flex flex-col gap-2">
+      <div className={cn('fixed bottom-4 right-4 flex flex-col gap-2', className)}>
         {toasts.map((toast) => (
           <div
             key={toast.id}
