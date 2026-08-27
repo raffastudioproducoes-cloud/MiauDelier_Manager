@@ -47,4 +47,26 @@ describe('LoginForm', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/senha incorreta/i)
     expect(navegarMock).not.toHaveBeenCalled()
   })
+
+  it('entrar lança exceção (conta corrompida): mostra erro distinto e não navega', async () => {
+    await setupAccount('senha-certa')
+    clearSession()
+    useAuthStore.setState({
+      autenticado: false,
+      contaConfigurada: true,
+      entrar: async () => {
+        throw new Error('Conta corrompida.')
+      },
+    })
+
+    render(<LoginForm />)
+    const input = await screen.findByLabelText(/senha/i)
+    fireEvent.change(input, { target: { value: 'qualquer-senha' } })
+    fireEvent.click(screen.getByRole('button', { name: /entrar/i }))
+
+    const alerta = await screen.findByRole('alert')
+    expect(alerta).toHaveTextContent(/conta corrompida/i)
+    expect(alerta).not.toHaveTextContent(/senha incorreta/i)
+    expect(navegarMock).not.toHaveBeenCalled()
+  })
 })
