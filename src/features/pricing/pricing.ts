@@ -17,7 +17,24 @@ export interface PrecificacaoResultado {
   precoFinal: number
 }
 
+function validarNaoNegativoFinito(nome: string, valor: number): void {
+  if (!Number.isFinite(valor) || valor < 0) {
+    throw new Error(`${nome} inválido: deve ser um número finito e não-negativo (recebido: ${valor})`)
+  }
+}
+
 export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResultado {
+  validarNaoNegativoFinito('custoMaterial', input.custoMaterial)
+  validarNaoNegativoFinito('custoAcessorios', input.custoAcessorios)
+  validarNaoNegativoFinito('horasProducao', input.horasProducao)
+  validarNaoNegativoFinito('valorHora', input.valorHora)
+  if (!Number.isFinite(input.rateioFixoPercent) || input.rateioFixoPercent < 0 || input.rateioFixoPercent > 100) {
+    throw new Error(`rateioFixoPercent inválido: deve estar entre 0 e 100 (recebido: ${input.rateioFixoPercent})`)
+  }
+  if (!Number.isFinite(input.margemLucroPercent) || input.margemLucroPercent < 0 || input.margemLucroPercent > 1000) {
+    throw new Error(`margemLucroPercent inválido: deve estar entre 0 e 1000 (recebido: ${input.margemLucroPercent})`)
+  }
+
   const custoDireto = input.custoMaterial + input.custoAcessorios
   const custoMaoDeObra = input.horasProducao * input.valorHora
   const subtotal = custoDireto + custoMaoDeObra

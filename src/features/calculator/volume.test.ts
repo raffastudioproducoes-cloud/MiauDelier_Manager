@@ -41,4 +41,28 @@ describe('calculadora de volume', () => {
     expect(parteA).toBe(1000)
     expect(parteB).toBeCloseTo(30, 5)
   })
+
+  it('lança se uma dimensão for negativa', () => {
+    expect(() =>
+      calcularVolumeMl({ geometria: 'retangular', comprimento: -10, largura: 10, profundidade: 2 }),
+    ).toThrow(/inválida/i)
+  })
+
+  it('lança se uma dimensão for NaN', () => {
+    expect(() => calcularVolumeMl({ geometria: 'cilindrico', raio: NaN, altura: 3 })).toThrow(/inválida/i)
+  })
+
+  it('lança se uma dimensão for Infinity', () => {
+    expect(() => calcularVolumeMl({ geometria: 'esferico', raio: Infinity })).toThrow(/inválida/i)
+  })
+
+  it('lança se volumeMl direto for -Infinity', () => {
+    expect(() => calcularVolumeMl({ geometria: 'direto', volumeMl: -Infinity })).toThrow(/inválida/i)
+  })
+
+  it('calcularProporcaoMistura lança se volumeMl for negativo, NaN ou não-finito', () => {
+    expect(() => calcularProporcaoMistura(-1, '1:1')).toThrow(/inválido/i)
+    expect(() => calcularProporcaoMistura(NaN, '1:1')).toThrow(/inválido/i)
+    expect(() => calcularProporcaoMistura(Infinity, '1:1')).toThrow(/inválido/i)
+  })
 })

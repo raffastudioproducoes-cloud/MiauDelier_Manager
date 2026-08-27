@@ -32,4 +32,35 @@ describe('motor de precificação', () => {
     })
     expect(resultado.precoFinal).toBe(0)
   })
+
+  const base = {
+    custoMaterial: 25,
+    custoAcessorios: 5,
+    horasProducao: 1.5,
+    valorHora: 20,
+    rateioFixoPercent: 15,
+    margemLucroPercent: 40,
+  }
+
+  it('lança se um custo for negativo', () => {
+    expect(() => calcularPrecificacao({ ...base, custoMaterial: -1 })).toThrow(/inválido/i)
+  })
+
+  it('lança se um custo for NaN', () => {
+    expect(() => calcularPrecificacao({ ...base, valorHora: NaN })).toThrow(/inválido/i)
+  })
+
+  it('lança se um custo for Infinity', () => {
+    expect(() => calcularPrecificacao({ ...base, horasProducao: Infinity })).toThrow(/inválido/i)
+  })
+
+  it('lança se rateioFixoPercent estiver fora de 0-100', () => {
+    expect(() => calcularPrecificacao({ ...base, rateioFixoPercent: -1 })).toThrow(/rateioFixoPercent/i)
+    expect(() => calcularPrecificacao({ ...base, rateioFixoPercent: 101 })).toThrow(/rateioFixoPercent/i)
+  })
+
+  it('lança se margemLucroPercent estiver fora de 0-1000', () => {
+    expect(() => calcularPrecificacao({ ...base, margemLucroPercent: -1 })).toThrow(/margemLucroPercent/i)
+    expect(() => calcularPrecificacao({ ...base, margemLucroPercent: 1001 })).toThrow(/margemLucroPercent/i)
+  })
 })
