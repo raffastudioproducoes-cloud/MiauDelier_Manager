@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as FormasRouteImport } from './routes/formas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MateriaisRouteImport } from './routes/materiais'
+import { Route as PecasRouteImport } from './routes/pecas'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const MateriaisRoute = MateriaisRouteImport.update({
   path: '/materiais',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PecasRoute = PecasRouteImport.update({
+  id: '/pecas',
+  path: '/pecas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
+  '/pecas': typeof PecasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
+  '/pecas': typeof PecasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
+  '/pecas': typeof PecasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/formas' | '/login' | '/materiais'
+  fullPaths: '/' | '/formas' | '/login' | '/materiais' | '/pecas'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/formas' | '/login' | '/materiais'
-  id: '__root__' | '/' | '/formas' | '/login' | '/materiais'
+  to: '/' | '/formas' | '/login' | '/materiais' | '/pecas'
+  id: '__root__' | '/' | '/formas' | '/login' | '/materiais' | '/pecas'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +76,7 @@ export interface RootRouteChildren {
   FormasRoute: typeof FormasRoute
   LoginRoute: typeof LoginRoute
   MateriaisRoute: typeof MateriaisRoute
+  PecasRoute: typeof PecasRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MateriaisRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pecas': {
+      id: '/pecas'
+      path: '/pecas'
+      fullPath: '/pecas'
+      preLoaderRoute: typeof PecasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   FormasRoute: FormasRoute,
   LoginRoute: LoginRoute,
   MateriaisRoute: MateriaisRoute,
+  PecasRoute: PecasRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
