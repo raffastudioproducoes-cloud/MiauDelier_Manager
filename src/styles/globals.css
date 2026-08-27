@@ -8,6 +8,11 @@
   --color-accent: #2F5D5A;
   --color-accent-soft: #DCEAE8;
   --color-danger: #B3432E;
+  --color-danger-soft: #F6DFDA;
+  --color-success: #3F6B3A;
+  --color-success-soft: #E1EDDF;
+  --color-warning: #8A6320;
+  --color-warning-soft: #F4E8D2;
 
   --radius-sm: 4px;
   --radius-md: 8px;

@@ -10,7 +10,7 @@ describe('Badge', () => {
 
   it('aplica classe de cor conforme variant', () => {
     render(<Badge variant="danger">Erro</Badge>)
-    expect(screen.getByText('Erro')).toHaveClass('bg-red-100')
+    expect(screen.getByText('Erro')).toHaveClass('text-[var(--color-danger)]')
   })
 
   it('usa variant neutral por padrão', () => {
