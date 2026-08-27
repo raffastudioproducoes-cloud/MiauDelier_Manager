@@ -1,0 +1,61 @@
+import { db, type Peca, type EventoPeca } from '../../db/schema'
+
+export interface NovoConsumo {
+  materialId: number
+  quantidade: number
+}
+
+export interface NovaPeca {
+  nome: string
+  formaId: number
+  consumos: NovoConsumo[]
+}
+
+export interface PecaComForma extends Peca {
+  nomeForma: string
+}
+
+export async function criarPeca(nova: NovaPeca): Promise<number> {
+  return db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, async () => {
+    const agora = new Date().toISOString()
+    const pecaId = (await db.pecas.add({
+      nome: nova.nome,
+      formaId: nova.formaId,
+      status: 'planejada',
+      criadaEm: agora,
+    })) as number
+
+    for (const consumo of nova.consumos) {
+      const material = await db.materiais.get(consumo.materialId)
+      if (!material) throw new Error(`material ${consumo.materialId} não encontrado`)
+
+      await db.consumosPeca.add({ pecaId, materialId: consumo.materialId, quantidade: consumo.quantidade })
+      await db.materiais.update(consumo.materialId, {
+        quantidadeEstoque: material.quantidadeEstoque - consumo.quantidade,
+      })
+    }
+
+    await db.eventosPeca.add({
+      pecaId,
+      tipo: 'criacao',
+      descricao: 'Peça criada e consumo de material registrado',
+      criadoEm: agora,
+    })
+
+    return pecaId
+  })
+}
+
+export async function listarPecas(): Promise<PecaComForma[]> {
+  const pecas = await db.pecas.toArray()
+  return Promise.all(
+    pecas.map(async (peca) => {
+      const forma = await db.formas.get(peca.formaId)
+      return { ...peca, nomeForma: forma?.nome ?? '—' }
+    }),
+  )
+}
+
+export async function listarEventosDaPeca(pecaId: number): Promise<EventoPeca[]> {
+  return db.eventosPeca.where('pecaId').equals(pecaId).toArray()
+}
