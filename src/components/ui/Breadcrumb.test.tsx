@@ -1,6 +1,17 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { Breadcrumb } from './Breadcrumb'
+
+// Breadcrumb usa <Link> do TanStack Router (navegação SPA, sem reload que zeraria a sessão).
+// O Link exige um router em contexto; aqui ele vira uma <a> simples.
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, children, ...resto }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...resto}>
+      {children}
+    </a>
+  ),
+}))
+
+const { Breadcrumb } = await import('./Breadcrumb')
 
 const itens = [
   { rotulo: 'Início', href: '/' },
@@ -19,8 +30,7 @@ describe('Breadcrumb', () => {
 
   it('último item não é um link, os anteriores são', () => {
     render(<Breadcrumb itens={itens} />)
-    expect(screen.getByText('Início').tagName).toBe('A')
-    expect(screen.getByText('Peças').tagName).toBe('A')
+    expect(screen.getAllByRole('link').map((el) => el.textContent)).toEqual(['Início', 'Peças'])
     expect(screen.getByText('Detalhe').tagName).not.toBe('A')
   })
 })

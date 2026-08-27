@@ -1,18 +1,26 @@
+import { Link } from '@tanstack/react-router'
+import { cn } from '../../lib/cn'
+
 interface ItemBreadcrumb {
   rotulo: string
   href?: string
 }
 
-export function Breadcrumb({ itens }: { itens: ItemBreadcrumb[] }) {
+interface BreadcrumbProps {
+  itens: ItemBreadcrumb[]
+  className?: string
+}
+
+export function Breadcrumb({ itens, className }: BreadcrumbProps) {
   return (
-    <nav aria-label="breadcrumb" className="text-sm text-[var(--color-ink-muted)]">
+    <nav aria-label="breadcrumb" className={cn('text-sm text-[var(--color-ink-muted)]', className)}>
       {itens.map((item, indice) => (
         <span key={item.rotulo}>
           {indice > 0 && ' / '}
           {indice < itens.length - 1 && item.href ? (
-            <a href={item.href} className="hover:text-[var(--color-accent)]">
+            <Link to={item.href} className="hover:text-[var(--color-accent)]">
               {item.rotulo}
-            </a>
+            </Link>
           ) : (
             <span className="text-[var(--color-ink)]">{item.rotulo}</span>
           )}
