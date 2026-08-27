@@ -4,7 +4,10 @@ import { useAuthStore } from '../../stores/authStore'
 import { NavItem } from './NavItem'
 import { Button } from '../ui/Button'
 
-const ITENS_MENU = [{ rotulo: 'Início', rota: '/' }] as const
+const ITENS_MENU = [
+  { rotulo: 'Início', rota: '/' },
+  { rotulo: 'Materiais', rota: '/materiais' },
+] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()

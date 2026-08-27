@@ -1,0 +1,46 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { db } from '../../db/schema'
+import { criarCategoriaMaterial } from './categoriasMaterialRepo'
+import { ToastProvider } from '../../components/ui/ToastProvider'
+import { MateriaisPage } from './MateriaisPage'
+
+describe('MateriaisPage', () => {
+  beforeEach(async () => {
+    await db.delete()
+    await db.open()
+  })
+
+  it('mostra estado vazio quando não há materiais', async () => {
+    render(<ToastProvider><MateriaisPage /></ToastProvider>)
+    expect(await screen.findByText(/nenhum material cadastrado/i)).toBeInTheDocument()
+  })
+
+  it('cadastra um material e ele aparece na lista', async () => {
+    await criarCategoriaMaterial('Resinas')
+    render(<ToastProvider><MateriaisPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina Cristal' } })
+    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
+    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '1000' } })
+    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.15' } })
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+
+    await waitFor(() => expect(screen.getByText('Resina Cristal')).toBeInTheDocument())
+  })
+
+  it('rejeita quantidade em estoque negativa antes de chamar o repositório', async () => {
+    await criarCategoriaMaterial('Resinas')
+    render(<ToastProvider><MateriaisPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina' } })
+    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
+    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '-5' } })
+    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/estoque/i)
+    const materiaisCriados = await db.materiais.toArray()
+    expect(materiaisCriados).toHaveLength(0)
+  })
+})
