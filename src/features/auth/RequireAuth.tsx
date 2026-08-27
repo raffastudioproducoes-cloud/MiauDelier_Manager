@@ -13,5 +13,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     }
   }, [autenticado, location.pathname, navigate])
 
+  // Não montar os filhos enquanto o redirecionamento não acontece: sem sessão, uma tela protegida
+  // que lê o repositório no mount dispararia SessaoFechadaError antes de o navigate completar.
+  if (!autenticado && location.pathname !== '/login') return null
+
   return <>{children}</>
 }

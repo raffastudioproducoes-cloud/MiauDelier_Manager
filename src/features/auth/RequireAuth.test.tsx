@@ -25,6 +25,7 @@ describe('RequireAuth', () => {
       </RequireAuth>,
     )
     expect(navegarMock).toHaveBeenCalledWith({ to: '/login' })
+    expect(screen.queryByText('Conteúdo protegido')).not.toBeInTheDocument()
   })
 
   it('não redireciona quando já está em /login', () => {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../db/schema'
 import { setupAccount, login, clearSession, getSessionKey } from './auth'
 import { exportarBackup, importarBackup } from './backup'
+import { useAuthStore } from '../stores/authStore'
 
 async function semearMaterial() {
   await db.categoriasMaterial.add({ nome: 'Resinas' })
@@ -119,6 +120,18 @@ describe('backup JSON', () => {
     await expect(importarBackup(await exportarBackupFalso(parsed.dados))).rejects.toThrow(
       /autenticação/i,
     )
+  })
+
+  it('derruba o estado autenticado da store depois de importar', async () => {
+    await setupAccount('senha-do-backup-2026')
+    await semearMaterial()
+    const json = await exportarBackup()
+    useAuthStore.setState({ autenticado: true, contaConfigurada: true })
+
+    await importarBackup(json)
+
+    expect(useAuthStore.getState().autenticado).toBe(false)
+    expect(getSessionKey()).toBeNull()
   })
 
   it('rejeita JSON válido que não é um envelope de backup', async () => {

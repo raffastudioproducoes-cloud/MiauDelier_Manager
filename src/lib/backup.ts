@@ -1,5 +1,6 @@
 import { db } from '../db/schema'
-import { CHAVE_SALT, CHAVE_VERIFICADOR, clearSession } from './auth'
+import { CHAVE_SALT, CHAVE_VERIFICADOR } from './auth'
+import { useAuthStore } from '../stores/authStore'
 
 function fnv1aHash(texto: string): string {
   let hash = 0x811c9dc5
@@ -93,6 +94,7 @@ export async function importarBackup(json: string): Promise<void> {
   })
 
   // O banco restaurado traz salt e verificador do backup: a chave em memória foi derivada da
-  // senha antiga e não abre mais nada. Encerrar a sessão força novo login com a senha do backup.
-  clearSession()
+  // senha antiga e não abre mais nada. Sair pela store fecha a sessão de cifra E derruba o estado
+  // de autenticação da UI juntos — o guard redireciona em vez de montar tela protegida sem chave.
+  useAuthStore.getState().sair()
 }

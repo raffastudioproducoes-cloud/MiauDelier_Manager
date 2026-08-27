@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../db/schema'
 import { setupAccount, clearSession } from './auth'
 import { cifrarCampo, decifrarCampo, SessaoFechadaError } from './camposCifrados'
+import { useAuthStore } from '../stores/authStore'
 
 describe('camadas de campos cifrados', () => {
   beforeEach(async () => {
@@ -28,5 +29,15 @@ describe('camadas de campos cifrados', () => {
     const cifrado = await cifrarCampo('1234.56')
     clearSession()
     await expect(decifrarCampo(cifrado)).rejects.toThrow(SessaoFechadaError)
+  })
+
+  it('sair pela store fecha a porta de cifra, não só o estado visual', async () => {
+    await setupAccount('senha-do-ateliê')
+    expect(await cifrarCampo('10.00')).toBeTruthy()
+
+    useAuthStore.getState().sair()
+
+    expect(useAuthStore.getState().autenticado).toBe(false)
+    await expect(cifrarCampo('10.00')).rejects.toThrow(SessaoFechadaError)
   })
 })
