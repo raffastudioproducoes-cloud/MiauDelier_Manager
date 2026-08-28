@@ -14,6 +14,7 @@ import { Route as FormasRouteImport } from './routes/formas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as PecasRouteImport } from './routes/pecas'
+import { Route as PrecificacaoRouteImport } from './routes/precificacao'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const PecasRoute = PecasRouteImport.update({
   path: '/pecas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrecificacaoRoute = PrecificacaoRouteImport.update({
+  id: '/precificacao',
+  path: '/precificacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRoute
+  '/precificacao': typeof PrecificacaoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRoute
+  '/precificacao': typeof PrecificacaoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,22 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRoute
+  '/precificacao': typeof PrecificacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/formas' | '/login' | '/materiais' | '/pecas'
+  fullPaths:
+    '/' | '/formas' | '/login' | '/materiais' | '/pecas' | '/precificacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/formas' | '/login' | '/materiais' | '/pecas'
-  id: '__root__' | '/' | '/formas' | '/login' | '/materiais' | '/pecas'
+  to: '/' | '/formas' | '/login' | '/materiais' | '/pecas' | '/precificacao'
+  id:
+    | '__root__'
+    | '/'
+    | '/formas'
+    | '/login'
+    | '/materiais'
+    | '/pecas'
+    | '/precificacao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +94,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MateriaisRoute: typeof MateriaisRoute
   PecasRoute: typeof PecasRoute
+  PrecificacaoRoute: typeof PrecificacaoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +134,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PecasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/precificacao': {
+      id: '/precificacao'
+      path: '/precificacao'
+      fullPath: '/precificacao'
+      preLoaderRoute: typeof PrecificacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +150,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MateriaisRoute: MateriaisRoute,
   PecasRoute: PecasRoute,
+  PrecificacaoRoute: PrecificacaoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

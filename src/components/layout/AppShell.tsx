@@ -9,6 +9,7 @@ const ITENS_MENU = [
   { rotulo: 'Materiais', rota: '/materiais' },
   { rotulo: 'Formas', rota: '/formas' },
   { rotulo: 'Peças', rota: '/pecas' },
+  { rotulo: 'Precificação', rota: '/precificacao' },
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
