@@ -37,8 +37,9 @@ export async function obterResumoDashboard(): Promise<ResumoDashboard> {
 
   const agora = new Date()
   const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
+  const chaveInicioDoMes = inicioDoDia(inicioDoMes)
   const lucroDoMes = transacoes
-    .filter((transacao) => new Date(transacao.data) >= inicioDoMes)
+    .filter((transacao) => inicioDoDia(new Date(transacao.data)) >= chaveInicioDoMes)
     .reduce((soma, transacao) => soma + (transacao.tipo === 'entrada' ? transacao.valor : -transacao.valor), 0)
 
   const pecasEmProducao = pecas.filter((peca) => peca.status === 'em_producao').length

@@ -44,6 +44,17 @@ describe('resumo do dashboard', () => {
     expect(resumo.fluxoCaixa14Dias).toHaveLength(14)
   })
 
+  it('inclui no lucro do mês uma transação date-only do primeiro dia do mês (regressão timezone)', async () => {
+    await criarConta({ nome: 'Caixa', saldoInicial: 0 })
+    const agora = new Date()
+    const primeiroDiaDoMes = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-01`
+    await criarTransacao({ contaId: 1, tipo: 'entrada', valor: 77, descricao: 'Venda dia 1', data: primeiroDiaDoMes })
+
+    const resumo = await obterResumoDashboard()
+
+    expect(resumo.lucroDoMes).toBe(77)
+  })
+
   it('devolve zeros sem quebrar quando não há dado nenhum', async () => {
     const resumo = await obterResumoDashboard()
     expect(resumo.saldoTotal).toBe(0)
