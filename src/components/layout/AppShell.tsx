@@ -3,6 +3,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useAuthStore } from '../../stores/authStore'
 import { NavItem } from './NavItem'
 import { Button } from '../ui/Button'
+import { DicaIA } from '../../features/ia/DicaIA'
 
 const ITENS_MENU = [
   { rotulo: 'Início', rota: '/' },
@@ -35,6 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         ))}
         <div className="md:mt-auto">
+          <DicaIA />
           <Button variante="ghost" onClick={sair}>Sair</Button>
         </div>
       </nav>
