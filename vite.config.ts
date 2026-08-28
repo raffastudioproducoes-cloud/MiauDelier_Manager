@@ -4,7 +4,10 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const BASE_PATH = '/MiauDelier_Manager/'
+
 export default defineConfig({
+  base: BASE_PATH,
   plugins: [
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     react(),

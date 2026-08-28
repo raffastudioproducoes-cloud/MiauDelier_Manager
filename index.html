@@ -9,6 +9,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Desfaz o redirect de 404.html, restaurando a rota real antes do React montar.
+      (function () {
+        var l = window.location
+        if (l.search[1] === 'p' && l.search[2] === '=') {
+          var decoded = l.search.slice(3).split('&q=')
+          window.history.replaceState(
+            null,
+            '',
+            l.pathname.slice(0, -1) + decoded[0].replace(/~and~/g, '&') +
+              (decoded[1] ? '?' + decoded[1].replace(/~and~/g, '&') : '') +
+              l.hash,
+          )
+        }
+      })()
+    </script>
     <script type="module" src="/src/entry-client.tsx"></script>
   </body>
 </html>
