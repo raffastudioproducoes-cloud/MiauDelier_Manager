@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
-import { criarTransacao, listarTransacoesDaConta } from './transacoesRepo'
+import { criarTransacao, listarTransacoesDaConta, listarTodasTransacoes } from './transacoesRepo'
 
 describe('repositório de transações', () => {
   beforeEach(async () => {
@@ -42,5 +42,14 @@ describe('repositório de transações', () => {
     const daConta1 = await listarTransacoesDaConta(1)
     expect(daConta1).toHaveLength(1)
     expect(daConta1[0].descricao).toBe('A')
+  })
+
+  it('lista transações de todas as contas juntas', async () => {
+    await criarTransacao({ contaId: 1, tipo: 'entrada', valor: 100, descricao: 'A', data: '2026-08-01' })
+    await criarTransacao({ contaId: 2, tipo: 'saida', valor: 30, descricao: 'B', data: '2026-08-02' })
+
+    const todas = await listarTodasTransacoes()
+    expect(todas).toHaveLength(2)
+    expect(todas.map((t) => t.descricao).sort()).toEqual(['A', 'B'])
   })
 })

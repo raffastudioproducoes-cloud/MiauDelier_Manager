@@ -1,0 +1,54 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { db } from '../../db/schema'
+import { setupAccount } from '../../lib/auth'
+import { criarConta } from '../financeiro/contasRepo'
+import { criarTransacao } from '../financeiro/transacoesRepo'
+import { criarMaterial } from '../producao/materiaisRepo'
+import { criarForma } from '../producao/formasRepo'
+import { criarPeca } from '../producao/pecasRepo'
+import { criarCliente } from '../vendas/clientesRepo'
+import { criarPedido } from '../vendas/pedidosRepo'
+import { obterResumoDashboard } from './dashboardRepo'
+
+describe('resumo do dashboard', () => {
+  beforeEach(async () => {
+    await db.delete()
+    await db.open()
+    await setupAccount('senha-do-ateliê')
+  })
+
+  it('agrega saldo, lucro do mês, peças, estoque baixo e pedidos abertos', async () => {
+    await criarConta({ nome: 'Caixa', saldoInicial: 500 })
+    await criarTransacao({ contaId: 1, tipo: 'entrada', valor: 200, descricao: 'Venda', data: new Date().toISOString() })
+    await criarTransacao({ contaId: 1, tipo: 'saida', valor: 50, descricao: 'Insumo', data: new Date().toISOString() })
+
+    const materialBaixo = await criarMaterial({ nome: 'Corante raro', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 5, custoUnitario: 1 })
+    await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 1000, custoUnitario: 0.15 })
+
+    const formaId = await criarForma({ nome: 'Chaveiro', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    await criarPeca({ nome: 'Chaveiro gato', formaId, consumos: [{ materialId: materialBaixo, quantidade: 1 }] })
+
+    const clienteId = await criarCliente({ nome: 'Joana' })
+    const pecas = await db.pecas.toArray()
+    await criarPedido({ clienteId, pecaIds: [pecas[0].id!] })
+
+    const resumo = await obterResumoDashboard()
+
+    expect(resumo.saldoTotal).toBe(650)
+    expect(resumo.lucroDoMes).toBe(150)
+    expect(resumo.materiaisEstoqueBaixo).toBe(1)
+    expect(resumo.pecasEmProducao).toBe(0)
+    expect(resumo.pedidosAbertos).toBe(1)
+    expect(resumo.eventosRecentes.length).toBeGreaterThan(0)
+    expect(resumo.eventosRecentes[0].nomePeca).toBe('Chaveiro gato')
+    expect(resumo.fluxoCaixa14Dias).toHaveLength(14)
+  })
+
+  it('devolve zeros sem quebrar quando não há dado nenhum', async () => {
+    const resumo = await obterResumoDashboard()
+    expect(resumo.saldoTotal).toBe(0)
+    expect(resumo.lucroDoMes).toBe(0)
+    expect(resumo.eventosRecentes).toEqual([])
+    expect(resumo.fluxoCaixa14Dias).toHaveLength(14)
+  })
+})

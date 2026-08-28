@@ -43,3 +43,17 @@ export async function listarTransacoesDaConta(contaId: number): Promise<Transaca
     })),
   )
 }
+
+export async function listarTodasTransacoes(): Promise<TransacaoDecifrada[]> {
+  const registros = await db.transacoes.toArray()
+  return Promise.all(
+    registros.map(async (registro) => ({
+      id: registro.id!,
+      contaId: registro.contaId,
+      tipo: registro.tipo,
+      valor: Number(await decifrarCampo(registro.valorCriptografado)),
+      descricao: registro.descricao,
+      data: registro.data,
+    })),
+  )
+}
