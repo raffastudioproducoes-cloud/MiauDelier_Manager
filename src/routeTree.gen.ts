@@ -15,6 +15,7 @@ import { Route as FormasRouteImport } from './routes/formas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as PecasRouteImport } from './routes/pecas'
+import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PrecificacaoRouteImport } from './routes/precificacao'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const PecasRoute = PecasRouteImport.update({
   path: '/pecas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PedidosRoute = PedidosRouteImport.update({
+  id: '/pedidos',
+  path: '/pedidos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrecificacaoRoute = PrecificacaoRouteImport.update({
   id: '/precificacao',
   path: '/precificacao',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRoute
+  '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRoute
+  '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRoute
+  '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/materiais'
     | '/pecas'
+    | '/pedidos'
     | '/precificacao'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/materiais'
     | '/pecas'
+    | '/pedidos'
     | '/precificacao'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/materiais'
     | '/pecas'
+    | '/pedidos'
     | '/precificacao'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MateriaisRoute: typeof MateriaisRoute
   PecasRoute: typeof PecasRoute
+  PedidosRoute: typeof PedidosRoute
   PrecificacaoRoute: typeof PrecificacaoRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PecasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pedidos': {
+      id: '/pedidos'
+      path: '/pedidos'
+      fullPath: '/pedidos'
+      preLoaderRoute: typeof PedidosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/precificacao': {
       id: '/precificacao'
       path: '/precificacao'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MateriaisRoute: MateriaisRoute,
   PecasRoute: PecasRoute,
+  PedidosRoute: PedidosRoute,
   PrecificacaoRoute: PrecificacaoRoute,
 }
 export const routeTree = rootRouteImport
