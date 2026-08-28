@@ -1,9 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { DashboardPage } from '../features/dashboard/DashboardPage'
 
 export const Route = createFileRoute('/')({
-  component: HomePage,
+  component: DashboardPage,
 })
-
-function HomePage() {
-  return <div>MiauDelier Manager</div>
-}
