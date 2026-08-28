@@ -29,22 +29,29 @@ export async function pedirDicaIA(pergunta: string): Promise<string> {
 
   const personalidade = await obterPersonalidade()
 
-  const resposta = await fetch(`${ENDPOINT_GEMINI}?key=${chave}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: `${INSTRUCAO_SISTEMA_FIXA} ${PROMPTS_PERSONALIDADE[personalidade]}` }],
-      },
-      contents: [{ parts: [{ text: pergunta }] }],
-    }),
-  })
+  let dados: any
+  try {
+    const resposta = await fetch(`${ENDPOINT_GEMINI}?key=${chave}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: `${INSTRUCAO_SISTEMA_FIXA} ${PROMPTS_PERSONALIDADE[personalidade]}` }],
+        },
+        contents: [{ parts: [{ text: pergunta }] }],
+      }),
+    })
 
-  if (!resposta.ok) {
+    if (!resposta.ok) {
+      throw new IaIndisponivelError('Não foi possível falar com o assistente agora.')
+    }
+
+    dados = await resposta.json()
+  } catch (falha) {
+    if (falha instanceof IaIndisponivelError) throw falha
     throw new IaIndisponivelError('Não foi possível falar com o assistente agora.')
   }
 
-  const dados = await resposta.json()
   const texto = dados.candidates?.[0]?.content?.parts?.[0]?.text
   if (!texto) {
     throw new IaIndisponivelError('Resposta inesperada do assistente.')

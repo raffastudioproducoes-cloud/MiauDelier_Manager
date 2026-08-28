@@ -55,4 +55,13 @@ describe('cliente Gemini', () => {
 
     await expect(pedirDicaIA('pergunta qualquer')).rejects.toThrow(IaIndisponivelError)
   })
+
+  it('lança IaIndisponivelError com mensagem em português quando fetch falha por erro de rede', async () => {
+    await definirChaveGemini('chave-de-teste')
+    vi.stubGlobal('navigator', { onLine: true })
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    await expect(pedirDicaIA('pergunta qualquer')).rejects.toThrow(IaIndisponivelError)
+    await expect(pedirDicaIA('pergunta qualquer')).rejects.toThrow('Não foi possível falar com o assistente agora.')
+  })
 })

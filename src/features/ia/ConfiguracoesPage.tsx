@@ -76,6 +76,7 @@ export function ConfiguracoesPage() {
           <form onSubmit={handleSalvarChave} className="flex flex-col gap-3">
             <p className="text-sm text-[var(--color-ink-muted)]">
               Cole abaixo a chave de API do Gemini (gratuita). Essa chave é cifrada e só pode ser definida uma vez.
+              Confira a chave com atenção antes de salvar — depois de configurada, não é possível trocar por aqui. Se errar, a única saída é limpar o app ou restaurar um backup anterior.
             </p>
             <TextField id="chave-gemini" rotulo="Chave de API do Gemini" type="password" value={chaveDigitada} onChange={(e) => setChaveDigitada(e.target.value)} />
             <Button type="submit">Salvar chave</Button>
