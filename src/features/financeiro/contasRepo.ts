@@ -21,11 +21,18 @@ export async function criarConta(nova: NovaConta): Promise<number> {
 export async function listarContas(): Promise<ContaDecifrada[]> {
   const registros = await db.contas.toArray()
   return Promise.all(
-    registros.map(async (registro) => ({
-      id: registro.id as number,
-      nome: registro.nome,
-      saldo: Number(await decifrarCampo(registro.saldoCriptografado)),
-    })),
+    registros.map(async (registro) => {
+      const id = registro.id as number
+      const saldoInicial = Number(await decifrarCampo(registro.saldoCriptografado))
+      // Acesso direto à tabela (em vez de importar transacoesRepo) evita import circular.
+      const transacoes = await db.transacoes.where('contaId').equals(id).toArray()
+      let movimento = 0
+      for (const transacao of transacoes) {
+        const valor = Number(await decifrarCampo(transacao.valorCriptografado))
+        movimento += transacao.tipo === 'entrada' ? valor : -valor
+      }
+      return { id, nome: registro.nome, saldo: saldoInicial + movimento }
+    }),
   )
 }
 
