@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -10,6 +10,14 @@ export function BackupPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null)
   const inputArquivoRef = useRef<HTMLInputElement>(null)
+  const montado = useRef(true)
+
+  useEffect(() => {
+    montado.current = true
+    return () => {
+      montado.current = false
+    }
+  }, [])
 
   async function handleExportar() {
     try {
@@ -19,8 +27,10 @@ export function BackupPage() {
       const link = document.createElement('a')
       link.href = url
       link.download = `miaudelier-backup-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
       link.click()
-      URL.revokeObjectURL(url)
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 0)
       mostrarToast('Backup exportado com sucesso')
     } catch (falha) {
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao exportar backup.', 'erro')
@@ -46,9 +56,10 @@ export function BackupPage() {
       await importarBackup(conteudo)
       mostrarToast('Backup importado. Faça login novamente.')
     } catch (falha) {
+      if (!montado.current) return
       setErro(falha instanceof Error ? falha.message : 'Arquivo de backup inválido.')
     } finally {
-      limparSelecao()
+      if (montado.current) limparSelecao()
     }
   }
 
