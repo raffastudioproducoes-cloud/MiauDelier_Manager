@@ -36,7 +36,10 @@ export function PecasPage() {
 
   useEffect(() => {
     montado.current = true
-    recarregar().catch(() => {})
+    recarregar().catch((falha) => {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar peças.', 'erro')
+    })
     return () => {
       montado.current = false
     }
