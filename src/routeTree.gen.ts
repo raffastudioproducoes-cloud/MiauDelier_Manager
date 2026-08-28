@@ -18,6 +18,7 @@ import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as PecasRouteImport } from './routes/pecas'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PrecificacaoRouteImport } from './routes/precificacao'
+import { Route as TransacoesRouteImport } from './routes/transacoes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +65,11 @@ const PrecificacaoRoute = PrecificacaoRouteImport.update({
   path: '/precificacao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransacoesRoute = TransacoesRouteImport.update({
+  id: '/transacoes',
+  path: '/transacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/pecas': typeof PecasRoute
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
+  '/transacoes': typeof TransacoesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/pecas': typeof PecasRoute
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
+  '/transacoes': typeof TransacoesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/pecas': typeof PecasRoute
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
+  '/transacoes': typeof TransacoesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/pecas'
     | '/pedidos'
     | '/precificacao'
+    | '/transacoes'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/pecas'
     | '/pedidos'
     | '/precificacao'
+    | '/transacoes'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/pecas'
     | '/pedidos'
     | '/precificacao'
+    | '/transacoes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   PecasRoute: typeof PecasRoute
   PedidosRoute: typeof PedidosRoute
   PrecificacaoRoute: typeof PrecificacaoRoute
+  TransacoesRoute: typeof TransacoesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrecificacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/transacoes': {
+      id: '/transacoes'
+      path: '/transacoes'
+      fullPath: '/transacoes'
+      preLoaderRoute: typeof TransacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +245,7 @@ const rootRouteChildren: RootRouteChildren = {
   PecasRoute: PecasRoute,
   PedidosRoute: PedidosRoute,
   PrecificacaoRoute: PrecificacaoRoute,
+  TransacoesRoute: TransacoesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
