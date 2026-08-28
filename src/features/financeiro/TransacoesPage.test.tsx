@@ -26,6 +26,20 @@ describe('TransacoesPage', () => {
     await waitFor(() => expect(screen.getByText('Venda de chaveiro')).toBeInTheDocument())
   })
 
+  it('mostra as movimentações da conta selecionada, não sempre as da primeira', async () => {
+    const segundaConta = await criarConta({ nome: 'Banco', saldoInicial: 0 })
+    render(<ToastProvider><TransacoesPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/^conta$/i), { target: { value: String(segundaConta) } })
+    fireEvent.change(screen.getByLabelText(/^tipo$/i), { target: { value: 'entrada' } })
+    fireEvent.change(screen.getByLabelText(/valor/i), { target: { value: '80' } })
+    fireEvent.change(screen.getByLabelText(/descrição/i), { target: { value: 'Pix recebido' } })
+    fireEvent.click(screen.getByRole('button', { name: /registrar transação/i }))
+
+    await waitFor(() => expect(screen.getByText('Pix recebido')).toBeInTheDocument())
+    expect(screen.getByText(/movimentações de banco/i)).toBeInTheDocument()
+  })
+
   it('desabilita o registro quando não há conta cadastrada', async () => {
     await db.contas.clear()
     render(<ToastProvider><TransacoesPage /></ToastProvider>)

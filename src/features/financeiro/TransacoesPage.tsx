@@ -26,15 +26,21 @@ export function TransacoesPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [carregado, setCarregado] = useState(false)
 
+  async function carregarTransacoes(idDaConta: string) {
+    if (!idDaConta) {
+      setTransacoes([])
+      return
+    }
+    const listaTransacoes = await listarTransacoesDaConta(Number(idDaConta))
+    if (!montado.current) return
+    setTransacoes(listaTransacoes)
+  }
+
   async function recarregar() {
     const listaContas = await listarContas()
     if (!montado.current) return
     setContas(listaContas)
-    if (listaContas[0]) {
-      const listaTransacoes = await listarTransacoesDaConta(listaContas[0].id)
-      if (!montado.current) return
-      setTransacoes(listaTransacoes)
-    }
+    await carregarTransacoes(contaId)
   }
 
   useEffect(() => {
@@ -55,7 +61,16 @@ export function TransacoesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    carregarTransacoes(contaId).catch((falha) => {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar transações.', 'erro')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contaId])
+
   const faltaConta = contas.length === 0
+  const contaSelecionada = contas.find((conta) => conta.id === Number(contaId))
 
   if (!carregado) {
     return null
@@ -124,6 +139,12 @@ export function TransacoesPage() {
           <Button type="submit" disabled={faltaConta || !contaId}>Registrar transação</Button>
         </form>
       </Card>
+
+      {contaSelecionada && (
+        <h2 className="text-sm font-medium text-[var(--color-ink-muted)]">
+          Movimentações de {contaSelecionada.nome}
+        </h2>
+      )}
 
       {transacoes.length === 0 ? (
         <EmptyState titulo="Nenhuma transação registrada" descricao="Registre a primeira movimentação da conta." />
