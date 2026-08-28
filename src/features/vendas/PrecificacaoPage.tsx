@@ -11,9 +11,9 @@ export function PrecificacaoPage() {
   const [rateioFixoPercent, setRateioFixoPercent] = useState('')
   const [margemLucroPercent, setMargemLucroPercent] = useState('')
 
-  const resultado = useMemo(() => {
+  const { resultado, erroValidacao } = useMemo(() => {
     try {
-      return calcularPrecificacao({
+      const calculado = calcularPrecificacao({
         custoMaterial: Number(custoMaterial) || 0,
         custoAcessorios: Number(custoAcessorios) || 0,
         horasProducao: Number(horasProducao) || 0,
@@ -21,8 +21,9 @@ export function PrecificacaoPage() {
         rateioFixoPercent: Number(rateioFixoPercent) || 0,
         margemLucroPercent: Number(margemLucroPercent) || 0,
       })
-    } catch {
-      return null
+      return { resultado: calculado, erroValidacao: null }
+    } catch (falha) {
+      return { resultado: null, erroValidacao: falha instanceof Error ? falha.message : 'Dados inválidos.' }
     }
   }, [custoMaterial, custoAcessorios, horasProducao, valorHora, rateioFixoPercent, margemLucroPercent])
 
@@ -43,6 +44,9 @@ export function PrecificacaoPage() {
           <TextField id="margem-lucro" rotulo="Margem de lucro (%)" type="number" value={margemLucroPercent} onChange={(e) => setMargemLucroPercent(e.target.value)} />
         </div>
         <p className="mt-4 text-lg font-semibold text-[var(--color-accent)]">Preço final: {precoFormatado}</p>
+        {erroValidacao && (
+          <p role="alert" className="text-sm text-[var(--color-danger)]">{erroValidacao}</p>
+        )}
       </Card>
     </div>
   )
