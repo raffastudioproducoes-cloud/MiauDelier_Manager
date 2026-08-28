@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
 import { exportarBackup, importarBackup } from '../../lib/backup'
 
 export function BackupPage() {
   const { mostrarToast } = useToast()
   const [erro, setErro] = useState<string | null>(null)
+  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null)
   const inputArquivoRef = useRef<HTMLInputElement>(null)
 
   async function handleExportar() {
@@ -25,19 +27,28 @@ export function BackupPage() {
     }
   }
 
-  async function handleImportar(evento: React.ChangeEvent<HTMLInputElement>) {
+  function handleSelecionarArquivo(evento: React.ChangeEvent<HTMLInputElement>) {
     setErro(null)
     const arquivo = evento.target.files?.[0]
     if (!arquivo) return
+    setArquivoSelecionado(arquivo)
+  }
 
+  function limparSelecao() {
+    setArquivoSelecionado(null)
+    if (inputArquivoRef.current) inputArquivoRef.current.value = ''
+  }
+
+  async function handleConfirmarImportacao() {
+    if (!arquivoSelecionado) return
     try {
-      const conteudo = await arquivo.text()
+      const conteudo = await arquivoSelecionado.text()
       await importarBackup(conteudo)
       mostrarToast('Backup importado. Faça login novamente.')
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : 'Arquivo de backup inválido.')
     } finally {
-      if (inputArquivoRef.current) inputArquivoRef.current.value = ''
+      limparSelecao()
     }
   }
 
@@ -62,11 +73,19 @@ export function BackupPage() {
           ref={inputArquivoRef}
           type="file"
           accept="application/json"
-          onChange={handleImportar}
+          onChange={handleSelecionarArquivo}
           className="mt-1"
         />
         {erro && <p role="alert" className="mt-2 text-sm text-[var(--color-danger)]">{erro}</p>}
       </Card>
+
+      <ConfirmModal
+        aberto={arquivoSelecionado !== null}
+        titulo="Importar backup?"
+        descricao="Importar este arquivo substitui todos os dados atuais e encerra sua sessão. Você precisará entrar de novo com a senha do backup. Essa ação não pode ser desfeita."
+        onConfirmar={handleConfirmarImportacao}
+        onCancelar={limparSelecao}
+      />
     </div>
   )
 }

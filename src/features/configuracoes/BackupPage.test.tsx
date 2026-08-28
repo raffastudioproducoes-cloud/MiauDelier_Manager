@@ -30,6 +30,8 @@ describe('BackupPage', () => {
     const input = screen.getByLabelText(/importar backup/i) as HTMLInputElement
     await fireEvent.change(input, { target: { files: [arquivo] } })
 
+    fireEvent.click(await screen.findByRole('button', { name: /confirmar/i }))
+
     expect(await screen.findByRole('alert')).toBeInTheDocument()
   })
 })
