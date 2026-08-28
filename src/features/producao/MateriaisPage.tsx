@@ -38,7 +38,7 @@ export function MateriaisPage() {
 
   useEffect(() => {
     montado.current = true
-    recarregar()
+    recarregar().catch(() => {})
     return () => {
       montado.current = false
     }
