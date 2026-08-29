@@ -10,6 +10,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 const { DashboardPage } = await import('./DashboardPage')
+const dashboardRepo = await import('./dashboardRepo')
 
 describe('DashboardPage', () => {
   beforeEach(async () => {
@@ -36,5 +37,20 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('button', { name: /novo pedido/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /novo material/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /nova transação/i })).toBeInTheDocument()
+  })
+
+  it('mostra mensagem de erro persistente em vez de zeros quando a carga falha', async () => {
+    const spy = vi
+      .spyOn(dashboardRepo, 'obterResumoDashboard')
+      .mockRejectedValueOnce(new Error('Sessão expirada'))
+
+    render(<ToastProvider><DashboardPage /></ToastProvider>)
+
+    await waitFor(() =>
+      expect(screen.getByText(/não foi possível carregar o resumo/i)).toBeInTheDocument(),
+    )
+    expect(screen.queryByText('R$ 0,00')).not.toBeInTheDocument()
+
+    spy.mockRestore()
   })
 })
