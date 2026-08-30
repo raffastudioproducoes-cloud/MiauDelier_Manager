@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { criarPedido, listarPedidos, type PedidoComCliente } from './pedidosRepo'
+import { criarPedido, listarPedidos, excluirPedido, listarPecaIdsJaVinculadas, type PedidoComCliente } from './pedidosRepo'
 import { listarClientes, type ClienteDecifrado } from './clientesRepo'
 import { listarPecas, type PecaComForma } from '../producao/pecasRepo'
 
@@ -14,20 +16,24 @@ export function PedidosPage() {
   const [pedidos, setPedidos] = useState<PedidoComCliente[]>([])
   const [clientes, setClientes] = useState<ClienteDecifrado[]>([])
   const [pecas, setPecas] = useState<PecaComForma[]>([])
+  const [pecaIdsVinculadas, setPecaIdsVinculadas] = useState<number[]>([])
   const [clienteId, setClienteId] = useState('')
   const [pecaIdsSelecionadas, setPecaIdsSelecionadas] = useState<number[]>([])
   const [carregado, setCarregado] = useState(false)
+  const [pedidoExcluindoId, setPedidoExcluindoId] = useState<number | null>(null)
 
   async function recarregar() {
-    const [listaPedidos, listaClientes, listaPecas] = await Promise.all([
+    const [listaPedidos, listaClientes, listaPecas, vinculadas] = await Promise.all([
       listarPedidos(),
       listarClientes(),
       listarPecas(),
+      listarPecaIdsJaVinculadas(),
     ])
     if (!montado.current) return
     setPedidos(listaPedidos)
     setClientes(listaClientes)
     setPecas(listaPecas)
+    setPecaIdsVinculadas(vinculadas)
   }
 
   useEffect(() => {
@@ -54,7 +60,8 @@ export function PedidosPage() {
     )
   }
 
-  const faltamPreRequisitos = clientes.length === 0 || pecas.length === 0
+  const pecasDisponiveis = pecas.filter((peca) => !pecaIdsVinculadas.includes(peca.id!))
+  const faltamPreRequisitos = clientes.length === 0 || pecasDisponiveis.length === 0
 
   async function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
@@ -63,6 +70,10 @@ export function PedidosPage() {
     const clienteIdNumero = Number(clienteId)
     const pecaIdsEnviadas = pecaIdsSelecionadas
     const nomeCliente = clientes.find((cliente) => cliente.id === clienteIdNumero)?.nome ?? '—'
+    const valorTotal = pecaIdsEnviadas.reduce((soma, pecaId) => {
+      const peca = pecas.find((p) => p.id === pecaId)
+      return soma + (peca?.precoVenda ?? 0)
+    }, 0)
     // Atualização otimista: exibe o pedido imediatamente, antes da escrita no banco,
     // para não depender do tempo de resposta assíncrono do IndexedDB na renderização.
     const pedidoOtimista: PedidoComCliente = {
@@ -72,8 +83,10 @@ export function PedidosPage() {
       status: 'aberto',
       criadoEm: new Date().toISOString(),
       nomeCliente,
+      valorTotal,
     }
     setPedidos((atual) => [...atual, pedidoOtimista])
+    setPecaIdsVinculadas((atual) => [...atual, ...pecaIdsEnviadas])
     setClienteId('')
     setPecaIdsSelecionadas([])
 
@@ -85,8 +98,23 @@ export function PedidosPage() {
     } catch (falha) {
       if (!montado.current) return
       setPedidos((atual) => atual.filter((pedido) => pedido !== pedidoOtimista))
+      setPecaIdsVinculadas((atual) => atual.filter((id) => !pecaIdsEnviadas.includes(id)))
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao criar pedido.', 'erro')
     }
+  }
+
+  async function handleExcluir(pedidoId: number) {
+    try {
+      await excluirPedido(pedidoId)
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao excluir pedido.', 'erro')
+      return
+    }
+    if (!montado.current) return
+    mostrarToast('Pedido excluído com sucesso')
+    setPedidoExcluindoId(null)
+    await recarregar()
   }
 
   if (!carregado) {
@@ -119,7 +147,7 @@ export function PedidosPage() {
           </select>
 
           <p className="text-sm font-medium">Peças</p>
-          {pecas.map((peca) => (
+          {pecasDisponiveis.map((peca) => (
             <label key={peca.id} className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -142,12 +170,28 @@ export function PedidosPage() {
         <ul className="flex flex-col gap-2">
           {pedidos.map((pedido) => (
             <Card key={pedido.id} className="flex items-center justify-between">
-              <p className="font-medium">Cliente: {pedido.nomeCliente}</p>
-              <Badge variant="neutral">{pedido.status}</Badge>
+              <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }} className="flex-1">
+                <p className="font-medium">Cliente: {pedido.nomeCliente}</p>
+                <p className="text-sm text-[var(--color-ink-muted)]">
+                  R$ {pedido.valorTotal.toFixed(2)}
+                </p>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Badge variant="neutral">{pedido.status}</Badge>
+                <Button variante="ghost" onClick={() => setPedidoExcluindoId(pedido.id ?? null)}>Excluir</Button>
+              </div>
             </Card>
           ))}
         </ul>
       )}
+
+      <ConfirmModal
+        aberto={pedidoExcluindoId !== null}
+        titulo="Excluir pedido?"
+        descricao="As peças vinculadas continuam marcadas como já vinculadas a um pedido."
+        onConfirmar={() => pedidoExcluindoId !== null && handleExcluir(pedidoExcluindoId)}
+        onCancelar={() => setPedidoExcluindoId(null)}
+      />
     </div>
   )
 }

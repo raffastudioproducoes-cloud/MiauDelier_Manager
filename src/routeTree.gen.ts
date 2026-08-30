@@ -23,6 +23,7 @@ import { Route as PrecificacaoRouteImport } from './routes/precificacao'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
 import { Route as ClientesClienteIdRouteImport } from './routes/clientes.$clienteId'
 import { Route as PecasPecaIdRouteImport } from './routes/pecas.$pecaId'
+import { Route as PedidosPedidoIdRouteImport } from './routes/pedidos.$pedidoId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -94,6 +95,11 @@ const PecasPecaIdRoute = PecasPecaIdRouteImport.update({
   path: '/$pecaId',
   getParentRoute: () => PecasRoute,
 } as any)
+const PedidosPedidoIdRoute = PedidosPedidoIdRouteImport.update({
+  id: '/$pedidoId',
+  path: '/$pedidoId',
+  getParentRoute: () => PedidosRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -105,11 +111,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
-  '/pedidos': typeof PedidosRoute
+  '/pedidos': typeof PedidosRouteWithChildren
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
+  '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -121,11 +128,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
-  '/pedidos': typeof PedidosRoute
+  '/pedidos': typeof PedidosRouteWithChildren
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
+  '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -138,11 +146,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
-  '/pedidos': typeof PedidosRoute
+  '/pedidos': typeof PedidosRouteWithChildren
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
+  '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
+    | '/pedidos/$pedidoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
+    | '/pedidos/$pedidoId'
   id:
     | '__root__'
     | '/'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
+    | '/pedidos/$pedidoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -205,7 +217,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MateriaisRoute: typeof MateriaisRoute
   PecasRoute: typeof PecasRouteWithChildren
-  PedidosRoute: typeof PedidosRoute
+  PedidosRoute: typeof PedidosRouteWithChildren
   PrecificacaoRoute: typeof PrecificacaoRoute
   TransacoesRoute: typeof TransacoesRoute
 }
@@ -310,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PecasPecaIdRouteImport
       parentRoute: typeof PecasRoute
     }
+    '/pedidos/$pedidoId': {
+      id: '/pedidos/$pedidoId'
+      path: '/$pedidoId'
+      fullPath: '/pedidos/$pedidoId'
+      preLoaderRoute: typeof PedidosPedidoIdRouteImport
+      parentRoute: typeof PedidosRoute
+    }
   }
 }
 
@@ -335,6 +354,17 @@ const PecasRouteChildren: PecasRouteChildren = {
 
 const PecasRouteWithChildren = PecasRoute._addFileChildren(PecasRouteChildren)
 
+interface PedidosRouteChildren {
+  PedidosPedidoIdRoute: typeof PedidosPedidoIdRoute
+}
+
+const PedidosRouteChildren: PedidosRouteChildren = {
+  PedidosPedidoIdRoute: PedidosPedidoIdRoute,
+}
+
+const PedidosRouteWithChildren =
+  PedidosRoute._addFileChildren(PedidosRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BackupRoute: BackupRoute,
@@ -345,7 +375,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MateriaisRoute: MateriaisRoute,
   PecasRoute: PecasRouteWithChildren,
-  PedidosRoute: PedidosRoute,
+  PedidosRoute: PedidosRouteWithChildren,
   PrecificacaoRoute: PrecificacaoRoute,
   TransacoesRoute: TransacoesRoute,
 }

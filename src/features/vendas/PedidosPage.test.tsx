@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
@@ -6,8 +6,16 @@ import { criarCliente } from './clientesRepo'
 import { criarForma } from '../producao/formasRepo'
 import { criarMaterial } from '../producao/materiaisRepo'
 import { criarPeca } from '../producao/pecasRepo'
+import { atualizarPrecoVendaPeca } from '../producao/pecasRepo'
 import { ToastProvider } from '../../components/ui/ToastProvider'
-import { PedidosPage } from './PedidosPage'
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to, params, ...props }: { children: React.ReactNode; to: string; params?: Record<string, string> }) => (
+    <a href={to.replace('$pedidoId', params?.pedidoId ?? '')} {...props}>{children}</a>
+  ),
+}))
+
+const { PedidosPage } = await import('./PedidosPage')
 
 describe('PedidosPage', () => {
   beforeEach(async () => {
@@ -37,5 +45,17 @@ describe('PedidosPage', () => {
 
     expect(await screen.findByText(/cadastre pelo menos um cliente/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /criar pedido/i })).toBeDisabled()
+  })
+
+  it('não mostra peça já vinculada a outro pedido no checklist e exibe o valor total', async () => {
+    await atualizarPrecoVendaPeca(1, 50)
+    render(<ToastProvider><PedidosPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/^cliente$/i), { target: { value: '1' } })
+    fireEvent.click(screen.getByLabelText(/chaveiro gato/i))
+    fireEvent.click(screen.getByRole('button', { name: /criar pedido/i }))
+
+    await waitFor(() => expect(screen.getByText(/R\$ 50\.00/)).toBeInTheDocument())
+    expect(screen.queryByLabelText(/chaveiro gato/i)).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
-import { criarPedido, listarPedidos, atualizarStatusPedido } from './pedidosRepo'
+import {
+  criarPedido,
+  listarPedidos,
+  atualizarStatusPedido,
+  listarPecaIdsJaVinculadas,
+  excluirPedido,
+} from './pedidosRepo'
 
 describe('repositório de pedidos', () => {
   beforeEach(async () => {
@@ -25,5 +31,31 @@ describe('repositório de pedidos', () => {
 
     const pedidos = await listarPedidos()
     expect(pedidos[0].status).toBe('entregue')
+  })
+
+  it('lista peças já vinculadas a algum pedido', async () => {
+    await criarPedido({ clienteId: 1, pecaIds: [1] })
+    const vinculadas = await listarPecaIdsJaVinculadas()
+    expect(vinculadas).toContain(1)
+    expect(vinculadas).not.toContain(2)
+  })
+
+  it('calcula valorTotal do pedido a partir do precoVenda das peças', async () => {
+    await db.formas.add({ nome: 'Vaso', geometria: 'direto', dimensoesCm: {} })
+    await db.pecas.add({ nome: 'Peça A', formaId: 1, status: 'pronta', criadaEm: new Date().toISOString(), precoVenda: 50 })
+    await db.pecas.add({ nome: 'Peça B', formaId: 1, status: 'pronta', criadaEm: new Date().toISOString(), precoVenda: 30 })
+
+    await criarPedido({ clienteId: 1, pecaIds: [1, 2] })
+
+    const pedidos = await listarPedidos()
+    expect(pedidos[0].valorTotal).toBe(80)
+  })
+
+  it('exclui um pedido', async () => {
+    const id = await criarPedido({ clienteId: 1, pecaIds: [1] })
+    await excluirPedido(id)
+
+    const pedidos = await listarPedidos()
+    expect(pedidos).toHaveLength(0)
   })
 })
