@@ -4,9 +4,16 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
 import { criarCategoriaMaterial, listarCategoriasMaterial } from './categoriasMaterialRepo'
-import { criarMaterial, listarMateriais } from './materiaisRepo'
+import {
+  criarMaterial,
+  listarMateriais,
+  atualizarMaterial,
+  reporEstoqueMaterial,
+  excluirMaterial,
+} from './materiaisRepo'
 import type { CategoriaMaterial, Material } from '../../db/schema'
 
 const schemaMaterial = z.object({
@@ -16,6 +23,12 @@ const schemaMaterial = z.object({
   custoUnitario: z.number().finite().min(0, 'Custo unitário não pode ser negativo'),
 })
 
+const NOVA_CATEGORIA = '__nova__'
+
+function formatarMoeda(valor: number): string {
+  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
 export function MateriaisPage() {
   const { mostrarToast } = useToast()
   const [categorias, setCategorias] = useState<CategoriaMaterial[]>([])
@@ -24,7 +37,13 @@ export function MateriaisPage() {
   const [unidade, setUnidade] = useState('')
   const [quantidadeEstoque, setQuantidadeEstoque] = useState('')
   const [custoUnitario, setCustoUnitario] = useState('')
+  const [categoriaId, setCategoriaId] = useState<string>('')
+  const [novaCategoriaNome, setNovaCategoriaNome] = useState('')
   const [erro, setErro] = useState<string | null>(null)
+  const [materialEmEdicaoId, setMaterialEmEdicaoId] = useState<number | null>(null)
+  const [materialRepondoId, setMaterialRepondoId] = useState<number | null>(null)
+  const [quantidadeReposicao, setQuantidadeReposicao] = useState('')
+  const [materialExcluindoId, setMaterialExcluindoId] = useState<number | null>(null)
 
   const montado = useRef(true)
 
@@ -47,6 +66,26 @@ export function MateriaisPage() {
     }
   }, [])
 
+  function limparFormulario() {
+    setNome('')
+    setUnidade('')
+    setQuantidadeEstoque('')
+    setCustoUnitario('')
+    setCategoriaId('')
+    setNovaCategoriaNome('')
+    setMaterialEmEdicaoId(null)
+  }
+
+  function iniciarEdicao(material: Material) {
+    setMaterialEmEdicaoId(material.id ?? null)
+    setNome(material.nome)
+    setUnidade(material.unidade)
+    setQuantidadeEstoque(String(material.quantidadeEstoque))
+    setCustoUnitario(String(material.custoUnitario))
+    setCategoriaId(String(material.categoriaId))
+    setNovaCategoriaNome('')
+  }
+
   async function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
     setErro(null)
@@ -64,21 +103,72 @@ export function MateriaisPage() {
     }
 
     try {
-      let categoriaId = categorias[0]?.id
-      if (!categoriaId) categoriaId = await criarCategoriaMaterial('Geral')
-      await criarMaterial({ ...resultado.data, categoriaId })
+      let categoriaIdFinal: number | undefined
+      if (categoriaId === NOVA_CATEGORIA) {
+        if (!novaCategoriaNome.trim()) {
+          setErro('Informe o nome da nova categoria')
+          return
+        }
+        categoriaIdFinal = await criarCategoriaMaterial(novaCategoriaNome.trim())
+      } else if (categoriaId) {
+        categoriaIdFinal = Number(categoriaId)
+      } else {
+        categoriaIdFinal = categorias[0]?.id
+        if (!categoriaIdFinal) categoriaIdFinal = await criarCategoriaMaterial('Geral')
+      }
+
+      if (materialEmEdicaoId !== null) {
+        await atualizarMaterial(materialEmEdicaoId, { ...resultado.data, categoriaId: categoriaIdFinal })
+      } else {
+        await criarMaterial({ ...resultado.data, categoriaId: categoriaIdFinal })
+      }
     } catch (falha) {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao salvar.', 'erro')
       return
     }
     if (!montado.current) return
-    mostrarToast('Material cadastrado com sucesso')
-    setNome('')
-    setUnidade('')
-    setQuantidadeEstoque('')
-    setCustoUnitario('')
+    mostrarToast(materialEmEdicaoId !== null ? 'Material atualizado com sucesso' : 'Material cadastrado com sucesso')
+    limparFormulario()
     await recarregar()
+  }
+
+  async function handleReporEstoque(materialId: number) {
+    const quantidade = Number(quantidadeReposicao)
+    if (!Number.isFinite(quantidade) || quantidade <= 0) {
+      mostrarToast('Informe uma quantidade válida para adicionar', 'erro')
+      return
+    }
+    try {
+      await reporEstoqueMaterial(materialId, quantidade)
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao repor estoque.', 'erro')
+      return
+    }
+    if (!montado.current) return
+    mostrarToast('Estoque reposto com sucesso')
+    setMaterialRepondoId(null)
+    setQuantidadeReposicao('')
+    await recarregar()
+  }
+
+  async function handleExcluir(materialId: number) {
+    try {
+      await excluirMaterial(materialId)
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao excluir material.', 'erro')
+      return
+    }
+    if (!montado.current) return
+    mostrarToast('Material excluído com sucesso')
+    setMaterialExcluindoId(null)
+    await recarregar()
+  }
+
+  function nomeCategoria(id: number): string {
+    return categorias.find((categoria) => categoria.id === id)?.nome ?? 'Sem categoria'
   }
 
   return (
@@ -90,8 +180,36 @@ export function MateriaisPage() {
           <TextField id="unidade-material" rotulo="Unidade" value={unidade} onChange={(e) => setUnidade(e.target.value)} />
           <TextField id="quantidade-material" rotulo="Quantidade em estoque" type="number" value={quantidadeEstoque} onChange={(e) => setQuantidadeEstoque(e.target.value)} />
           <TextField id="custo-material" rotulo="Custo unitário" type="number" step="0.01" value={custoUnitario} onChange={(e) => setCustoUnitario(e.target.value)} />
+
+          <label htmlFor="categoria-material" className="text-sm font-medium text-[var(--color-ink)]">Categoria</label>
+          <select
+            id="categoria-material"
+            value={categoriaId}
+            onChange={(e) => setCategoriaId(e.target.value)}
+            className="rounded-lg px-3 py-2 elevation-inset"
+          >
+            <option value="">Selecione</option>
+            {categorias.map((categoria) => (
+              <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>
+            ))}
+            <option value={NOVA_CATEGORIA}>+ Nova categoria</option>
+          </select>
+          {categoriaId === NOVA_CATEGORIA && (
+            <TextField
+              id="nova-categoria-material"
+              rotulo="Nome da nova categoria"
+              value={novaCategoriaNome}
+              onChange={(e) => setNovaCategoriaNome(e.target.value)}
+            />
+          )}
+
           {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{erro}</p>}
-          <Button type="submit">Cadastrar material</Button>
+          <div className="flex gap-2">
+            <Button type="submit">{materialEmEdicaoId !== null ? 'Salvar' : 'Cadastrar material'}</Button>
+            {materialEmEdicaoId !== null && (
+              <Button type="button" variante="ghost" onClick={limparFormulario}>Cancelar edição</Button>
+            )}
+          </div>
         </form>
       </Card>
 
@@ -102,11 +220,38 @@ export function MateriaisPage() {
           {materiais.map((material) => (
             <Card key={material.id}>
               <p className="font-medium">{material.nome}</p>
-              <p className="text-sm text-[var(--color-ink-muted)]">{material.quantidadeEstoque} {material.unidade} em estoque</p>
+              <p className="text-sm text-[var(--color-ink-muted)]">
+                {material.quantidadeEstoque} {material.unidade} em estoque · {formatarMoeda(material.custoUnitario)} · {nomeCategoria(material.categoriaId)}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button variante="ghost" onClick={() => iniciarEdicao(material)}>Editar</Button>
+                <Button variante="ghost" onClick={() => setMaterialRepondoId(material.id ?? null)}>Repor estoque</Button>
+                <Button variante="ghost" onClick={() => setMaterialExcluindoId(material.id ?? null)}>Excluir</Button>
+              </div>
+              {materialRepondoId === material.id && (
+                <div className="mt-2 flex items-end gap-2">
+                  <TextField
+                    id={`reposicao-${material.id}`}
+                    rotulo="Quantidade a adicionar"
+                    type="number"
+                    value={quantidadeReposicao}
+                    onChange={(e) => setQuantidadeReposicao(e.target.value)}
+                  />
+                  <Button onClick={() => material.id !== undefined && handleReporEstoque(material.id)}>Adicionar</Button>
+                </div>
+              )}
             </Card>
           ))}
         </ul>
       )}
+
+      <ConfirmModal
+        aberto={materialExcluindoId !== null}
+        titulo="Excluir material?"
+        descricao="Isso não afeta peças já criadas com este material."
+        onConfirmar={() => materialExcluindoId !== null && handleExcluir(materialExcluindoId)}
+        onCancelar={() => setMaterialExcluindoId(null)}
+      />
     </div>
   )
 }
