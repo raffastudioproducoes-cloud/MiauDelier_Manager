@@ -1,5 +1,11 @@
 import { db, type Peca, type EventoPeca } from '../../db/schema'
 
+export interface ConsumoComMaterial {
+  materialId: number
+  quantidade: number
+  nomeMaterial: string
+}
+
 export interface NovoConsumo {
   materialId: number
   quantidade: number
@@ -66,4 +72,29 @@ export async function listarPecas(): Promise<PecaComForma[]> {
 
 export async function listarEventosDaPeca(pecaId: number): Promise<EventoPeca[]> {
   return db.eventosPeca.where('pecaId').equals(pecaId).toArray()
+}
+
+export async function listarConsumosDaPeca(pecaId: number): Promise<ConsumoComMaterial[]> {
+  const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
+  return Promise.all(
+    consumos.map(async (consumo) => {
+      const material = await db.materiais.get(consumo.materialId)
+      return { materialId: consumo.materialId, quantidade: consumo.quantidade, nomeMaterial: material?.nome ?? '—' }
+    }),
+  )
+}
+
+export async function excluirPeca(pecaId: number): Promise<void> {
+  await db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, async () => {
+    const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
+    for (const consumo of consumos) {
+      const material = await db.materiais.get(consumo.materialId)
+      if (material) {
+        await db.materiais.update(consumo.materialId, { quantidadeEstoque: material.quantidadeEstoque + consumo.quantidade })
+      }
+    }
+    await db.consumosPeca.where('pecaId').equals(pecaId).delete()
+    await db.eventosPeca.where('pecaId').equals(pecaId).delete()
+    await db.pecas.delete(pecaId)
+  })
 }

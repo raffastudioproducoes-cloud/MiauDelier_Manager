@@ -21,6 +21,7 @@ import { Route as PecasRouteImport } from './routes/pecas'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PrecificacaoRouteImport } from './routes/precificacao'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
+import { Route as PecasPecaIdRouteImport } from './routes/pecas.$pecaId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -82,6 +83,11 @@ const TransacoesRoute = TransacoesRouteImport.update({
   path: '/transacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PecasPecaIdRoute = PecasPecaIdRouteImport.update({
+  id: '/$pecaId',
+  path: '/$pecaId',
+  getParentRoute: () => PecasRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -92,10 +98,11 @@ export interface FileRoutesByFullPath {
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
-  '/pecas': typeof PecasRoute
+  '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
+  '/pecas/$pecaId': typeof PecasPecaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -106,10 +113,11 @@ export interface FileRoutesByTo {
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
-  '/pecas': typeof PecasRoute
+  '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
+  '/pecas/$pecaId': typeof PecasPecaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -121,10 +129,11 @@ export interface FileRoutesById {
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/materiais': typeof MateriaisRoute
-  '/pecas': typeof PecasRoute
+  '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
+  '/pecas/$pecaId': typeof PecasPecaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/precificacao'
     | '/transacoes'
+    | '/pecas/$pecaId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/precificacao'
     | '/transacoes'
+    | '/pecas/$pecaId'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/precificacao'
     | '/transacoes'
+    | '/pecas/$pecaId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -180,7 +192,7 @@ export interface RootRouteChildren {
   FormasRoute: typeof FormasRoute
   LoginRoute: typeof LoginRoute
   MateriaisRoute: typeof MateriaisRoute
-  PecasRoute: typeof PecasRoute
+  PecasRoute: typeof PecasRouteWithChildren
   PedidosRoute: typeof PedidosRoute
   PrecificacaoRoute: typeof PrecificacaoRoute
   TransacoesRoute: typeof TransacoesRoute
@@ -272,8 +284,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TransacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pecas/$pecaId': {
+      id: '/pecas/$pecaId'
+      path: '/$pecaId'
+      fullPath: '/pecas/$pecaId'
+      preLoaderRoute: typeof PecasPecaIdRouteImport
+      parentRoute: typeof PecasRoute
+    }
   }
 }
+
+interface PecasRouteChildren {
+  PecasPecaIdRoute: typeof PecasPecaIdRoute
+}
+
+const PecasRouteChildren: PecasRouteChildren = {
+  PecasPecaIdRoute: PecasPecaIdRoute,
+}
+
+const PecasRouteWithChildren = PecasRoute._addFileChildren(PecasRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -284,7 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   FormasRoute: FormasRoute,
   LoginRoute: LoginRoute,
   MateriaisRoute: MateriaisRoute,
-  PecasRoute: PecasRoute,
+  PecasRoute: PecasRouteWithChildren,
   PedidosRoute: PedidosRoute,
   PrecificacaoRoute: PrecificacaoRoute,
   TransacoesRoute: TransacoesRoute,

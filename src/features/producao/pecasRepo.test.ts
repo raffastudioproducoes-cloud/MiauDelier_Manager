@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
 import { criarForma } from './formasRepo'
 import { criarMaterial } from './materiaisRepo'
-import { criarPeca, listarPecas, listarEventosDaPeca } from './pecasRepo'
+import { criarPeca, listarPecas, listarEventosDaPeca, excluirPeca, listarConsumosDaPeca } from './pecasRepo'
+import { listarMateriais } from './materiaisRepo'
 
 describe('repositório de peças', () => {
   beforeEach(async () => {
@@ -81,5 +82,30 @@ describe('repositório de peças', () => {
 
     const materiais = await db.materiais.toArray()
     expect(materiais[0].quantidadeEstoque).toBe(500)
+  })
+
+  it('exclui peça e devolve o material consumido ao estoque', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 1000, custoUnitario: 0.1 })
+    const pecaId = await criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 100 }] })
+
+    await excluirPeca(pecaId)
+
+    const materiais = await listarMateriais()
+    expect(materiais[0].quantidadeEstoque).toBe(1000)
+    expect(await listarPecas()).toHaveLength(0)
+    expect(await db.consumosPeca.count()).toBe(0)
+    expect(await db.eventosPeca.count()).toBe(0)
+  })
+
+  it('lista consumos da peça decorados com o nome do material', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 1000, custoUnitario: 0.1 })
+    const pecaId = await criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 100 }] })
+
+    const consumos = await listarConsumosDaPeca(pecaId)
+    expect(consumos).toHaveLength(1)
+    expect(consumos[0].nomeMaterial).toBe('Resina')
+    expect(consumos[0].quantidade).toBe(100)
   })
 })

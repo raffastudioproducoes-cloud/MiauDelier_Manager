@@ -1,14 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from '@tanstack/react-router'
+import { z } from 'zod'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
 import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { criarPeca, listarPecas, type PecaComForma } from './pecasRepo'
+import { criarPeca, listarPecas, excluirPeca, type PecaComForma } from './pecasRepo'
 import { listarFormas } from './formasRepo'
 import { listarMateriais } from './materiaisRepo'
 import type { Forma, Material } from '../../db/schema'
+
+const schemaPeca = z.object({
+  nome: z.string().trim().min(1, 'Informe o nome da peça').max(120),
+})
+
+interface LinhaConsumo {
+  materialId: string
+  quantidade: string
+}
+
+function linhaVazia(): LinhaConsumo {
+  return { materialId: '', quantidade: '' }
+}
 
 export function PecasPage() {
   const { mostrarToast } = useToast()
@@ -17,8 +33,9 @@ export function PecasPage() {
   const [materiais, setMateriais] = useState<Material[]>([])
   const [nome, setNome] = useState('')
   const [formaId, setFormaId] = useState('')
-  const [materialId, setMaterialId] = useState('')
-  const [quantidade, setQuantidade] = useState('')
+  const [consumos, setConsumos] = useState<LinhaConsumo[]>([linhaVazia()])
+  const [erro, setErro] = useState<string | null>(null)
+  const [pecaExcluindoId, setPecaExcluindoId] = useState<number | null>(null)
 
   const montado = useRef(true)
 
@@ -45,15 +62,53 @@ export function PecasPage() {
     }
   }, [])
 
+  function limparFormulario() {
+    setNome('')
+    setFormaId('')
+    setConsumos([linhaVazia()])
+    setErro(null)
+  }
+
+  function atualizarLinha(indice: number, campo: keyof LinhaConsumo, valor: string) {
+    setConsumos((atual) => atual.map((linha, i) => (i === indice ? { ...linha, [campo]: valor } : linha)))
+  }
+
+  function adicionarLinha() {
+    setConsumos((atual) => [...atual, linhaVazia()])
+  }
+
+  function removerLinha(indice: number) {
+    setConsumos((atual) => atual.filter((_, i) => i !== indice))
+  }
+
   async function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
-    if (!nome.trim() || !formaId || !materialId || !quantidade) return
+    setErro(null)
+
+    const resultado = schemaPeca.safeParse({ nome })
+    if (!resultado.success) {
+      setErro(resultado.error.issues[0]?.message ?? 'Dados inválidos')
+      return
+    }
+    if (!formaId) {
+      setErro('Selecione uma forma')
+      return
+    }
+
+    const linhasValidas = consumos.filter((linha) => linha.materialId && Number(linha.quantidade) > 0)
+    if (linhasValidas.length === 0) {
+      setErro('Adicione ao menos um material com quantidade maior que zero')
+      return
+    }
 
     try {
       await criarPeca({
-        nome,
+        nome: resultado.data.nome,
         formaId: Number(formaId),
-        consumos: [{ materialId: Number(materialId), quantidade: Number(quantidade) }],
+        consumos: linhasValidas.map((linha) => ({
+          materialId: Number(linha.materialId),
+          quantidade: Number(linha.quantidade),
+        })),
       })
     } catch (falha) {
       if (!montado.current) return
@@ -62,10 +117,21 @@ export function PecasPage() {
     }
     if (!montado.current) return
     mostrarToast('Peça cadastrada com sucesso')
-    setNome('')
-    setFormaId('')
-    setMaterialId('')
-    setQuantidade('')
+    limparFormulario()
+    await recarregar()
+  }
+
+  async function handleExcluir(pecaId: number) {
+    try {
+      await excluirPeca(pecaId)
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao excluir peça.', 'erro')
+      return
+    }
+    if (!montado.current) return
+    mostrarToast('Peça excluída com sucesso')
+    setPecaExcluindoId(null)
     await recarregar()
   }
 
@@ -91,16 +157,38 @@ export function PecasPage() {
             ))}
           </select>
 
-          <label htmlFor="material-peca" className="text-sm font-medium">Material</label>
-          <select id="material-peca" value={materialId} onChange={(e) => setMaterialId(e.target.value)} className="rounded-lg px-3 py-2 elevation-inset">
-            <option value="">Selecione</option>
-            {materiais.map((material) => (
-              <option key={material.id} value={material.id}>{material.nome}</option>
-            ))}
-          </select>
+          <p className="text-sm font-medium">Materiais consumidos</p>
+          {consumos.map((linha, indice) => (
+            <div key={indice} className="flex items-end gap-2">
+              <div className="flex flex-1 flex-col gap-1">
+                <label htmlFor={`material-peca-${indice}`} className="text-sm font-medium">Material</label>
+                <select
+                  id={`material-peca-${indice}`}
+                  value={linha.materialId}
+                  onChange={(e) => atualizarLinha(indice, 'materialId', e.target.value)}
+                  className="rounded-lg px-3 py-2 elevation-inset"
+                >
+                  <option value="">Selecione</option>
+                  {materiais.map((material) => (
+                    <option key={material.id} value={material.id}>{material.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <TextField
+                id={`quantidade-peca-${indice}`}
+                rotulo="Quantidade"
+                type="number"
+                value={linha.quantidade}
+                onChange={(e) => atualizarLinha(indice, 'quantidade', e.target.value)}
+              />
+              {consumos.length > 1 && (
+                <Button type="button" variante="ghost" onClick={() => removerLinha(indice)}>×</Button>
+              )}
+            </div>
+          ))}
+          <Button type="button" variante="ghost" onClick={adicionarLinha}>+ Adicionar material</Button>
 
-          <TextField id="quantidade-consumida" rotulo="Quantidade consumida" type="number" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} />
-
+          {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{erro}</p>}
           <Button type="submit" disabled={faltamPreRequisitos}>Cadastrar peça</Button>
         </form>
       </Card>
@@ -111,15 +199,26 @@ export function PecasPage() {
         <ul className="flex flex-col gap-2">
           {pecas.map((peca) => (
             <Card key={peca.id} className="flex items-center justify-between">
-              <div>
+              <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} className="flex-1">
                 <p className="font-medium">{peca.nome}</p>
                 <p className="text-sm text-[var(--color-ink-muted)]">{peca.nomeForma}</p>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Badge variant="neutral">{peca.status}</Badge>
+                <Button variante="ghost" onClick={() => setPecaExcluindoId(peca.id ?? null)}>Excluir</Button>
               </div>
-              <Badge variant="neutral">{peca.status}</Badge>
             </Card>
           ))}
         </ul>
       )}
+
+      <ConfirmModal
+        aberto={pecaExcluindoId !== null}
+        titulo="Excluir peça?"
+        descricao="O material consumido volta ao estoque."
+        onConfirmar={() => pecaExcluindoId !== null && handleExcluir(pecaExcluindoId)}
+        onCancelar={() => setPecaExcluindoId(null)}
+      />
     </div>
   )
 }
