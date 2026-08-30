@@ -1,4 +1,4 @@
-import { db, type Peca, type EventoPeca } from '../../db/schema'
+import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema'
 
 export interface ConsumoComMaterial {
   materialId: number
@@ -82,6 +82,22 @@ export async function listarConsumosDaPeca(pecaId: number): Promise<ConsumoComMa
       return { materialId: consumo.materialId, quantidade: consumo.quantidade, nomeMaterial: material?.nome ?? '—' }
     }),
   )
+}
+
+export async function atualizarStatusPeca(pecaId: number, novoStatus: StatusPeca): Promise<void> {
+  await db.transaction('rw', db.pecas, db.eventosPeca, async () => {
+    await db.pecas.update(pecaId, { status: novoStatus })
+    await db.eventosPeca.add({
+      pecaId,
+      tipo: 'mudanca_status',
+      descricao: `Status alterado para ${novoStatus}`,
+      criadoEm: new Date().toISOString(),
+    })
+  })
+}
+
+export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number): Promise<void> {
+  await db.pecas.update(pecaId, { precoVenda })
 }
 
 export async function excluirPeca(pecaId: number): Promise<void> {

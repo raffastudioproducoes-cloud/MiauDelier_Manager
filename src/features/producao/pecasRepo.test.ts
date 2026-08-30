@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
 import { criarForma } from './formasRepo'
 import { criarMaterial } from './materiaisRepo'
-import { criarPeca, listarPecas, listarEventosDaPeca, excluirPeca, listarConsumosDaPeca } from './pecasRepo'
+import { criarPeca, listarPecas, listarEventosDaPeca, excluirPeca, listarConsumosDaPeca, atualizarStatusPeca } from './pecasRepo'
 import { listarMateriais } from './materiaisRepo'
 
 describe('repositório de peças', () => {
@@ -107,5 +107,18 @@ describe('repositório de peças', () => {
     expect(consumos).toHaveLength(1)
     expect(consumos[0].nomeMaterial).toBe('Resina')
     expect(consumos[0].quantidade).toBe(100)
+  })
+
+  it('atualiza status e registra evento no ledger', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const pecaId = await criarPeca({ nome: 'Peça', formaId, consumos: [] })
+
+    await atualizarStatusPeca(pecaId, 'em_producao')
+
+    const pecas = await listarPecas()
+    expect(pecas[0].status).toBe('em_producao')
+
+    const eventos = await listarEventosDaPeca(pecaId)
+    expect(eventos.some((e) => e.tipo === 'mudanca_status')).toBe(true)
   })
 })

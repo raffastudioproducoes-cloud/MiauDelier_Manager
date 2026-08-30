@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Button } from './Button'
 import { cn } from '../../lib/cn'
@@ -9,6 +10,7 @@ interface ConfirmModalProps {
   onConfirmar: () => void
   onCancelar: () => void
   className?: string
+  children?: ReactNode
 }
 
 export function ConfirmModal({
@@ -18,6 +20,7 @@ export function ConfirmModal({
   onConfirmar,
   onCancelar,
   className,
+  children,
 }: ConfirmModalProps) {
   return (
     <Dialog.Root open={aberto} onOpenChange={(abertoAgora) => !abertoAgora && onCancelar()}>
@@ -35,6 +38,7 @@ export function ConfirmModal({
               {descricao}
             </Dialog.Description>
           )}
+          {children && <div className="mt-3">{children}</div>}
           <div className="mt-4 flex justify-end gap-2">
             <Button variante="ghost" onClick={onCancelar}>
               Cancelar
