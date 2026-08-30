@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
-import { criarCliente, listarClientes } from './clientesRepo'
+import { criarCliente, listarClientes, atualizarCliente, excluirCliente } from './clientesRepo'
 
 describe('repositório de clientes', () => {
   beforeEach(async () => {
@@ -30,5 +30,20 @@ describe('repositório de clientes', () => {
     await criarCliente({ nome: 'Cliente sem telefone' })
     const clientes = await listarClientes()
     expect(clientes[0].contato).toBeUndefined()
+  })
+
+  it('atualiza nome e contato de um cliente existente', async () => {
+    const id = await criarCliente({ nome: 'Joana', contato: '111' })
+    await atualizarCliente(id, { nome: 'Joana Silva', contato: '222' })
+    const clientes = await listarClientes()
+    expect(clientes[0].nome).toBe('Joana Silva')
+    expect(clientes[0].contato).toBe('222')
+  })
+
+  it('exclui um cliente', async () => {
+    const id = await criarCliente({ nome: 'Cliente a remover' })
+    await excluirCliente(id)
+    const clientes = await listarClientes()
+    expect(clientes).toHaveLength(0)
   })
 })

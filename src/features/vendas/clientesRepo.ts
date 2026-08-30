@@ -28,3 +28,12 @@ export async function listarClientes(): Promise<ClienteDecifrado[]> {
     })),
   )
 }
+
+export async function atualizarCliente(clienteId: number, novo: NovoCliente): Promise<void> {
+  const contatoCifrado = novo.contato ? await cifrarCampo(novo.contato) : undefined
+  await db.clientes.update(clienteId, { nome: novo.nome, contato: contatoCifrado })
+}
+
+export async function excluirCliente(clienteId: number): Promise<void> {
+  await db.clientes.delete(clienteId)
+}

@@ -21,6 +21,7 @@ import { Route as PecasRouteImport } from './routes/pecas'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PrecificacaoRouteImport } from './routes/precificacao'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
+import { Route as ClientesClienteIdRouteImport } from './routes/clientes.$clienteId'
 import { Route as PecasPecaIdRouteImport } from './routes/pecas.$pecaId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -83,6 +84,11 @@ const TransacoesRoute = TransacoesRouteImport.update({
   path: '/transacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientesClienteIdRoute = ClientesClienteIdRouteImport.update({
+  id: '/$clienteId',
+  path: '/$clienteId',
+  getParentRoute: () => ClientesRoute,
+} as any)
 const PecasPecaIdRoute = PecasPecaIdRouteImport.update({
   id: '/$pecaId',
   path: '/$pecaId',
@@ -92,7 +98,7 @@ const PecasPecaIdRoute = PecasPecaIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/backup': typeof BackupRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/formas': typeof FormasRoute
@@ -102,12 +108,13 @@ export interface FileRoutesByFullPath {
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
+  '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/backup': typeof BackupRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/formas': typeof FormasRoute
@@ -117,13 +124,14 @@ export interface FileRoutesByTo {
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
+  '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/backup': typeof BackupRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/formas': typeof FormasRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/pedidos': typeof PedidosRoute
   '/precificacao': typeof PrecificacaoRoute
   '/transacoes': typeof TransacoesRoute
+  '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/precificacao'
     | '/transacoes'
+    | '/clientes/$clienteId'
     | '/pecas/$pecaId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/precificacao'
     | '/transacoes'
+    | '/clientes/$clienteId'
     | '/pecas/$pecaId'
   id:
     | '__root__'
@@ -180,13 +191,14 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/precificacao'
     | '/transacoes'
+    | '/clientes/$clienteId'
     | '/pecas/$pecaId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BackupRoute: typeof BackupRoute
-  ClientesRoute: typeof ClientesRoute
+  ClientesRoute: typeof ClientesRouteWithChildren
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContasRoute: typeof ContasRoute
   FormasRoute: typeof FormasRoute
@@ -284,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TransacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clientes/$clienteId': {
+      id: '/clientes/$clienteId'
+      path: '/$clienteId'
+      fullPath: '/clientes/$clienteId'
+      preLoaderRoute: typeof ClientesClienteIdRouteImport
+      parentRoute: typeof ClientesRoute
+    }
     '/pecas/$pecaId': {
       id: '/pecas/$pecaId'
       path: '/$pecaId'
@@ -293,6 +312,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ClientesRouteChildren {
+  ClientesClienteIdRoute: typeof ClientesClienteIdRoute
+}
+
+const ClientesRouteChildren: ClientesRouteChildren = {
+  ClientesClienteIdRoute: ClientesClienteIdRoute,
+}
+
+const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
+  ClientesRouteChildren,
+)
 
 interface PecasRouteChildren {
   PecasPecaIdRoute: typeof PecasPecaIdRoute
@@ -307,7 +338,7 @@ const PecasRouteWithChildren = PecasRoute._addFileChildren(PecasRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BackupRoute: BackupRoute,
-  ClientesRoute: ClientesRoute,
+  ClientesRoute: ClientesRouteWithChildren,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContasRoute: ContasRoute,
   FormasRoute: FormasRoute,
