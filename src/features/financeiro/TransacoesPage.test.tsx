@@ -47,4 +47,57 @@ describe('TransacoesPage', () => {
     expect(await screen.findByText(/cadastre pelo menos uma conta/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /registrar transação/i })).toBeDisabled()
   })
+
+  it('edita uma transação existente', async () => {
+    render(<ToastProvider><TransacoesPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/^conta$/i), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText(/valor/i), { target: { value: '150' } })
+    fireEvent.change(screen.getByLabelText(/descrição/i), { target: { value: 'Venda de chaveiro' } })
+    fireEvent.click(screen.getByRole('button', { name: /registrar transação/i }))
+    await waitFor(() => expect(screen.getByText('Venda de chaveiro')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.change(screen.getByLabelText(/descrição/i), { target: { value: 'Venda corrigida' } })
+    fireEvent.click(screen.getByRole('button', { name: /salvar/i }))
+
+    await waitFor(() => expect(screen.getByText('Venda corrigida')).toBeInTheDocument())
+  })
+
+  it('exclui uma transação via ConfirmModal', async () => {
+    render(<ToastProvider><TransacoesPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/^conta$/i), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText(/valor/i), { target: { value: '150' } })
+    fireEvent.change(screen.getByLabelText(/descrição/i), { target: { value: 'Venda de chaveiro' } })
+    fireEvent.click(screen.getByRole('button', { name: /registrar transação/i }))
+    await waitFor(() => expect(screen.getByText('Venda de chaveiro')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /excluir/i }))
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
+
+    await waitFor(() => expect(screen.getByText(/nenhuma transação registrada/i)).toBeInTheDocument())
+  })
+
+  it('filtra transações por período', async () => {
+    render(<ToastProvider><TransacoesPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/^conta$/i), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText(/valor/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/descrição/i), { target: { value: 'Antiga' } })
+    fireEvent.change(screen.getByLabelText(/^data$/i), { target: { value: '2026-01-01' } })
+    fireEvent.click(screen.getByRole('button', { name: /registrar transação/i }))
+    await waitFor(() => expect(screen.getByText('Antiga')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText(/valor/i), { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText(/descrição/i), { target: { value: 'Recente' } })
+    fireEvent.change(screen.getByLabelText(/^data$/i), { target: { value: '2026-08-01' } })
+    fireEvent.click(screen.getByRole('button', { name: /registrar transação/i }))
+    await waitFor(() => expect(screen.getByText('Recente')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText(/^de$/i), { target: { value: '2026-06-01' } })
+
+    expect(screen.getByText('Recente')).toBeInTheDocument()
+    expect(screen.queryByText('Antiga')).not.toBeInTheDocument()
+  })
 })

@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
-import { criarTransacao, listarTransacoesDaConta, listarTodasTransacoes } from './transacoesRepo'
+import {
+  criarTransacao,
+  listarTransacoesDaConta,
+  listarTodasTransacoes,
+  atualizarTransacao,
+  excluirTransacao,
+} from './transacoesRepo'
 
 describe('repositório de transações', () => {
   beforeEach(async () => {
@@ -51,5 +57,19 @@ describe('repositório de transações', () => {
     const todas = await listarTodasTransacoes()
     expect(todas).toHaveLength(2)
     expect(todas.map((t) => t.descricao).sort()).toEqual(['A', 'B'])
+  })
+
+  it('atualiza uma transação existente', async () => {
+    const id = await criarTransacao({ contaId: 1, tipo: 'entrada', valor: 100, descricao: 'A', data: '2026-08-01' })
+    await atualizarTransacao(id, { contaId: 1, tipo: 'entrada', valor: 150, descricao: 'A corrigida', data: '2026-08-01' })
+    const transacoes = await listarTransacoesDaConta(1)
+    expect(transacoes[0].valor).toBe(150)
+    expect(transacoes[0].descricao).toBe('A corrigida')
+  })
+
+  it('exclui uma transação', async () => {
+    const id = await criarTransacao({ contaId: 1, tipo: 'entrada', valor: 100, descricao: 'A', data: '2026-08-01' })
+    await excluirTransacao(id)
+    expect(await listarTransacoesDaConta(1)).toHaveLength(0)
   })
 })

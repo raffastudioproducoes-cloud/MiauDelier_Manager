@@ -30,6 +30,21 @@ export async function criarTransacao(nova: NovaTransacao): Promise<number> {
   return id as number
 }
 
+export async function atualizarTransacao(transacaoId: number, dados: NovaTransacao): Promise<void> {
+  const valorCriptografado = await cifrarCampo(dados.valor.toString())
+  await db.transacoes.update(transacaoId, {
+    contaId: dados.contaId,
+    tipo: dados.tipo,
+    valorCriptografado,
+    descricao: dados.descricao,
+    data: dados.data,
+  })
+}
+
+export async function excluirTransacao(transacaoId: number): Promise<void> {
+  await db.transacoes.delete(transacaoId)
+}
+
 export async function listarTransacoesDaConta(contaId: number): Promise<TransacaoDecifrada[]> {
   const registros = await db.transacoes.where('contaId').equals(contaId).toArray()
   return Promise.all(
