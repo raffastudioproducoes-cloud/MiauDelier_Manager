@@ -1,4 +1,5 @@
 import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema'
+import { cifrarCampo } from '../../lib/camposCifrados'
 
 export interface ConsumoComMaterial {
   materialId: number
@@ -98,6 +99,34 @@ export async function atualizarStatusPeca(pecaId: number, novoStatus: StatusPeca
 
 export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number): Promise<void> {
   await db.pecas.update(pecaId, { precoVenda })
+}
+
+export async function registrarVendaPeca(
+  pecaId: number,
+  precoVenda: number,
+  contaId: number,
+  descricaoTransacao: string,
+): Promise<void> {
+  // WebCrypto (cifrarCampo) doesn't need to run inside the Dexie transaction — only the writes do.
+  const valorCriptografado = await cifrarCampo(precoVenda.toString())
+  const agora = new Date().toISOString()
+
+  await db.transaction('rw', db.pecas, db.eventosPeca, db.contas, db.transacoes, async () => {
+    await db.pecas.update(pecaId, { status: 'vendida', precoVenda })
+    await db.eventosPeca.add({
+      pecaId,
+      tipo: 'mudanca_status',
+      descricao: 'Status alterado para vendida',
+      criadoEm: agora,
+    })
+    await db.transacoes.add({
+      contaId,
+      tipo: 'entrada',
+      valorCriptografado,
+      descricao: descricaoTransacao,
+      data: agora,
+    })
+  })
 }
 
 export async function excluirPeca(pecaId: number): Promise<void> {

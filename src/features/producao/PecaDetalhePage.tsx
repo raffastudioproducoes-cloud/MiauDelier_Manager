@@ -12,12 +12,11 @@ import {
   listarConsumosDaPeca,
   listarEventosDaPeca,
   atualizarStatusPeca,
-  atualizarPrecoVendaPeca,
+  registrarVendaPeca,
   type PecaComForma,
   type ConsumoComMaterial,
 } from './pecasRepo'
 import { listarContas } from '../financeiro/contasRepo'
-import { criarTransacao } from '../financeiro/transacoesRepo'
 import type { EventoPeca, StatusPeca } from '../../db/schema'
 
 const routeApi = getRouteApi('/pecas/$pecaId')
@@ -96,15 +95,7 @@ export function PecaDetalhePage() {
         mostrarToast('Cadastre uma conta antes de registrar uma venda.', 'erro')
         return
       }
-      await atualizarStatusPeca(id, 'vendida')
-      await atualizarPrecoVendaPeca(id, resultado.data)
-      await criarTransacao({
-        contaId: contas[0].id,
-        tipo: 'entrada',
-        valor: resultado.data,
-        descricao: `Venda: ${peca?.nome ?? ''}`,
-        data: new Date().toISOString(),
-      })
+      await registrarVendaPeca(id, resultado.data, contas[0].id, `Venda: ${peca?.nome ?? ''}`)
     } catch (falha) {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao registrar venda.', 'erro')

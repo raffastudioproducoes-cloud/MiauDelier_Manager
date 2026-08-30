@@ -1,14 +1,26 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '../../db/schema'
 import { criarForma } from './formasRepo'
 import { criarMaterial } from './materiaisRepo'
-import { criarPeca, listarPecas, listarEventosDaPeca, excluirPeca, listarConsumosDaPeca, atualizarStatusPeca } from './pecasRepo'
+import {
+  criarPeca,
+  listarPecas,
+  listarEventosDaPeca,
+  excluirPeca,
+  listarConsumosDaPeca,
+  atualizarStatusPeca,
+  registrarVendaPeca,
+} from './pecasRepo'
 import { listarMateriais } from './materiaisRepo'
+import { criarConta } from '../financeiro/contasRepo'
+import { setupAccount, clearSession } from '../../lib/auth'
 
 describe('repositório de peças', () => {
   beforeEach(async () => {
     await db.delete()
     await db.open()
+    clearSession()
+    await setupAccount('senha-do-ateliê')
   })
 
   it('cria peça, registra consumo, decrementa estoque e abre evento inicial', async () => {
@@ -120,5 +132,48 @@ describe('repositório de peças', () => {
 
     const eventos = await listarEventosDaPeca(pecaId)
     expect(eventos.some((e) => e.tipo === 'mudanca_status')).toBe(true)
+  })
+
+  it('registrarVendaPeca marca vendida, salva preço e cria transação em uma única operação', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const pecaId = await criarPeca({ nome: 'Peça vendida', formaId, consumos: [] })
+    const contaId = await criarConta({ nome: 'Caixa', saldoInicial: 0 })
+
+    await registrarVendaPeca(pecaId, 50, contaId, 'Venda: Peça vendida')
+
+    const pecas = await listarPecas()
+    expect(pecas[0].status).toBe('vendida')
+    expect(pecas[0].precoVenda).toBe(50)
+
+    const transacoes = await db.transacoes.where('contaId').equals(contaId).toArray()
+    expect(transacoes).toHaveLength(1)
+    expect(transacoes[0].descricao).toBe('Venda: Peça vendida')
+
+    const eventos = await listarEventosDaPeca(pecaId)
+    expect(eventos.some((e) => e.tipo === 'mudanca_status' && e.descricao.includes('vendida'))).toBe(true)
+  })
+
+  it('registrarVendaPeca não deixa a peça "vendida" órfã se a escrita da transação falhar (atomicidade)', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const pecaId = await criarPeca({ nome: 'Peça falha', formaId, consumos: [] })
+    const contaId = await criarConta({ nome: 'Caixa', saldoInicial: 0 })
+
+    const addOriginal = db.transacoes.add.bind(db.transacoes)
+    const espiao = vi.spyOn(db.transacoes, 'add').mockImplementation(() => {
+      throw new Error('falha simulada de gravação (ex.: quota do IndexedDB)')
+    })
+
+    await expect(registrarVendaPeca(pecaId, 50, contaId, 'Venda: Peça falha')).rejects.toThrow(/falha simulada/)
+
+    espiao.mockRestore()
+    void addOriginal
+
+    const pecas = await listarPecas()
+    expect(pecas[0].status).not.toBe('vendida')
+    expect(pecas[0].precoVenda).toBeUndefined()
+
+    expect(await db.transacoes.where('contaId').equals(contaId).count()).toBe(0)
+    const eventos = await listarEventosDaPeca(pecaId)
+    expect(eventos.some((e) => e.tipo === 'mudanca_status')).toBe(false)
   })
 })
