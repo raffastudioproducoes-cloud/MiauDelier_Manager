@@ -96,6 +96,9 @@ export function ClientesPage() {
       await excluirCliente(clienteParaExcluir.id)
       if (!montado.current) return
       mostrarToast('Cliente excluído com sucesso')
+      if (editandoId === clienteParaExcluir.id) {
+        cancelarEdicao()
+      }
       setClienteParaExcluir(null)
       await recarregar()
     } catch (falha) {
@@ -137,7 +140,11 @@ export function ClientesPage() {
       {clientesFiltrados.length === 0 ? (
         <EmptyState
           titulo={clientes.length === 0 ? 'Nenhum cliente cadastrado' : 'Nenhum cliente encontrado'}
-          descricao="Cadastre o primeiro cliente do seu ateliê."
+          descricao={
+            clientes.length === 0
+              ? 'Cadastre o primeiro cliente do seu ateliê.'
+              : 'Ajuste os termos da busca.'
+          }
         />
       ) : (
         <ul className="flex flex-col gap-2">

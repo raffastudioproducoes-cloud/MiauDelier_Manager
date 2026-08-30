@@ -87,4 +87,36 @@ describe('ClientesPage', () => {
     expect(screen.queryByText('Joana')).not.toBeInTheDocument()
     expect(screen.getByText('Marcos')).toBeInTheDocument()
   })
+
+  it('mostra mensagem de busca sem resultado, diferente da mensagem de lista vazia', async () => {
+    render(<ToastProvider><ClientesPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/nome do cliente/i), { target: { value: 'Joana' } })
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar cliente/i }))
+    await waitFor(() => expect(screen.getByText('Joana')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText(/buscar cliente/i), { target: { value: 'zzz' } })
+
+    expect(await screen.findByText(/nenhum cliente encontrado/i)).toBeInTheDocument()
+    expect(screen.getByText(/ajuste os termos da busca/i)).toBeInTheDocument()
+    expect(screen.queryByText(/cadastre o primeiro cliente/i)).not.toBeInTheDocument()
+  })
+
+  it('limpa o formulário de edição ao excluir o cliente que estava sendo editado', async () => {
+    render(<ToastProvider><ClientesPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/nome do cliente/i), { target: { value: 'Joana' } })
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar cliente/i }))
+    await waitFor(() => expect(screen.getByText('Joana')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /^editar$/i }))
+    expect(screen.getByRole('button', { name: /salvar alterações/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^excluir$/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /^confirmar$/i }))
+
+    await waitFor(() => expect(screen.queryByText('Joana')).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /cadastrar cliente/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/nome do cliente/i)).toHaveValue('')
+  })
 })

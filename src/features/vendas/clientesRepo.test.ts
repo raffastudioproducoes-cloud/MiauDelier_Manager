@@ -38,6 +38,9 @@ describe('repositório de clientes', () => {
     const clientes = await listarClientes()
     expect(clientes[0].nome).toBe('Joana Silva')
     expect(clientes[0].contato).toBe('222')
+
+    const bruto = await db.clientes.toArray()
+    expect(bruto[0].contato).not.toContain('222')
   })
 
   it('exclui um cliente', async () => {
