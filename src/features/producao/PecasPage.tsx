@@ -36,6 +36,7 @@ export function PecasPage() {
   const [consumos, setConsumos] = useState<LinhaConsumo[]>([linhaVazia()])
   const [erro, setErro] = useState<string | null>(null)
   const [pecaExcluindoId, setPecaExcluindoId] = useState<number | null>(null)
+  const [carregado, setCarregado] = useState(false)
 
   const montado = useRef(true)
 
@@ -53,10 +54,16 @@ export function PecasPage() {
 
   useEffect(() => {
     montado.current = true
-    recarregar().catch((falha) => {
-      if (!montado.current) return
-      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar peças.', 'erro')
-    })
+    recarregar()
+      .then(() => {
+        if (!montado.current) return
+        setCarregado(true)
+      })
+      .catch((falha) => {
+        if (!montado.current) return
+        mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar peças.', 'erro')
+        setCarregado(true)
+      })
     return () => {
       montado.current = false
     }
@@ -136,6 +143,15 @@ export function PecasPage() {
   }
 
   const faltamPreRequisitos = formas.length === 0 || materiais.length === 0
+
+  if (!carregado) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold">Peças</h1>
+        <p className="text-sm text-[var(--color-ink-muted)]">Carregando...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">

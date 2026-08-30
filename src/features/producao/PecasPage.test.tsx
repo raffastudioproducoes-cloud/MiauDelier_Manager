@@ -13,6 +13,16 @@ vi.mock('@tanstack/react-router', () => ({
 
 const { PecasPage } = await import('./PecasPage')
 
+async function renderPagina() {
+  const utils = render(
+    <ToastProvider>
+      <PecasPage />
+    </ToastProvider>,
+  )
+  await screen.findByLabelText(/nome da peça/i)
+  return utils
+}
+
 describe('PecasPage', () => {
   beforeEach(async () => {
     await db.delete()
@@ -22,9 +32,9 @@ describe('PecasPage', () => {
   })
 
   it('cria uma peça vinculando forma e consumo de material', async () => {
-    render(<ToastProvider><PecasPage /></ToastProvider>)
+    await renderPagina()
 
-    fireEvent.change(await screen.findByLabelText(/nome da peça/i), { target: { value: 'Chaveiro gato' } })
+    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Chaveiro gato' } })
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/^material$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '20' } })
@@ -47,9 +57,9 @@ describe('PecasPage', () => {
   })
 
   it('mostra mensagem de erro quando o consumo excede o estoque', async () => {
-    render(<ToastProvider><PecasPage /></ToastProvider>)
+    await renderPagina()
 
-    fireEvent.change(await screen.findByLabelText(/nome da peça/i), { target: { value: 'Peça gigante' } })
+    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Peça gigante' } })
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/^material$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '5000' } })
@@ -61,9 +71,9 @@ describe('PecasPage', () => {
 
   it('permite adicionar múltiplas linhas de consumo de material', async () => {
     await criarMaterial({ nome: 'Pigmento', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 200, custoUnitario: 1 })
-    render(<ToastProvider><PecasPage /></ToastProvider>)
+    await renderPagina()
 
-    fireEvent.change(await screen.findByLabelText(/nome da peça/i), { target: { value: 'Peça mista' } })
+    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Peça mista' } })
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '10' } })
@@ -80,9 +90,9 @@ describe('PecasPage', () => {
   })
 
   it('exclui peça via ConfirmModal e devolve material ao estoque', async () => {
-    render(<ToastProvider><PecasPage /></ToastProvider>)
+    await renderPagina()
 
-    fireEvent.change(await screen.findByLabelText(/nome da peça/i), { target: { value: 'Peça a excluir' } })
+    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Peça a excluir' } })
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
@@ -97,9 +107,9 @@ describe('PecasPage', () => {
   })
 
   it('cada item da lista de peças é um link pro detalhe', async () => {
-    render(<ToastProvider><PecasPage /></ToastProvider>)
+    await renderPagina()
 
-    fireEvent.change(await screen.findByLabelText(/nome da peça/i), { target: { value: 'Chaveiro gato' } })
+    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Chaveiro gato' } })
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
