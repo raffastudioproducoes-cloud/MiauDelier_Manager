@@ -188,7 +188,7 @@ export function PedidosPage() {
       <ConfirmModal
         aberto={pedidoExcluindoId !== null}
         titulo="Excluir pedido?"
-        descricao="As peças vinculadas continuam marcadas como já vinculadas a um pedido."
+        descricao="As peças vinculadas ficam disponíveis novamente para novos pedidos."
         onConfirmar={() => pedidoExcluindoId !== null && handleExcluir(pedidoExcluindoId)}
         onCancelar={() => setPedidoExcluindoId(null)}
       />
