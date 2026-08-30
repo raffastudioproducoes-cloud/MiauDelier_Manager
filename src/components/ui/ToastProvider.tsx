@@ -1,4 +1,4 @@
-import { createContext, useCallback, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 interface Toast {
@@ -23,11 +23,24 @@ export function ToastProvider({
   className?: string
 }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  const timeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  useEffect(() => {
+    const timeouts = timeoutsRef.current
+    return () => {
+      timeouts.forEach((timeoutId) => clearTimeout(timeoutId))
+      timeouts.clear()
+    }
+  }, [])
 
   const mostrarToast = useCallback((mensagem: string, tipo: Toast['tipo'] = 'sucesso') => {
     const id = Date.now()
     setToasts((atual) => [...atual, { id, mensagem, tipo }])
-    setTimeout(() => setToasts((atual) => atual.filter((t) => t.id !== id)), DURACAO_TOAST_MS)
+    const timeoutId = setTimeout(() => {
+      timeoutsRef.current.delete(timeoutId)
+      setToasts((atual) => atual.filter((t) => t.id !== id))
+    }, DURACAO_TOAST_MS)
+    timeoutsRef.current.add(timeoutId)
   }, [])
 
   return (
