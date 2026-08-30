@@ -147,6 +147,18 @@ describe('backup JSON', () => {
     expect(registros[0].tamanhoBytes).toBeGreaterThan(0)
   })
 
+  it('rejeita backup com linha de tabela em formato inesperado', async () => {
+    await setupAccount('senha-qualquer')
+    await semearMaterial()
+    const parsed = JSON.parse(await exportarBackup())
+    parsed.dados.materiais = [['isso', 'não', 'é', 'um', 'objeto']]
+
+    await expect(importarBackup(await exportarBackupFalso(parsed.dados))).rejects.toThrow(
+      /malformad|inválid/i,
+    )
+    expect(await db.materiais.count()).toBe(1)
+  })
+
   it('rejeita JSON válido que não é um envelope de backup', async () => {
     await expect(importarBackup('{"qualquer":"coisa"}')).rejects.toThrow(/backup inválido/i)
     await expect(importarBackup('não é json')).rejects.toThrow(/não é JSON/i)

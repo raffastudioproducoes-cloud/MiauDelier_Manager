@@ -47,6 +47,14 @@ function validarEnvelope(json: string): Envelope {
   return parsed as unknown as Envelope
 }
 
+function validarLinhasDaTabela(nomeTabela: string, linhas: unknown[]): void {
+  for (const linha of linhas) {
+    if (typeof linha !== 'object' || linha === null || Array.isArray(linha)) {
+      throw new Error(`Backup inválido: registro malformado na tabela "${nomeTabela}".`)
+    }
+  }
+}
+
 function validarAutenticacao(dados: Record<string, unknown[]>): void {
   const configuracoes = dados.configuracoes
   const chaves = new Set(
@@ -87,6 +95,9 @@ export async function importarBackup(json: string): Promise<void> {
     throw new Error('checksum do backup não confere — arquivo corrompido')
   }
   validarAutenticacao(parsed.dados)
+  for (const nomeTabela of TABELAS) {
+    validarLinhasDaTabela(nomeTabela, parsed.dados[nomeTabela] ?? [])
+  }
 
   await db.transaction('rw', TABELAS.map((nome) => db.table(nome)), async () => {
     for (const nomeTabela of TABELAS) {
