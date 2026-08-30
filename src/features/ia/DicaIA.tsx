@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/TextField'
 import { useToast } from '../../components/ui/useToast'
 import { pedirDicaIA } from './geminiClient'
+
+const TAMANHO_MAXIMO_PERGUNTA = 500
 
 export function DicaIA() {
   const { mostrarToast } = useToast()
@@ -11,17 +13,29 @@ export function DicaIA() {
   const [resposta, setResposta] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
+  const montado = useRef(true)
+
+  useEffect(() => {
+    montado.current = true
+    return () => {
+      montado.current = false
+    }
+  }, [])
+
   async function handlePerguntar() {
-    if (!pergunta.trim() || enviando) return
+    const perguntaLimpa = pergunta.trim()
+    if (!perguntaLimpa || perguntaLimpa.length > TAMANHO_MAXIMO_PERGUNTA || enviando) return
     setEnviando(true)
     setResposta(null)
     try {
-      const texto = await pedirDicaIA(pergunta.trim())
+      const texto = await pedirDicaIA(perguntaLimpa)
+      if (!montado.current) return
       setResposta(texto)
     } catch (falha) {
+      if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Assistente indisponível agora.', 'erro')
     } finally {
-      setEnviando(false)
+      if (montado.current) setEnviando(false)
     }
   }
 

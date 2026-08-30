@@ -27,4 +27,17 @@ describe('DicaIA', () => {
     await waitFor(() => expect(screen.getByText(/sem conexão/i)).toBeInTheDocument())
     expect(screen.getByRole('button', { name: /pedir dica/i })).toBeInTheDocument()
   })
+
+  it('rejeita pergunta vazia ou absurdamente longa antes de chamar a IA', async () => {
+    const spy = vi.spyOn(geminiClient, 'pedirDicaIA')
+
+    render(<ToastProvider><DicaIA /></ToastProvider>)
+    fireEvent.click(screen.getByRole('button', { name: /pedir dica/i }))
+    fireEvent.click(screen.getByRole('button', { name: /perguntar/i }))
+    expect(spy).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText(/sua pergunta/i), { target: { value: 'a'.repeat(501) } })
+    fireEvent.click(screen.getByRole('button', { name: /perguntar/i }))
+    expect(spy).not.toHaveBeenCalled()
+  })
 })
