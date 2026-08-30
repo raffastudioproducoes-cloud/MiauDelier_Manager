@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
-import { criarConta, listarContas, atualizarSaldoConta } from './contasRepo'
+import { criarConta, listarContas, atualizarNomeConta, excluirConta } from './contasRepo'
 import { criarTransacao } from './transacoesRepo'
 
 describe('repositório de contas', () => {
@@ -36,11 +36,22 @@ describe('repositório de contas', () => {
     expect(contas[0].saldo).toBe(610)
   })
 
-  it('atualiza o saldo de uma conta', async () => {
+  it('atualiza o nome de uma conta', async () => {
     const id = await criarConta({ nome: 'Caixa', saldoInicial: 100 })
-    await atualizarSaldoConta(id, 250)
-
+    await atualizarNomeConta(id, 'Caixa Principal')
     const contas = await listarContas()
-    expect(contas[0].saldo).toBe(250)
+    expect(contas[0].nome).toBe('Caixa Principal')
+  })
+
+  it('exclui conta sem transação', async () => {
+    const id = await criarConta({ nome: 'Caixa', saldoInicial: 0 })
+    await excluirConta(id)
+    expect(await listarContas()).toHaveLength(0)
+  })
+
+  it('recusa excluir conta com transação', async () => {
+    const id = await criarConta({ nome: 'Caixa', saldoInicial: 100 })
+    await criarTransacao({ contaId: id, tipo: 'entrada', valor: 10, descricao: 'X', data: new Date().toISOString() })
+    await expect(excluirConta(id)).rejects.toThrow(/transaç/i)
   })
 })

@@ -36,7 +36,14 @@ export async function listarContas(): Promise<ContaDecifrada[]> {
   )
 }
 
-export async function atualizarSaldoConta(contaId: number, novoSaldo: number): Promise<void> {
-  const saldoCriptografado = await cifrarCampo(novoSaldo.toString())
-  await db.contas.update(contaId, { saldoCriptografado })
+export async function atualizarNomeConta(contaId: number, nome: string): Promise<void> {
+  await db.contas.update(contaId, { nome })
+}
+
+export async function excluirConta(contaId: number): Promise<void> {
+  const quantidadeTransacoes = await db.transacoes.where('contaId').equals(contaId).count()
+  if (quantidadeTransacoes > 0) {
+    throw new Error('Não é possível excluir uma conta que já tem transações registradas.')
+  }
+  await db.contas.delete(contaId)
 }
