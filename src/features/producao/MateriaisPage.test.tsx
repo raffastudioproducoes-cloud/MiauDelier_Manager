@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { db } from '../../db/schema'
-import { criarCategoriaMaterial } from './categoriasMaterialRepo'
+import { criarCategoriaMaterial, listarCategoriasMaterial } from './categoriasMaterialRepo'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 import { MateriaisPage } from './MateriaisPage'
 
@@ -76,6 +76,25 @@ describe('MateriaisPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /adicionar/i }))
 
     await waitFor(() => expect(screen.getByText(/150/)).toBeInTheDocument())
+  })
+
+  it('cria uma categoria nova pelo select e vincula o material a ela', async () => {
+    await criarCategoriaMaterial('Resinas')
+    render(<ToastProvider><MateriaisPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Cola Quente' } })
+    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'un' } })
+    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '5' } })
+    fireEvent.change(screen.getByLabelText(/categoria$/i), { target: { value: '__nova__' } })
+    fireEvent.change(await screen.findByLabelText(/nome da nova categoria/i), { target: { value: 'Ferramentas' } })
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+
+    await waitFor(() => expect(screen.getByText('Cola Quente')).toBeInTheDocument())
+    expect(screen.getByText(/em estoque.*Ferramentas/)).toBeInTheDocument()
+
+    const categorias = await listarCategoriasMaterial()
+    expect(categorias.some((categoria) => categoria.nome === 'Ferramentas')).toBe(true)
   })
 
   it('exclui um material via confirmação', async () => {

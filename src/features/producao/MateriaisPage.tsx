@@ -118,7 +118,8 @@ export function MateriaisPage() {
       }
 
       if (materialEmEdicaoId !== null) {
-        await atualizarMaterial(materialEmEdicaoId, { ...resultado.data, categoriaId: categoriaIdFinal })
+        const { quantidadeEstoque: _omit, ...dadosSemEstoque } = resultado.data
+        await atualizarMaterial(materialEmEdicaoId, { ...dadosSemEstoque, categoriaId: categoriaIdFinal })
       } else {
         await criarMaterial({ ...resultado.data, categoriaId: categoriaIdFinal })
       }
@@ -178,7 +179,14 @@ export function MateriaisPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <TextField id="nome-material" rotulo="Nome do material" value={nome} onChange={(e) => setNome(e.target.value)} />
           <TextField id="unidade-material" rotulo="Unidade" value={unidade} onChange={(e) => setUnidade(e.target.value)} />
-          <TextField id="quantidade-material" rotulo="Quantidade em estoque" type="number" value={quantidadeEstoque} onChange={(e) => setQuantidadeEstoque(e.target.value)} />
+          <TextField
+            id="quantidade-material"
+            rotulo={materialEmEdicaoId !== null ? 'Quantidade em estoque (use "Repor estoque" para alterar)' : 'Quantidade em estoque'}
+            type="number"
+            value={quantidadeEstoque}
+            onChange={(e) => setQuantidadeEstoque(e.target.value)}
+            disabled={materialEmEdicaoId !== null}
+          />
           <TextField id="custo-material" rotulo="Custo unitário" type="number" step="0.01" value={custoUnitario} onChange={(e) => setCustoUnitario(e.target.value)} />
 
           <label htmlFor="categoria-material" className="text-sm font-medium text-[var(--color-ink)]">Categoria</label>
