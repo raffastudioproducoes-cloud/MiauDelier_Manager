@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { db } from './schema'
+import { db, type Peca } from './schema'
 
 describe('MiauDelierDB schema', () => {
   beforeEach(async () => {
@@ -38,5 +38,20 @@ describe('MiauDelierDB schema', () => {
         'transacoes',
       ].sort(),
     )
+  })
+
+  it('permite gravar e ler precoVenda numa peça', async () => {
+    const formaId = (await db.formas.add({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })) as number
+    const peca_: Peca = {
+      nome: 'Peça X',
+      formaId,
+      status: 'planejada',
+      criadaEm: new Date().toISOString(),
+      precoVenda: 45.5,
+    }
+    const pecaId = await db.pecas.add(peca_)
+    const peca = await db.pecas.get(pecaId)
+    expect(peca).toBeDefined()
+    expect(peca!.precoVenda).toBe(45.5)
   })
 })

@@ -32,6 +32,7 @@ export interface Peca {
   formaId: number
   status: StatusPeca
   criadaEm: string
+  precoVenda?: number
 }
 
 export interface ConsumoPeca {
