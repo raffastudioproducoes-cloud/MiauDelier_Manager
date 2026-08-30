@@ -55,6 +55,24 @@ describe('resumo do dashboard', () => {
     expect(resumo.lucroDoMes).toBe(77)
   })
 
+  it('agrupa transação por data local, não UTC, no fluxo de caixa (regressão fuso horário)', async () => {
+    await criarConta({ nome: 'Caixa', saldoInicial: 0 })
+    const hoje = new Date()
+    const noiteLocal = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 0, 0)
+    const anoEsperado = noiteLocal.getFullYear()
+    const mesEsperado = String(noiteLocal.getMonth() + 1).padStart(2, '0')
+    const diaEsperado = String(noiteLocal.getDate()).padStart(2, '0')
+    const chaveEsperada = `${anoEsperado}-${mesEsperado}-${diaEsperado}`
+
+    await criarTransacao({ contaId: 1, tipo: 'entrada', valor: 42, descricao: 'Venda tarde da noite', data: noiteLocal.toISOString() })
+
+    const resumo = await obterResumoDashboard()
+    const bucketEsperado = resumo.fluxoCaixa14Dias.find((dia) => dia.data === chaveEsperada)
+
+    expect(bucketEsperado).toBeDefined()
+    expect(bucketEsperado!.entradas).toBe(42)
+  })
+
   it('devolve zeros sem quebrar quando não há dado nenhum', async () => {
     const resumo = await obterResumoDashboard()
     expect(resumo.saldoTotal).toBe(0)

@@ -69,8 +69,28 @@ export function DashboardPage() {
           <Card><p className="text-xs text-[var(--color-ink-muted)]">Lucro do mês</p><p className="text-lg font-semibold">{formatarMoeda(resumo.lucroDoMes)}</p></Card>
           <Card><p className="text-xs text-[var(--color-ink-muted)]">Peças em produção</p><p className="text-lg font-semibold">{resumo.pecasEmProducao}</p></Card>
           <Card><p className="text-xs text-[var(--color-ink-muted)]">Peças em cura</p><p className="text-lg font-semibold">{resumo.pecasEmCura}</p></Card>
-          <Card><p className="text-xs text-[var(--color-ink-muted)]">Estoque baixo</p><p className="text-lg font-semibold">{resumo.materiaisEstoqueBaixo}</p></Card>
-          <Card><p className="text-xs text-[var(--color-ink-muted)]">Pedidos em aberto</p><p className="text-lg font-semibold">{resumo.pedidosAbertos}</p></Card>
+          <Card
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer"
+            onClick={() => navigate({ to: '/materiais' })}
+            onKeyDown={(evento) => {
+              if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/materiais' })
+            }}
+          >
+            <p className="text-xs text-[var(--color-ink-muted)]">Estoque baixo</p><p className="text-lg font-semibold">{resumo.materiaisEstoqueBaixo}</p>
+          </Card>
+          <Card
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer"
+            onClick={() => navigate({ to: '/pedidos' })}
+            onKeyDown={(evento) => {
+              if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/pedidos' })
+            }}
+          >
+            <p className="text-xs text-[var(--color-ink-muted)]">Pedidos em aberto</p><p className="text-lg font-semibold">{resumo.pedidosAbertos}</p>
+          </Card>
         </div>
       )}
 

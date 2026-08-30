@@ -20,8 +20,17 @@ export interface ResumoDashboard {
   eventosRecentes: Array<{ pecaId: number; nomePeca: string; tipo: string; descricao: string; criadoEm: string }>
 }
 
-function inicioDoDia(data: Date): string {
-  return data.toISOString().slice(0, 10)
+// ponytail: strings "YYYY-MM-DD" (vindas de <input type="date">) já são a data-calendário
+// pretendida — não passam por new Date() pra não sofrer conversão de fuso (UTC-midnight vs local)
+function inicioDoDia(valor: string | Date): string {
+  if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+    return valor
+  }
+  const data = typeof valor === 'string' ? new Date(valor) : valor
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
 }
 
 export async function obterResumoDashboard(): Promise<ResumoDashboard> {
@@ -39,7 +48,7 @@ export async function obterResumoDashboard(): Promise<ResumoDashboard> {
   const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
   const chaveInicioDoMes = inicioDoDia(inicioDoMes)
   const lucroDoMes = transacoes
-    .filter((transacao) => inicioDoDia(new Date(transacao.data)) >= chaveInicioDoMes)
+    .filter((transacao) => inicioDoDia(transacao.data) >= chaveInicioDoMes)
     .reduce((soma, transacao) => soma + (transacao.tipo === 'entrada' ? transacao.valor : -transacao.valor), 0)
 
   const pecasEmProducao = pecas.filter((peca) => peca.status === 'em_producao').length
@@ -52,7 +61,7 @@ export async function obterResumoDashboard(): Promise<ResumoDashboard> {
     const dia = new Date(agora)
     dia.setDate(dia.getDate() - i)
     const chaveDia = inicioDoDia(dia)
-    const transacoesDoDia = transacoes.filter((transacao) => inicioDoDia(new Date(transacao.data)) === chaveDia)
+    const transacoesDoDia = transacoes.filter((transacao) => inicioDoDia(transacao.data) === chaveDia)
     fluxoCaixa14Dias.push({
       data: chaveDia,
       entradas: transacoesDoDia.filter((t) => t.tipo === 'entrada').reduce((soma, t) => soma + t.valor, 0),
