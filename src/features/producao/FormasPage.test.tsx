@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { db } from '../../db/schema'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 import { FormasPage } from './FormasPage'
+import { listarFormas } from './formasRepo'
 
 describe('FormasPage', () => {
   beforeEach(async () => {
@@ -41,6 +42,15 @@ describe('FormasPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /cadastrar forma/i }))
 
     await waitFor(() => expect(screen.getByText('Sabonete retangular')).toBeInTheDocument())
+    const linhaRetangular = screen.getByText(
+      (_, el) => el?.tagName.toLowerCase() === 'p' && /Retangular/.test(el.textContent ?? '') && /100\.0 ml/.test(el.textContent ?? ''),
+    )
+    expect(linhaRetangular).toBeInTheDocument()
+
+    const formas = await listarFormas()
+    const forma = formas.find((f) => f.nome === 'Sabonete retangular')
+    expect(forma?.volumeDiretoMl).toBeCloseTo(10 * 5 * 2)
+    expect(forma?.dimensoesCm).toEqual({ comprimento: 10, largura: 5, profundidade: 2 })
   })
 
   it('cadastra uma forma esférica', async () => {
@@ -52,6 +62,18 @@ describe('FormasPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /cadastrar forma/i }))
 
     await waitFor(() => expect(screen.getByText('Bolinha')).toBeInTheDocument())
+
+    const volumeEsperado = (4 / 3) * Math.PI * Math.pow(3, 3)
+    const volumeTexto = `${volumeEsperado.toFixed(1)} ml`.replace('.', '\\.')
+    const linhaEsferica = screen.getByText(
+      (_, el) => el?.tagName.toLowerCase() === 'p' && /Esférico/.test(el.textContent ?? '') && new RegExp(volumeTexto).test(el.textContent ?? ''),
+    )
+    expect(linhaEsferica).toBeInTheDocument()
+
+    const formas = await listarFormas()
+    const forma = formas.find((f) => f.nome === 'Bolinha')
+    expect(forma?.volumeDiretoMl).toBeCloseTo(volumeEsperado)
+    expect(forma?.dimensoesCm).toEqual({ raio: 3 })
   })
 
   it('edita uma forma existente', async () => {

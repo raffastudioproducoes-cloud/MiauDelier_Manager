@@ -41,7 +41,7 @@ function dimensoesGeometria(geometria: FormaGeometria, dimensoes: {
     case 'esferico':
       return { raio: Number(dimensoes.raio) }
     case 'direto':
-      return { volumeMl: Number(dimensoes.volumeMl) }
+      return {}
   }
 }
 
@@ -98,6 +98,7 @@ export function FormasPage() {
       return calcularVolumeMl({
         geometria,
         ...dimensoesGeometria(geometria, { comprimento, largura, profundidade, raio, altura, volumeMl }),
+        volumeMl: Number(volumeMl),
       })
     } catch {
       return null
