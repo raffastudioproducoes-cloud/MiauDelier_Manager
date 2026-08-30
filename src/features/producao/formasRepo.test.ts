@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
-import { criarForma, listarFormas } from './formasRepo'
+import { criarForma, listarFormas, atualizarForma, excluirForma } from './formasRepo'
 
 describe('repositório de formas', () => {
   beforeEach(async () => {
@@ -17,5 +17,18 @@ describe('repositório de formas', () => {
     const formas = await listarFormas()
     expect(formas).toHaveLength(1)
     expect(formas[0].geometria).toBe('cilindrico')
+  })
+
+  it('atualiza uma forma existente', async () => {
+    const id = await criarForma({ nome: 'Molde X', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    await atualizarForma(id, { nome: 'Molde X Editado', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 25 })
+    const formas = await listarFormas()
+    expect(formas[0].nome).toBe('Molde X Editado')
+  })
+
+  it('exclui uma forma', async () => {
+    const id = await criarForma({ nome: 'Molde Y', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    await excluirForma(id)
+    expect(await listarFormas()).toHaveLength(0)
   })
 })

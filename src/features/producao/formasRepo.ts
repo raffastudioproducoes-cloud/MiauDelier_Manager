@@ -10,3 +10,11 @@ export async function criarForma(nova: NovaForma): Promise<number> {
 export async function listarFormas(): Promise<Forma[]> {
   return db.formas.toArray()
 }
+
+export async function atualizarForma(formaId: number, dados: NovaForma): Promise<void> {
+  await db.formas.update(formaId, dados)
+}
+
+export async function excluirForma(formaId: number): Promise<void> {
+  await db.formas.delete(formaId)
+}
