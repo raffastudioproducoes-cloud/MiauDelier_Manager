@@ -22,6 +22,7 @@ export function PrecificacaoPage() {
   const [valorHora, setValorHora] = useState('')
   const [rateioFixoPercent, setRateioFixoPercent] = useState('')
   const [margemLucroPercent, setMargemLucroPercent] = useState('')
+  const [carregado, setCarregado] = useState(false)
 
   useEffect(() => {
     montado.current = true
@@ -29,10 +30,12 @@ export function PrecificacaoPage() {
       .then((lista) => {
         if (!montado.current) return
         setPecas(lista)
+        setCarregado(true)
       })
       .catch((falha) => {
         if (!montado.current) return
         mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar peças.', 'erro')
+        setCarregado(true)
       })
     return () => {
       montado.current = false
@@ -84,6 +87,15 @@ export function PrecificacaoPage() {
     } catch (falha) {
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao salvar preço de venda.', 'erro')
     }
+  }
+
+  if (!carregado) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold">Precificação</h1>
+        <p className="text-sm text-[var(--color-ink-muted)]">Carregando...</p>
+      </div>
+    )
   }
 
   return (

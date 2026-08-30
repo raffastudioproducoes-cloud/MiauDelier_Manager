@@ -8,12 +8,14 @@ import { criarPeca } from '../producao/pecasRepo'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 import { PrecificacaoPage } from './PrecificacaoPage'
 
-function renderPagina() {
-  return render(
+async function renderPagina() {
+  const utils = render(
     <ToastProvider>
       <PrecificacaoPage />
     </ToastProvider>,
   )
+  await screen.findByLabelText(/peça \(opcional\)/i)
+  return utils
 }
 
 describe('PrecificacaoPage', () => {
@@ -24,7 +26,7 @@ describe('PrecificacaoPage', () => {
   })
 
   it('calcula o preço final ao preencher os campos', async () => {
-    renderPagina()
+    await renderPagina()
 
     fireEvent.change(screen.getByLabelText(/custo do material/i), { target: { value: '25' } })
     fireEvent.change(screen.getByLabelText(/acessórios/i), { target: { value: '5' } })
@@ -37,22 +39,22 @@ describe('PrecificacaoPage', () => {
   })
 
   it('não quebra a tela com entrada inválida (percentual fora de faixa)', async () => {
-    renderPagina()
+    await renderPagina()
 
     fireEvent.change(screen.getByLabelText(/margem de lucro/i), { target: { value: '99999' } })
 
     expect(await screen.findByText(/preço final: —/i)).toBeInTheDocument()
   })
 
-  it('mostra aviso em vez de R$ 0,00 quando nada foi preenchido', () => {
-    renderPagina()
+  it('mostra aviso em vez de R$ 0,00 quando nada foi preenchido', async () => {
+    await renderPagina()
 
-    expect(screen.getByText(/preencha os campos/i)).toBeInTheDocument()
+    expect(await screen.findByText(/preencha os campos/i)).toBeInTheDocument()
     expect(screen.queryByText(/R\$\s*0,00/)).not.toBeInTheDocument()
   })
 
   it('mostra a decomposição completa do cálculo', async () => {
-    renderPagina()
+    await renderPagina()
 
     fireEvent.change(screen.getByLabelText(/custo do material/i), { target: { value: '25' } })
     fireEvent.change(screen.getByLabelText(/horas de produção/i), { target: { value: '1' } })
@@ -69,7 +71,7 @@ describe('PrecificacaoPage', () => {
     const formaId = await criarForma({ nome: 'Chaveiro', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
     const pecaId = await criarPeca({ nome: 'Chaveiro gato', formaId, consumos: [{ materialId, quantidade: 100 }] })
 
-    renderPagina()
+    await renderPagina()
 
     fireEvent.change(await screen.findByLabelText(/peça \(opcional\)/i), { target: { value: String(pecaId) } })
 
