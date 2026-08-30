@@ -66,4 +66,20 @@ describe('repositório de peças', () => {
     expect(await listarPecas()).toHaveLength(0)
     expect(await db.consumosPeca.count()).toBe(0)
   })
+
+  it('rejeita quantidade negativa ou zero em vez de inflar o estoque', async () => {
+    const formaId = await criarForma({ nome: 'Z', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 500, custoUnitario: 0.1 })
+
+    await expect(
+      criarPeca({ nome: 'Peça negativa', formaId, consumos: [{ materialId, quantidade: -5 }] }),
+    ).rejects.toThrow(/maior que zero/i)
+
+    await expect(
+      criarPeca({ nome: 'Peça zero', formaId, consumos: [{ materialId, quantidade: 0 }] }),
+    ).rejects.toThrow(/maior que zero/i)
+
+    const materiais = await db.materiais.toArray()
+    expect(materiais[0].quantidadeEstoque).toBe(500)
+  })
 })
