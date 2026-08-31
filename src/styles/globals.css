@@ -28,8 +28,8 @@
   --secondary: oklch(0.827 0.013 271.3);
   --success: oklch(0.75 0.13 145);
   --success-soft: oklch(0.3 0.06 145);
-  --warning: var(--primary);
-  --warning-soft: var(--on-primary);
+  --warning: oklch(0.82 0.13 78);
+  --warning-soft: oklch(0.3 0.06 78);
 }
 
 @theme inline {
