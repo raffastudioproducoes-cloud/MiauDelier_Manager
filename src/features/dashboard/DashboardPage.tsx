@@ -55,7 +55,10 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">Início</h1>
+      <div>
+        <h1 className="text-headline-sm font-semibold text-on-surface">Início</h1>
+        <p className="text-label-sm text-on-surface-variant">Visão geral do seu atelier.</p>
+      </div>
 
       {erroCarga ? (
         <Card>
@@ -64,63 +67,82 @@ export function DashboardPage() {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <Card><p className="text-xs text-[var(--color-ink-muted)]">Saldo total</p><p className="text-lg font-semibold">{formatarMoeda(resumo.saldoTotal)}</p></Card>
-          <Card><p className="text-xs text-[var(--color-ink-muted)]">Lucro do mês</p><p className="text-lg font-semibold">{formatarMoeda(resumo.lucroDoMes)}</p></Card>
-          <Card><p className="text-xs text-[var(--color-ink-muted)]">Peças em produção</p><p className="text-lg font-semibold">{resumo.pecasEmProducao}</p></Card>
-          <Card><p className="text-xs text-[var(--color-ink-muted)]">Peças em cura</p><p className="text-lg font-semibold">{resumo.pecasEmCura}</p></Card>
-          <Card
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer"
-            onClick={() => navigate({ to: '/materiais' })}
-            onKeyDown={(evento) => {
-              if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/materiais' })
-            }}
-          >
-            <p className="text-xs text-[var(--color-ink-muted)]">Estoque baixo</p><p className="text-lg font-semibold">{resumo.materiaisEstoqueBaixo}</p>
-          </Card>
-          <Card
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer"
-            onClick={() => navigate({ to: '/pedidos' })}
-            onKeyDown={(evento) => {
-              if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/pedidos' })
-            }}
-          >
-            <p className="text-xs text-[var(--color-ink-muted)]">Pedidos em aberto</p><p className="text-lg font-semibold">{resumo.pedidosAbertos}</p>
-          </Card>
-        </div>
+        <section>
+          <div className="no-scrollbar -mx-1 flex gap-4 overflow-x-auto px-1 pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6">
+            <div className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden rounded-xl border border-outline-variant/10 bg-surface p-4">
+              <p className="mb-1 text-label-sm text-on-surface-variant">Saldo total</p>
+              <p className="text-headline-sm font-semibold text-primary">{formatarMoeda(resumo.saldoTotal)}</p>
+            </div>
+            <div className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden rounded-xl border border-outline-variant/10 bg-surface p-4">
+              <p className="mb-1 text-label-sm text-on-surface-variant">Lucro do mês</p>
+              <p className="text-headline-sm font-semibold text-primary">{formatarMoeda(resumo.lucroDoMes)}</p>
+            </div>
+            <div className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden rounded-xl border border-outline-variant/10 bg-surface p-4">
+              <p className="mb-1 text-label-sm text-on-surface-variant">Peças em produção</p>
+              <p className="text-headline-sm font-semibold text-primary">{resumo.pecasEmProducao}</p>
+            </div>
+            <div className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden rounded-xl border border-outline-variant/10 bg-surface p-4">
+              <p className="mb-1 text-label-sm text-on-surface-variant">Peças em cura</p>
+              <p className="text-headline-sm font-semibold text-primary">{resumo.pecasEmCura}</p>
+            </div>
+            <div
+              role="button"
+              tabIndex={0}
+              className="glow-hover min-w-[160px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-outline-variant/10 bg-surface p-4"
+              onClick={() => navigate({ to: '/materiais' })}
+              onKeyDown={(evento) => {
+                if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/materiais' })
+              }}
+            >
+              <p className="mb-1 text-label-sm text-on-surface-variant">Estoque baixo</p>
+              <p className="text-headline-sm font-semibold text-primary">{resumo.materiaisEstoqueBaixo}</p>
+            </div>
+            <div
+              role="button"
+              tabIndex={0}
+              className="glow-hover min-w-[160px] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-outline-variant/10 bg-surface p-4"
+              onClick={() => navigate({ to: '/pedidos' })}
+              onKeyDown={(evento) => {
+                if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/pedidos' })
+              }}
+            >
+              <p className="mb-1 text-label-sm text-on-surface-variant">Pedidos em aberto</p>
+              <p className="text-headline-sm font-semibold text-primary">{resumo.pedidosAbertos}</p>
+            </div>
+          </div>
+        </section>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={() => navigate({ to: '/pecas' })}>Nova peça</Button>
-        <Button onClick={() => navigate({ to: '/pedidos' })}>Novo pedido</Button>
-        <Button onClick={() => navigate({ to: '/materiais' })}>Novo material</Button>
-        <Button onClick={() => navigate({ to: '/transacoes' })}>Nova transação</Button>
-      </div>
+      <section>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Button onClick={() => navigate({ to: '/pecas' })}>Nova peça</Button>
+          <Button onClick={() => navigate({ to: '/pedidos' })}>Novo pedido</Button>
+          <Button onClick={() => navigate({ to: '/materiais' })}>Novo material</Button>
+          <Button onClick={() => navigate({ to: '/transacoes' })}>Nova transação</Button>
+        </div>
+      </section>
 
       {!erroCarga && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-2">
+          <div className="rounded-xl border border-outline-variant/10 bg-surface p-4 lg:col-span-2">
             <FluxoCaixaChart dados={resumo.fluxoCaixa14Dias} />
-          </Card>
-          <Card>
-            <p className="text-sm font-medium mb-2">Eventos recentes de produção</p>
+          </div>
+          <div className="rounded-xl border border-outline-variant/10 bg-surface p-4">
+            <p className="mb-2 text-sm font-medium text-on-surface">Eventos recentes de produção</p>
             {resumo.eventosRecentes.length === 0 ? (
-              <p className="text-sm text-[var(--color-ink-muted)]">Nenhum evento registrado ainda.</p>
+              <p className="text-sm text-on-surface-variant">Nenhum evento registrado ainda.</p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-3">
                 {resumo.eventosRecentes.map((evento, indice) => (
                   <li key={`${evento.pecaId}-${indice}`} className="text-sm">
-                    <Badge variant="neutral">{evento.tipo}</Badge> <span className="font-medium">{evento.nomePeca}</span>
-                    <p className="text-xs text-[var(--color-ink-muted)]">{evento.descricao}</p>
+                    <Badge variant="neutral">{evento.tipo}</Badge>{' '}
+                    <span className="font-medium text-on-surface">{evento.nomePeca}</span>
+                    <p className="text-xs text-on-surface-variant">{evento.descricao}</p>
                   </li>
                 ))}
               </ul>
             )}
-          </Card>
+          </div>
         </div>
       )}
     </div>

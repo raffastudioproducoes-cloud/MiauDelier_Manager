@@ -14,7 +14,7 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
 
   return (
     <div>
-      <p className="text-sm font-medium text-[var(--color-ink)] mb-2">Fluxo de caixa — últimos 14 dias</p>
+      <p className="text-sm font-medium text-on-surface mb-2">Fluxo de caixa — últimos 14 dias</p>
       <svg width="100%" viewBox={`0 0 ${largura} ${ALTURA_SVG}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Gráfico de entradas e saídas dos últimos 14 dias">
         {dados.map((ponto, indice) => {
           const x = indice * (LARGURA_BARRA * 2 + ESPACO_ENTRE_BARRAS)
@@ -22,8 +22,8 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
           const alturaSaida = (ponto.saidas / maiorValor) * (ALTURA_SVG - 10)
           return (
             <g key={ponto.data}>
-              <rect x={x} y={ALTURA_SVG - alturaEntrada} width={LARGURA_BARRA} height={alturaEntrada} fill="var(--color-success)" />
-              <rect x={x + LARGURA_BARRA} y={ALTURA_SVG - alturaSaida} width={LARGURA_BARRA} height={alturaSaida} fill="var(--color-danger)" />
+              <rect x={x} y={ALTURA_SVG - alturaEntrada} width={LARGURA_BARRA} height={alturaEntrada} rx={2} fill="var(--color-success)" opacity={0.85} />
+              <rect x={x + LARGURA_BARRA} y={ALTURA_SVG - alturaSaida} width={LARGURA_BARRA} height={alturaSaida} rx={2} fill="var(--color-danger)" opacity={0.85} />
             </g>
           )
         })}
