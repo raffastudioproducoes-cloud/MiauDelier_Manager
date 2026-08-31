@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 const CORES_BADGE = {
-  neutral: 'bg-[var(--color-surface)] text-[var(--color-ink-muted)]',
+  neutral: 'bg-surface-container text-on-surface-variant',
   success: 'bg-[var(--color-success-soft)] text-[var(--color-success)]',
   warning: 'bg-[var(--color-warning-soft)] text-[var(--color-warning)]',
   danger: 'bg-[var(--color-danger-soft)] text-[var(--color-danger)]',

@@ -10,9 +10,14 @@ interface EmptyStateProps {
 
 export function EmptyState({ titulo, descricao, acao, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center gap-2 py-12 text-center', className)}>
-      <p className="text-base font-semibold text-[var(--color-ink)]">{titulo}</p>
-      {descricao && <p className="text-sm text-[var(--color-ink-muted)]">{descricao}</p>}
+    <div
+      className={cn(
+        'flex flex-col items-center gap-2 rounded-2xl border border-dashed border-outline-variant bg-surface-container/40 py-12 text-center',
+        className,
+      )}
+    >
+      <p className="text-base font-semibold text-on-surface">{titulo}</p>
+      {descricao && <p className="text-sm text-on-surface-variant">{descricao}</p>}
       {acao}
     </div>
   )

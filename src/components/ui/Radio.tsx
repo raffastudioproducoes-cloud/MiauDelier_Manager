@@ -18,9 +18,9 @@ export function Radio({ id, name, rotulo, marcado, aoMudar, className }: RadioPr
         type="radio"
         checked={marcado}
         onChange={(evento) => aoMudar(evento.target.checked)}
-        className="h-4 w-4 accent-[var(--color-accent)]"
+        className="h-4 w-4 cursor-pointer accent-primary"
       />
-      <span className="text-sm text-[var(--color-ink)]">{rotulo}</span>
+      <span className="text-sm text-on-surface">{rotulo}</span>
     </label>
   )
 }

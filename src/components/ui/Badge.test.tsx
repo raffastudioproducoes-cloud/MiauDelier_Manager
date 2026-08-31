@@ -15,6 +15,6 @@ describe('Badge', () => {
 
   it('usa variant neutral por padrão', () => {
     render(<Badge>Padrão</Badge>)
-    expect(screen.getByText('Padrão')).toHaveClass('text-[var(--color-ink-muted)]')
+    expect(screen.getByText('Padrão')).toHaveClass('text-on-surface-variant')
   })
 })

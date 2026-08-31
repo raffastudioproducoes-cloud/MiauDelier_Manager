@@ -19,18 +19,18 @@ export function Switch({ id, rotulo, marcado, aoMudar, className }: SwitchProps)
         aria-label={rotulo}
         onClick={() => aoMudar(!marcado)}
         className={cn(
-          'relative h-6 w-11 shrink-0 rounded-full elevation-inset transition-colors',
-          marcado ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-base)]',
+          'relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent shadow-inner transition-colors',
+          marcado ? 'bg-primary' : 'bg-surface-high',
         )}
       >
         <span
           className={cn(
-            'absolute top-0.5 h-5 w-5 rounded-full bg-[var(--color-base)] elevation-raised transition-transform',
+            'absolute top-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform',
             marcado ? 'translate-x-5' : 'translate-x-0.5',
           )}
         />
       </button>
-      <label htmlFor={id} className="text-sm text-[var(--color-ink)] cursor-pointer">
+      <label htmlFor={id} className="text-sm text-on-surface cursor-pointer">
         {rotulo}
       </label>
     </div>

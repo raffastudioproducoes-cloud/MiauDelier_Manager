@@ -15,7 +15,12 @@ export function Tooltip({ conteudo, children, className }: TooltipProps) {
         <TooltipPrimitivo.Trigger asChild>{children}</TooltipPrimitivo.Trigger>
         <TooltipPrimitivo.Portal>
           {/* className cai no Content: o Trigger é o children de quem chama, não é nosso. */}
-          <TooltipPrimitivo.Content className={cn('rounded-md elevation-raised px-2 py-1 text-xs', className)}>
+          <TooltipPrimitivo.Content
+            className={cn(
+              'z-50 rounded-md border border-outline-variant bg-surface-high px-2 py-1 text-xs text-on-surface shadow-md',
+              className,
+            )}
+          >
             {conteudo}
           </TooltipPrimitivo.Content>
         </TooltipPrimitivo.Portal>

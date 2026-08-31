@@ -25,16 +25,16 @@ export function ConfirmModal({
   return (
     <Dialog.Root open={aberto} onOpenChange={(abertoAgora) => !abertoAgora && onCancelar()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60" />
         <Dialog.Content
           className={cn(
-            'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl elevation-raised p-6 w-full max-w-sm',
+            'fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-outline-variant bg-surface-container p-6 shadow-lg',
             className,
           )}
         >
-          <Dialog.Title className="text-base font-semibold text-[var(--color-ink)]">{titulo}</Dialog.Title>
+          <Dialog.Title className="text-base font-semibold text-on-surface">{titulo}</Dialog.Title>
           {descricao && (
-            <Dialog.Description className="mt-2 text-sm text-[var(--color-ink-muted)]">
+            <Dialog.Description className="mt-2 text-sm text-on-surface-variant">
               {descricao}
             </Dialog.Description>
           )}

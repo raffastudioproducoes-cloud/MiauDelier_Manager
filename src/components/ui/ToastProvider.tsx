@@ -46,14 +46,14 @@ export function ToastProvider({
   return (
     <ToastContext.Provider value={{ mostrarToast }}>
       {children}
-      <div className={cn('fixed bottom-4 right-4 flex flex-col gap-2', className)}>
+      <div className={cn('fixed bottom-4 right-4 z-50 flex flex-col gap-2', className)}>
         {toasts.map((toast) => (
           <div
             key={toast.id}
             role="status"
             className={cn(
-              'rounded-lg px-4 py-2 elevation-raised',
-              toast.tipo === 'erro' && 'text-[var(--color-danger)]',
+              'rounded-lg border border-outline-variant bg-surface-high px-4 py-2 text-sm text-on-surface shadow-lg',
+              toast.tipo === 'erro' && 'text-error',
             )}
           >
             {toast.mensagem}

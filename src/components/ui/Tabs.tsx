@@ -23,12 +23,12 @@ export function Tabs({ abas, abaInicial, abaAtiva, onMudarAba, className }: Tabs
 
   return (
     <TabsPrimitivo.Root {...props} className={className}>
-      <TabsPrimitivo.List className="flex gap-1 border-b border-thin">
+      <TabsPrimitivo.List className="inline-flex items-center gap-1 rounded-lg bg-surface-container p-1">
         {abas.map((aba) => (
           <TabsPrimitivo.Trigger
             key={aba.id}
             value={aba.id}
-            className="px-4 py-2 text-sm font-medium data-[state=active]:elevation-raised data-[state=active]:rounded-t-lg"
+            className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium text-on-surface-variant transition-colors data-[state=active]:bg-surface-high data-[state=active]:text-on-surface data-[state=active]:shadow"
           >
             {aba.rotulo}
           </TabsPrimitivo.Trigger>

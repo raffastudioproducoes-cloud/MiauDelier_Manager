@@ -13,16 +13,16 @@ interface BreadcrumbProps {
 
 export function Breadcrumb({ itens, className }: BreadcrumbProps) {
   return (
-    <nav aria-label="breadcrumb" className={cn('text-sm text-[var(--color-ink-muted)]', className)}>
+    <nav aria-label="breadcrumb" className={cn('text-sm text-on-surface-variant', className)}>
       {itens.map((item, indice) => (
         <span key={item.rotulo}>
           {indice > 0 && ' / '}
           {indice < itens.length - 1 && item.href ? (
-            <Link to={item.href} className="hover:text-[var(--color-accent)]">
+            <Link to={item.href} className="transition-colors hover:text-primary">
               {item.rotulo}
             </Link>
           ) : (
-            <span className="text-[var(--color-ink)]">{item.rotulo}</span>
+            <span className="font-medium text-on-surface">{item.rotulo}</span>
           )}
         </span>
       ))}

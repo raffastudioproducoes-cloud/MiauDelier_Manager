@@ -16,9 +16,9 @@ export function Checkbox({ id, rotulo, marcado, aoMudar, className }: CheckboxPr
         type="checkbox"
         checked={marcado}
         onChange={(evento) => aoMudar(evento.target.checked)}
-        className="h-4 w-4 rounded accent-[var(--color-accent)]"
+        className="h-4 w-4 cursor-pointer rounded accent-primary"
       />
-      <span className="text-sm text-[var(--color-ink)]">{rotulo}</span>
+      <span className="text-sm text-on-surface">{rotulo}</span>
     </label>
   )
 }
