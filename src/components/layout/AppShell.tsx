@@ -25,8 +25,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { location } = useRouterState()
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row elevation-base">
-      <nav className="flex md:w-56 md:flex-col md:p-4 md:gap-2 order-2 md:order-1 border-t md:border-t-0 md:border-r border-thin p-2 gap-1 flex-row md:flex-col justify-around md:justify-start">
+    <div className="flex min-h-screen flex-col bg-background text-on-surface md:flex-row">
+      <header className="sticky top-0 z-40 flex h-16 w-full shrink-0 items-center gap-3 border-b border-outline-variant/10 bg-background px-5 md:hidden">
+        <span className="text-headline-sm font-semibold tracking-tight text-primary">MiauDelier</span>
+      </header>
+
+      <nav className="order-2 flex shrink-0 gap-1 overflow-x-auto border-t border-outline-variant/10 bg-surface-container/95 p-2 backdrop-blur-md md:order-1 md:h-screen md:w-56 md:flex-col md:gap-2 md:overflow-visible md:border-t-0 md:border-r md:p-4">
+        <span className="hidden px-3 pb-2 text-headline-sm font-semibold tracking-tight text-primary md:block">
+          MiauDelier
+        </span>
         {ITENS_MENU.map((item) => (
           <NavItem
             key={item.rota}
@@ -40,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Button variante="ghost" onClick={sair}>Sair</Button>
         </div>
       </nav>
-      <main className="flex-1 order-1 md:order-2 p-4">{children}</main>
+      <main className="order-1 flex-1 p-4 md:order-2">{children}</main>
     </div>
   )
 }
