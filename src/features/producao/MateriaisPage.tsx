@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
-import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
@@ -238,12 +237,10 @@ export function MateriaisPage() {
         ) : (
           <ul className="flex flex-col gap-3">
             {materiais.map((material) => {
-              const critico = material.quantidadeEstoque < 1
               return (
                 <Card key={material.id} className="glow-hover">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-medium text-on-surface">{material.nome}</h3>
-                    {critico && <Badge variant="danger">Estoque baixo</Badge>}
                   </div>
                   <p className="mt-1 text-label-sm text-on-surface-variant">
                     {material.quantidadeEstoque} {material.unidade} em estoque · {formatarMoeda(material.custoUnitario)} · {nomeCategoria(material.categoriaId)}
