@@ -62,41 +62,45 @@ export function PedidoDetalhePage() {
   const pecasDoPedido = pedido.pecaIds.map((pecaId) => pecas.find((peca) => peca.id === pecaId)).filter((peca): peca is PecaComForma => Boolean(peca))
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Pedido #{pedido.id}</h1>
-        <div className="flex items-center gap-2">
-          <Badge variant="neutral">{pedido.status}</Badge>
-          <label htmlFor="status-pedido" className="sr-only">Status</label>
-          <select
-            id="status-pedido"
-            value={pedido.status}
-            onChange={(e) => handleMudarStatus(e.target.value as StatusPedido)}
-            className="rounded-lg px-3 py-2 elevation-inset"
-          >
-            {OPCOES_STATUS.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
+    <div className="flex flex-col gap-6">
+      <Card>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold text-on-surface">Pedido #{pedido.id}</h1>
+            <p className="mt-1 text-label-sm text-on-surface-variant">Cliente: {pedido.nomeCliente}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="neutral">{pedido.status}</Badge>
+            <label htmlFor="status-pedido" className="sr-only">Status</label>
+            <select
+              id="status-pedido"
+              value={pedido.status}
+              onChange={(e) => handleMudarStatus(e.target.value as StatusPedido)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              {OPCOES_STATUS.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
-      <p className="text-sm text-[var(--color-ink-muted)]">Cliente: {pedido.nomeCliente}</p>
+      </Card>
 
       <Card>
-        <h2 className="mb-2 font-medium">Peças</h2>
+        <h2 className="mb-2 font-medium text-on-surface">Peças</h2>
         {pecasDoPedido.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">Nenhuma peça vinculada.</p>
+          <p className="text-sm text-on-surface-variant">Nenhuma peça vinculada.</p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-2">
             {pecasDoPedido.map((peca) => (
-              <li key={peca.id} className="flex items-center justify-between text-sm">
+              <li key={peca.id} className="flex items-center justify-between text-sm text-on-surface-variant">
                 <span>{peca.nome}</span>
-                <span>R$ {(peca.precoVenda ?? 0).toFixed(2)}</span>
+                <span className="font-medium text-on-surface">R$ {(peca.precoVenda ?? 0).toFixed(2)}</span>
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-3 text-right font-medium">Total: R$ {pedido.valorTotal.toFixed(2)}</p>
+        <p className="mt-3 text-right font-semibold text-primary">Total: R$ {pedido.valorTotal.toFixed(2)}</p>
       </Card>
     </div>
   )

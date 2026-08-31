@@ -120,35 +120,46 @@ export function PedidosPage() {
   if (!carregado) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold">Pedidos</h1>
-        <p className="text-sm text-[var(--color-ink-muted)]">Carregando...</p>
+        <h1 className="text-xl font-semibold text-on-surface">Pedidos</h1>
+        <p className="text-sm text-on-surface-variant">Carregando...</p>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Pedidos</h1>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">Pedidos</h1>
+        <p className="text-label-sm text-on-surface-variant">Encomendas do atelier por situação.</p>
+      </div>
 
       {faltamPreRequisitos && (
-        <p role="alert" className="text-sm text-[var(--color-danger)]">
+        <p role="alert" className="text-sm text-error">
           Cadastre pelo menos um cliente e uma peça antes de criar um pedido.
         </p>
       )}
 
       <Card>
+        <h2 className="mb-3 font-medium text-on-surface">Criar pedido</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <label htmlFor="cliente-pedido" className="text-sm font-medium">Cliente</label>
-          <select id="cliente-pedido" value={clienteId} onChange={(e) => setClienteId(e.target.value)} className="rounded-lg px-3 py-2 elevation-inset">
-            <option value="">Selecione</option>
-            {clientes.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>
-            ))}
-          </select>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="cliente-pedido" className="text-sm font-medium text-on-surface">Cliente</label>
+            <select
+              id="cliente-pedido"
+              value={clienteId}
+              onChange={(e) => setClienteId(e.target.value)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              <option value="">Selecione</option>
+              {clientes.map((cliente) => (
+                <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>
+              ))}
+            </select>
+          </div>
 
-          <p className="text-sm font-medium">Peças</p>
+          <p className="text-sm font-medium text-on-surface">Peças</p>
           {pecasDisponiveis.map((peca) => (
-            <label key={peca.id} className="flex items-center gap-2">
+            <label key={peca.id} className="flex items-center gap-2 text-sm text-on-surface">
               <input
                 type="checkbox"
                 checked={pecaIdsSelecionadas.includes(peca.id!)}
@@ -164,26 +175,29 @@ export function PedidosPage() {
         </form>
       </Card>
 
-      {pedidos.length === 0 ? (
-        <EmptyState titulo="Nenhum pedido cadastrado" descricao="Crie o primeiro pedido do seu ateliê." />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {pedidos.map((pedido) => (
-            <Card key={pedido.id} className="flex items-center justify-between">
-              <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }} className="flex-1">
-                <p className="font-medium">Cliente: {pedido.nomeCliente}</p>
-                <p className="text-sm text-[var(--color-ink-muted)]">
-                  R$ {pedido.valorTotal.toFixed(2)}
-                </p>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Badge variant="neutral">{pedido.status}</Badge>
-                <Button variante="ghost" onClick={() => setPedidoExcluindoId(pedido.id ?? null)}>Excluir</Button>
-              </div>
-            </Card>
-          ))}
-        </ul>
-      )}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">Todos os Pedidos</h2>
+        {pedidos.length === 0 ? (
+          <EmptyState titulo="Nenhum pedido cadastrado" descricao="Crie o primeiro pedido do seu ateliê." />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {pedidos.map((pedido) => (
+              <Card key={pedido.id} className="glow-hover flex items-center justify-between gap-3">
+                <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }} className="flex-1">
+                  <p className="font-medium text-on-surface">Cliente: {pedido.nomeCliente}</p>
+                  <p className="mt-1 text-label-sm text-on-surface-variant">
+                    R$ {pedido.valorTotal.toFixed(2)}
+                  </p>
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Badge variant="neutral">{pedido.status}</Badge>
+                  <Button variante="ghost" onClick={() => setPedidoExcluindoId(pedido.id ?? null)}>Excluir</Button>
+                </div>
+              </Card>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <ConfirmModal
         aberto={pedidoExcluindoId !== null}

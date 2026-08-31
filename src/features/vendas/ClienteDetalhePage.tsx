@@ -45,19 +45,35 @@ export function ClienteDetalhePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{cliente.nome}</h1>
-      {cliente.contato && <p className="text-sm text-[var(--color-ink-muted)]">{cliente.contato}</p>}
+    <div className="flex flex-col gap-6">
+      <Card>
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container text-sm font-semibold text-primary">
+            {cliente.nome
+              .split(' ')
+              .slice(0, 2)
+              .map((parte) => parte.charAt(0))
+              .join('')
+              .toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-on-surface">{cliente.nome}</h1>
+            {cliente.contato && <p className="mt-1 text-label-sm text-on-surface-variant">{cliente.contato}</p>}
+          </div>
+        </div>
+      </Card>
 
       <Card>
-        <h2 className="mb-2 font-medium">Pedidos</h2>
+        <h2 className="mb-2 font-medium text-on-surface">Pedidos</h2>
         {pedidos.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">Nenhum pedido registrado para este cliente.</p>
+          <p className="text-sm text-on-surface-variant">Nenhum pedido registrado para este cliente.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {pedidos.map((pedido) => (
               <li key={pedido.id} className="flex items-center justify-between text-sm">
-                <span>Pedido #{pedido.id} — {new Date(pedido.criadoEm).toLocaleString('pt-BR')}</span>
+                <span className="text-on-surface-variant">
+                  Pedido #{pedido.id} — {new Date(pedido.criadoEm).toLocaleString('pt-BR')}
+                </span>
                 <Badge variant="neutral">{pedido.status}</Badge>
               </li>
             ))}

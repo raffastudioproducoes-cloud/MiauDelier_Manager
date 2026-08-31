@@ -112,13 +112,20 @@ export function ClientesPage() {
   )
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Clientes</h1>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">Clientes</h1>
+        <p className="text-label-sm text-on-surface-variant">Sua base de contatos e histórico.</p>
+      </div>
+
       <Card>
+        <h2 className="mb-3 font-medium text-on-surface">
+          {editandoId !== null ? 'Editar cliente' : 'Cadastrar cliente'}
+        </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <TextField id="nome-cliente" rotulo="Nome do cliente" value={nome} onChange={(e) => setNome(e.target.value)} />
           <TextField id="contato-cliente" rotulo="Contato" value={contato} onChange={(e) => setContato(e.target.value)} />
-          {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{erro}</p>}
+          {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
           <div className="flex gap-2">
             <Button type="submit">{editandoId !== null ? 'Salvar alterações' : 'Cadastrar cliente'}</Button>
             {editandoId !== null && (
@@ -137,23 +144,32 @@ export function ClientesPage() {
         onChange={(e) => setBusca(e.target.value)}
       />
 
-      {clientesFiltrados.length === 0 ? (
-        <EmptyState
-          titulo={clientes.length === 0 ? 'Nenhum cliente cadastrado' : 'Nenhum cliente encontrado'}
-          descricao={
-            clientes.length === 0
-              ? 'Cadastre o primeiro cliente do seu ateliê.'
-              : 'Ajuste os termos da busca.'
-          }
-        />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {clientesFiltrados.map((cliente) => (
-            <Card key={cliente.id}>
-              <div className="flex items-center justify-between gap-2">
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">Clientes Cadastrados</h2>
+        {clientesFiltrados.length === 0 ? (
+          <EmptyState
+            titulo={clientes.length === 0 ? 'Nenhum cliente cadastrado' : 'Nenhum cliente encontrado'}
+            descricao={
+              clientes.length === 0
+                ? 'Cadastre o primeiro cliente do seu ateliê.'
+                : 'Ajuste os termos da busca.'
+            }
+          />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {clientesFiltrados.map((cliente) => (
+              <Card key={cliente.id} className="glow-hover flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container text-sm font-semibold text-primary">
+                  {cliente.nome
+                    .split(' ')
+                    .slice(0, 2)
+                    .map((parte) => parte.charAt(0))
+                    .join('')
+                    .toUpperCase()}
+                </div>
                 <Link to="/clientes/$clienteId" params={{ clienteId: String(cliente.id) }} className="flex-1">
-                  <p className="font-medium">{cliente.nome}</p>
-                  {cliente.contato && <p className="text-sm text-[var(--color-ink-muted)]">{cliente.contato}</p>}
+                  <p className="font-medium text-on-surface">{cliente.nome}</p>
+                  {cliente.contato && <p className="mt-1 text-label-sm text-on-surface-variant">{cliente.contato}</p>}
                 </Link>
                 <div className="flex gap-2">
                   <Button variante="ghost" onClick={() => iniciarEdicao(cliente)}>
@@ -163,11 +179,11 @@ export function ClientesPage() {
                     Excluir
                   </Button>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </ul>
-      )}
+              </Card>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <ConfirmModal
         aberto={clienteParaExcluir !== null}
