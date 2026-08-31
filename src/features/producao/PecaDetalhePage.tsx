@@ -114,9 +114,12 @@ export function PecaDetalhePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{peca.nome}</h1>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-on-surface">{peca.nome}</h1>
+          <p className="mt-1 text-label-sm text-on-surface-variant">Forma: {peca.nomeForma}</p>
+        </div>
         <div className="flex items-center gap-2">
           <Badge variant="neutral">{peca.status}</Badge>
           <label htmlFor="status-peca" className="sr-only">Status</label>
@@ -124,7 +127,7 @@ export function PecaDetalhePage() {
             id="status-peca"
             value={peca.status}
             onChange={(e) => handleMudarStatus(e.target.value as StatusPeca)}
-            className="rounded-lg px-3 py-2 elevation-inset"
+            className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
           >
             {OPCOES_STATUS.map((status) => (
               <option key={status} value={status}>{status}</option>
@@ -132,16 +135,15 @@ export function PecaDetalhePage() {
           </select>
         </div>
       </div>
-      <p className="text-sm text-[var(--color-ink-muted)]">Forma: {peca.nomeForma}</p>
 
       <Card>
-        <h2 className="mb-2 font-medium">Materiais consumidos</h2>
+        <h2 className="mb-2 font-medium text-on-surface">Materiais consumidos</h2>
         {consumos.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">Nenhum consumo registrado.</p>
+          <p className="text-sm text-on-surface-variant">Nenhum consumo registrado.</p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-2">
             {consumos.map((consumo, indice) => (
-              <li key={indice} className="text-sm">
+              <li key={indice} className="text-sm text-on-surface-variant">
                 {consumo.nomeMaterial}: {consumo.quantidade}
               </li>
             ))}
@@ -150,14 +152,14 @@ export function PecaDetalhePage() {
       </Card>
 
       <Card>
-        <h2 className="mb-2 font-medium">Histórico de eventos</h2>
+        <h2 className="mb-2 font-medium text-on-surface">Histórico de eventos</h2>
         {eventos.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">Nenhum evento registrado.</p>
+          <p className="text-sm text-on-surface-variant">Nenhum evento registrado.</p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-2">
             {eventos.map((evento) => (
-              <li key={evento.id} className="text-sm">
-                <span className="font-medium">{evento.tipo}</span> — {evento.descricao} ({new Date(evento.criadoEm).toLocaleString('pt-BR')})
+              <li key={evento.id} className="text-sm text-on-surface-variant">
+                {evento.tipo} — {evento.descricao} ({new Date(evento.criadoEm).toLocaleString('pt-BR')})
               </li>
             ))}
           </ul>

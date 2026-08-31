@@ -147,42 +147,54 @@ export function PecasPage() {
   if (!carregado) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-semibold">Peças</h1>
-        <p className="text-sm text-[var(--color-ink-muted)]">Carregando...</p>
+        <h1 className="text-xl font-semibold text-on-surface">Peças</h1>
+        <p className="text-sm text-on-surface-variant">Carregando...</p>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Peças</h1>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">Peças</h1>
+        <p className="text-label-sm text-on-surface-variant">Fluxo das peças na oficina.</p>
+      </div>
+
       <Card>
+        <h2 className="mb-3 font-medium text-on-surface">Cadastrar peça</h2>
         {faltamPreRequisitos && (
-          <p role="alert" className="mb-3 text-sm text-[var(--color-ink-muted)]">
+          <p role="alert" className="mb-3 text-sm text-on-surface-variant">
             Cadastre pelo menos um material e uma forma antes de criar uma peça.
           </p>
         )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <TextField id="nome-peca" rotulo="Nome da peça" value={nome} onChange={(e) => setNome(e.target.value)} />
 
-          <label htmlFor="forma-peca" className="text-sm font-medium">Forma</label>
-          <select id="forma-peca" value={formaId} onChange={(e) => setFormaId(e.target.value)} className="rounded-lg px-3 py-2 elevation-inset">
-            <option value="">Selecione</option>
-            {formas.map((forma) => (
-              <option key={forma.id} value={forma.id}>{forma.nome}</option>
-            ))}
-          </select>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="forma-peca" className="text-sm font-medium text-on-surface">Forma</label>
+            <select
+              id="forma-peca"
+              value={formaId}
+              onChange={(e) => setFormaId(e.target.value)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              <option value="">Selecione</option>
+              {formas.map((forma) => (
+                <option key={forma.id} value={forma.id}>{forma.nome}</option>
+              ))}
+            </select>
+          </div>
 
-          <p className="text-sm font-medium">Materiais consumidos</p>
+          <p className="text-sm font-medium text-on-surface">Materiais consumidos</p>
           {consumos.map((linha, indice) => (
             <div key={indice} className="flex items-end gap-2">
               <div className="flex flex-1 flex-col gap-1">
-                <label htmlFor={`material-peca-${indice}`} className="text-sm font-medium">Material</label>
+                <label htmlFor={`material-peca-${indice}`} className="text-sm font-medium text-on-surface">Material</label>
                 <select
                   id={`material-peca-${indice}`}
                   value={linha.materialId}
                   onChange={(e) => atualizarLinha(indice, 'materialId', e.target.value)}
-                  className="rounded-lg px-3 py-2 elevation-inset"
+                  className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 >
                   <option value="">Selecione</option>
                   {materiais.map((material) => (
@@ -204,29 +216,32 @@ export function PecasPage() {
           ))}
           <Button type="button" variante="ghost" onClick={adicionarLinha}>+ Adicionar material</Button>
 
-          {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{erro}</p>}
+          {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
           <Button type="submit" disabled={faltamPreRequisitos}>Cadastrar peça</Button>
         </form>
       </Card>
 
-      {pecas.length === 0 ? (
-        <EmptyState titulo="Nenhuma peça cadastrada" descricao="Cadastre a primeira peça em produção." />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {pecas.map((peca) => (
-            <Card key={peca.id} className="flex items-center justify-between">
-              <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} className="flex-1">
-                <p className="font-medium">{peca.nome}</p>
-                <p className="text-sm text-[var(--color-ink-muted)]">{peca.nomeForma}</p>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Badge variant="neutral">{peca.status}</Badge>
-                <Button variante="ghost" onClick={() => setPecaExcluindoId(peca.id ?? null)}>Excluir</Button>
-              </div>
-            </Card>
-          ))}
-        </ul>
-      )}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">Todas as Peças</h2>
+        {pecas.length === 0 ? (
+          <EmptyState titulo="Nenhuma peça cadastrada" descricao="Cadastre a primeira peça em produção." />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {pecas.map((peca) => (
+              <Card key={peca.id} className="glow-hover flex items-center justify-between gap-3">
+                <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} className="flex-1">
+                  <p className="font-medium text-on-surface">{peca.nome}</p>
+                  <p className="mt-1 text-label-sm text-on-surface-variant">{peca.nomeForma}</p>
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Badge variant="neutral">{peca.status}</Badge>
+                  <Button variante="ghost" onClick={() => setPecaExcluindoId(peca.id ?? null)}>Excluir</Button>
+                </div>
+              </Card>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <ConfirmModal
         aberto={pecaExcluindoId !== null}

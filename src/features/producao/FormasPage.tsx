@@ -185,23 +185,32 @@ export function FormasPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Formas</h1>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">Formas</h1>
+        <p className="text-label-sm text-on-surface-variant">Banco técnico de moldes do ateliê.</p>
+      </div>
+
       <Card>
+        <h2 className="mb-3 font-medium text-on-surface">
+          {formaEmEdicaoId !== null ? 'Editar forma' : 'Cadastrar forma'}
+        </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <TextField id="nome-forma" rotulo="Nome da forma" value={nome} onChange={(e) => setNome(e.target.value)} />
 
-          <label htmlFor="geometria-forma" className="text-sm font-medium text-[var(--color-ink)]">Geometria</label>
-          <select
-            id="geometria-forma"
-            value={geometria}
-            onChange={(e) => setGeometria(e.target.value as FormaGeometria)}
-            className="rounded-lg px-3 py-2 elevation-inset"
-          >
-            {(Object.keys(ROTULOS_GEOMETRIA) as FormaGeometria[]).map((chave) => (
-              <option key={chave} value={chave}>{ROTULOS_GEOMETRIA[chave]}</option>
-            ))}
-          </select>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="geometria-forma" className="text-sm font-medium text-on-surface">Geometria</label>
+            <select
+              id="geometria-forma"
+              value={geometria}
+              onChange={(e) => setGeometria(e.target.value as FormaGeometria)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              {(Object.keys(ROTULOS_GEOMETRIA) as FormaGeometria[]).map((chave) => (
+                <option key={chave} value={chave}>{ROTULOS_GEOMETRIA[chave]}</option>
+              ))}
+            </select>
+          </div>
 
           {geometria === 'retangular' && (
             <>
@@ -223,11 +232,11 @@ export function FormasPage() {
             <TextField id="volume-forma" rotulo="Volume (ml)" type="number" value={volumeMl} onChange={(e) => setVolumeMl(e.target.value)} />
           )}
 
-          <p className="text-sm text-[var(--color-ink-muted)]">
-            Volume calculado: <strong>{volumeCalculado !== null ? `${volumeCalculado.toFixed(1)} ml` : '—'}</strong>
+          <p className="text-sm text-on-surface-variant">
+            Volume calculado: <strong className="text-on-surface">{volumeCalculado !== null ? `${volumeCalculado.toFixed(1)} ml` : '—'}</strong>
           </p>
 
-          {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{erro}</p>}
+          {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={volumeCalculado === null || volumeCalculado <= 0 || !nome.trim()}>
               {formaEmEdicaoId !== null ? 'Salvar' : 'Cadastrar forma'}
@@ -239,24 +248,29 @@ export function FormasPage() {
         </form>
       </Card>
 
-      {formas.length === 0 ? (
-        <EmptyState titulo="Nenhuma forma cadastrada" descricao="Cadastre o primeiro molde do seu ateliê." />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {formas.map((forma) => (
-            <Card key={forma.id}>
-              <p className="font-medium">{forma.nome}</p>
-              <p className="text-sm text-[var(--color-ink-muted)]">
-                {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Button variante="ghost" onClick={() => iniciarEdicao(forma)}>Editar</Button>
-                <Button variante="ghost" onClick={() => setFormaExcluindoId(forma.id ?? null)}>Excluir</Button>
-              </div>
-            </Card>
-          ))}
-        </ul>
-      )}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">Moldes Cadastrados</h2>
+        {formas.length === 0 ? (
+          <EmptyState titulo="Nenhuma forma cadastrada" descricao="Cadastre o primeiro molde do seu ateliê." />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {formas.map((forma) => (
+              <Card key={forma.id} className="glow-hover">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-medium text-on-surface">{forma.nome}</h3>
+                </div>
+                <p className="mt-1 text-label-sm text-on-surface-variant">
+                  {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button variante="ghost" onClick={() => iniciarEdicao(forma)}>Editar</Button>
+                  <Button variante="ghost" onClick={() => setFormaExcluindoId(forma.id ?? null)}>Excluir</Button>
+                </div>
+              </Card>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <ConfirmModal
         aberto={formaExcluindoId !== null}
