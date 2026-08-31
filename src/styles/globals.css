@@ -146,15 +146,3 @@
   .border-regular { border-width: 2px; }
   .border-thick { border-width: 4px; }
 }
-
-.material-symbols-outlined {
-  font-variation-settings:
-    "FILL" 0,
-    "wght" 400,
-    "GRAD" 0,
-    "opsz" 24;
-}
-
-.material-symbols-outlined.filled {
-  font-variation-settings: "FILL" 1;
-}

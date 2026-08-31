@@ -44,7 +44,8 @@ describe('LoginForm', () => {
     fireEvent.change(input, { target: { value: 'senha-errada' } })
     fireEvent.click(screen.getByRole('button', { name: /entrar/i }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/senha incorreta/i)
+    // nota: pode ser intermitente sob carga da suíte completa (mesma classe de flakiness de TransacoesPage.test.tsx)
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(/senha incorreta/i)
     expect(navegarMock).not.toHaveBeenCalled()
   })
 
