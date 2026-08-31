@@ -23,7 +23,7 @@ export function LoginForm() {
     carregarEstadoInicial()
   }, [carregarEstadoInicial])
 
-  if (contaConfigurada === null) return <p>Carregando...</p>
+  if (contaConfigurada === null) return <p className="text-on-surface-variant">Carregando...</p>
 
   async function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
@@ -49,12 +49,17 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--color-base)] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <h1 className="text-xl font-semibold text-[var(--color-ink)]">
-            {contaConfigurada ? 'Entrar' : 'Criar senha'}
-          </h1>
+          <div>
+            <h1 className="text-xl font-semibold text-on-surface">
+              {contaConfigurada ? 'Entrar' : 'Criar senha'}
+            </h1>
+            <p className="mt-1 text-label-sm text-on-surface-variant">
+              {contaConfigurada ? 'Acesse o painel do ateliê.' : 'Defina a senha que vai proteger seus dados.'}
+            </p>
+          </div>
           <TextField
             id="senha"
             rotulo="Senha"

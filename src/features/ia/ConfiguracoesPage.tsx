@@ -63,35 +63,51 @@ export function ConfiguracoesPage() {
     }
   }
 
-  if (chaveConfigurada === null) return <p>Carregando...</p>
+  if (chaveConfigurada === null) return <p className="text-on-surface-variant">Carregando...</p>
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Configurações — Assistente de IA</h1>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">Configurações</h1>
+        <p className="text-label-sm text-on-surface-variant">Assistente de IA e preferências do ateliê.</p>
+      </div>
 
-      <Card>
-        {chaveConfigurada ? (
-          <p className="text-sm text-[var(--color-success)]">Chave configurada. A chave é definida uma única vez e não pode ser trocada por aqui.</p>
-        ) : (
-          <form onSubmit={handleSalvarChave} className="flex flex-col gap-3">
-            <p className="text-sm text-[var(--color-ink-muted)]">
-              Cole abaixo a chave de API do Gemini (gratuita). Essa chave é cifrada e só pode ser definida uma vez.
-              Confira a chave com atenção antes de salvar — depois de configurada, não é possível trocar por aqui. Se errar, a única saída é limpar o app ou restaurar um backup anterior.
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Chave de API do Gemini</h2>
+        <Card>
+          {chaveConfigurada ? (
+            <p className="text-sm text-success">
+              Chave configurada. A chave é definida uma única vez e não pode ser trocada por aqui.
             </p>
-            <TextField id="chave-gemini" rotulo="Chave de API do Gemini" type="password" value={chaveDigitada} onChange={(e) => setChaveDigitada(e.target.value)} />
-            <Button type="submit">Salvar chave</Button>
-          </form>
-        )}
-      </Card>
+          ) : (
+            <form onSubmit={handleSalvarChave} className="flex flex-col gap-3">
+              <p className="text-sm text-on-surface-variant">
+                Cole abaixo a chave de API do Gemini (gratuita). Essa chave é cifrada e só pode ser definida uma vez.
+                Confira a chave com atenção antes de salvar — depois de configurada, não é possível trocar por aqui. Se errar, a única saída é limpar o app ou restaurar um backup anterior.
+              </p>
+              <TextField id="chave-gemini" rotulo="Chave de API do Gemini" type="password" value={chaveDigitada} onChange={(e) => setChaveDigitada(e.target.value)} />
+              <Button type="submit">Salvar chave</Button>
+            </form>
+          )}
+        </Card>
+      </section>
 
-      <Card>
-        <label htmlFor="personalidade-ia" className="text-sm font-medium">Personalidade do assistente</label>
-        <select id="personalidade-ia" value={personalidade} onChange={handleMudarPersonalidade} className="mt-1 rounded-lg px-3 py-2 elevation-inset">
-          <option value="tecnica">Técnica</option>
-          <option value="acolhedora">Acolhedora</option>
-          <option value="direta">Direta</option>
-        </select>
-      </Card>
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Assistente</h2>
+        <Card>
+          <label htmlFor="personalidade-ia" className="text-sm font-medium text-on-surface">Personalidade do assistente</label>
+          <select
+            id="personalidade-ia"
+            value={personalidade}
+            onChange={handleMudarPersonalidade}
+            className="mt-1 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          >
+            <option value="tecnica">Técnica</option>
+            <option value="acolhedora">Acolhedora</option>
+            <option value="direta">Direta</option>
+          </select>
+        </Card>
+      </section>
     </div>
   )
 }

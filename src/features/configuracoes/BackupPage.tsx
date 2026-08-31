@@ -64,31 +64,40 @@ export function BackupPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Backup</h1>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">Backup</h1>
+        <p className="text-label-sm text-on-surface-variant">Exportação e restauração dos dados do ateliê.</p>
+      </div>
 
-      <Card>
-        <p className="text-sm text-[var(--color-ink-muted)] mb-3">
-          Exporte seus dados para um arquivo local. Guarde esse arquivo em local seguro — é a única forma de recuperar seus dados se limpar o navegador.
-        </p>
-        <Button onClick={handleExportar}>Exportar backup</Button>
-      </Card>
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Exportar</h2>
+        <Card>
+          <p className="mb-3 text-sm text-on-surface-variant">
+            Exporte seus dados para um arquivo local. Guarde esse arquivo em local seguro — é a única forma de recuperar seus dados se limpar o navegador.
+          </p>
+          <Button onClick={handleExportar}>Exportar backup</Button>
+        </Card>
+      </section>
 
-      <Card>
-        <p className="text-sm text-[var(--color-ink-muted)] mb-3">
-          Importar um backup substitui todos os dados atuais e encerra sua sessão — você precisará entrar de novo com a senha do backup.
-        </p>
-        <label htmlFor="input-backup" className="text-sm font-medium">Importar backup</label>
-        <input
-          id="input-backup"
-          ref={inputArquivoRef}
-          type="file"
-          accept="application/json"
-          onChange={handleSelecionarArquivo}
-          className="mt-1"
-        />
-        {erro && <p role="alert" className="mt-2 text-sm text-[var(--color-danger)]">{erro}</p>}
-      </Card>
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Importar</h2>
+        <Card>
+          <p className="mb-3 text-sm text-on-surface-variant">
+            Importar um backup substitui todos os dados atuais e encerra sua sessão — você precisará entrar de novo com a senha do backup.
+          </p>
+          <label htmlFor="input-backup" className="text-sm font-medium text-on-surface">Importar backup</label>
+          <input
+            id="input-backup"
+            ref={inputArquivoRef}
+            type="file"
+            accept="application/json"
+            onChange={handleSelecionarArquivo}
+            className="mt-1 block w-full text-sm text-on-surface-variant file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-primary file:cursor-pointer"
+          />
+          {erro && <p role="alert" className="mt-2 text-sm text-error">{erro}</p>}
+        </Card>
+      </section>
 
       <ConfirmModal
         aberto={arquivoSelecionado !== null}
