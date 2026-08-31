@@ -173,23 +173,29 @@ export function TransacoesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Transações</h1>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">Transações</h1>
+        <p className="text-label-sm text-on-surface-variant">Movimentações do caixa do ateliê.</p>
+      </div>
 
       {faltaConta && (
-        <p role="alert" className="text-sm text-[var(--color-danger)]">
+        <p role="alert" className="text-sm text-error">
           Cadastre pelo menos uma conta antes de registrar uma transação.
         </p>
       )}
 
       <Card>
+        <h2 className="mb-3 font-medium text-on-surface">
+          {transacaoEmEdicaoId !== null ? 'Editar transação' : 'Registrar transação'}
+        </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <label htmlFor="conta-transacao" className="text-sm font-medium">Conta</label>
+          <label htmlFor="conta-transacao" className="text-sm font-medium text-on-surface">Conta</label>
           <select
             id="conta-transacao"
             value={contaId}
             onChange={(e) => setContaId(e.target.value)}
-            className="rounded-lg px-3 py-2 elevation-inset"
+            className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             disabled={transacaoEmEdicaoId !== null}
           >
             <option value="">Selecione</option>
@@ -198,8 +204,13 @@ export function TransacoesPage() {
             ))}
           </select>
 
-          <label htmlFor="tipo-transacao" className="text-sm font-medium">Tipo</label>
-          <select id="tipo-transacao" value={tipo} onChange={(e) => setTipo(e.target.value as TipoTransacao)} className="rounded-lg px-3 py-2 elevation-inset">
+          <label htmlFor="tipo-transacao" className="text-sm font-medium text-on-surface">Tipo</label>
+          <select
+            id="tipo-transacao"
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as TipoTransacao)}
+            className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          >
             <option value="entrada">Entrada</option>
             <option value="saida">Saída</option>
           </select>
@@ -208,7 +219,7 @@ export function TransacoesPage() {
           <TextField id="descricao-transacao" rotulo="Descrição" value={descricao} onChange={(e) => setDescricao(e.target.value)} />
           <TextField id="data-transacao" rotulo="Data" type="date" value={data} onChange={(e) => setData(e.target.value)} />
 
-          {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{erro}</p>}
+          {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={faltaConta || !contaId}>
               {transacaoEmEdicaoId !== null ? 'Salvar' : 'Registrar transação'}
@@ -221,7 +232,7 @@ export function TransacoesPage() {
       </Card>
 
       {contaSelecionada && (
-        <h2 className="text-sm font-medium text-[var(--color-ink-muted)]">
+        <h2 className="text-sm font-medium text-on-surface-variant">
           Movimentações de {contaSelecionada.nome}
         </h2>
       )}
@@ -233,27 +244,40 @@ export function TransacoesPage() {
         </Card>
       )}
 
-      {transacoesFiltradas.length === 0 ? (
-        <EmptyState titulo="Nenhuma transação registrada" descricao="Registre a primeira movimentação da conta." />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {transacoesFiltradas.map((transacao) => (
-            <Card key={transacao.id} className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{transacao.descricao}</p>
-                <p className="text-sm text-[var(--color-ink-muted)]">{formatarData(transacao.data)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <p className={transacao.tipo === 'entrada' ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}>
-                  {transacao.tipo === 'entrada' ? '+' : '-'} {transacao.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-                <Button variante="ghost" onClick={() => iniciarEdicao(transacao)}>Editar</Button>
-                <Button variante="ghost" onClick={() => setTransacaoExcluindoId(transacao.id)}>Excluir</Button>
-              </div>
-            </Card>
-          ))}
-        </ul>
-      )}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">Últimas Transações</h2>
+        {transacoesFiltradas.length === 0 ? (
+          <EmptyState titulo="Nenhuma transação registrada" descricao="Registre a primeira movimentação da conta." />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {transacoesFiltradas.map((transacao) => {
+              const entrada = transacao.tipo === 'entrada'
+              return (
+                <Card key={transacao.id} className="glow-hover flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-outline-variant bg-surface-container">
+                    <span className={entrada ? 'text-lg font-semibold text-primary' : 'text-lg font-semibold text-error'}>
+                      {entrada ? '↑' : '↓'}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium text-on-surface">{transacao.descricao}</p>
+                      <p className={entrada ? 'text-sm font-semibold text-primary' : 'text-sm font-semibold text-error'}>
+                        {entrada ? '+' : '-'} {transacao.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-label-sm text-on-surface-variant">{formatarData(transacao.data)}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variante="ghost" onClick={() => iniciarEdicao(transacao)}>Editar</Button>
+                    <Button variante="ghost" onClick={() => setTransacaoExcluindoId(transacao.id)}>Excluir</Button>
+                  </div>
+                </Card>
+              )
+            })}
+          </ul>
+        )}
+      </section>
 
       <ConfirmModal
         aberto={transacaoExcluindoId !== null}

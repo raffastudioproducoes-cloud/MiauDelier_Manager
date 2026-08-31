@@ -110,10 +110,31 @@ export function ContasPage() {
     await recarregar()
   }
 
+  const totalConsolidado = contas.reduce((soma, conta) => soma + conta.saldo, 0)
+
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Contas</h1>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">Contas</h1>
+        <p className="text-label-sm text-on-surface-variant">Saldos distribuídos do ateliê.</p>
+      </div>
+
+      {contas.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-sm font-semibold text-on-surface">Saldo Consolidado</h2>
+          <div className="rounded-xl border border-primary/30 bg-surface-container p-5">
+            <p className="text-label-sm text-on-surface-variant">Total disponível</p>
+            <p className="mt-1 text-2xl font-semibold text-primary">
+              {totalConsolidado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+          </div>
+        </section>
+      )}
+
       <Card>
+        <h2 className="mb-3 font-medium text-on-surface">
+          {contaEmEdicaoId !== null ? 'Editar conta' : 'Cadastrar conta'}
+        </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <TextField id="nome-conta" rotulo="Nome da conta" value={nome} onChange={(e) => setNome(e.target.value)} />
           <TextField
@@ -124,7 +145,7 @@ export function ContasPage() {
             onChange={(e) => setSaldoInicial(e.target.value)}
             disabled={contaEmEdicaoId !== null}
           />
-          {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{erro}</p>}
+          {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
           <div className="flex gap-2">
             <Button type="submit">{contaEmEdicaoId !== null ? 'Salvar' : 'Cadastrar conta'}</Button>
             {contaEmEdicaoId !== null && (
@@ -134,26 +155,32 @@ export function ContasPage() {
         </form>
       </Card>
 
-      {contas.length === 0 ? (
-        <EmptyState titulo="Nenhuma conta cadastrada" descricao="Cadastre a primeira conta do seu ateliê." />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {contas.map((conta) => (
-            <Card key={conta.id} className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{conta.nome}</p>
-                <p className="text-sm text-[var(--color-ink-muted)]">
-                  {conta.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variante="ghost" onClick={() => iniciarEdicao(conta)}>Editar</Button>
-                <Button variante="ghost" onClick={() => setContaExcluindoId(conta.id)}>Excluir</Button>
-              </div>
-            </Card>
-          ))}
-        </ul>
-      )}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">Minhas Contas</h2>
+        {contas.length === 0 ? (
+          <EmptyState titulo="Nenhuma conta cadastrada" descricao="Cadastre a primeira conta do seu ateliê." />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {contas.map((conta) => (
+              <Card key={conta.id} className="glow-hover flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container text-sm font-semibold text-primary">
+                  {conta.nome.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-on-surface">{conta.nome}</p>
+                  <p className="mt-1 text-label-sm text-on-surface-variant">
+                    {conta.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variante="ghost" onClick={() => iniciarEdicao(conta)}>Editar</Button>
+                  <Button variante="ghost" onClick={() => setContaExcluindoId(conta.id)}>Excluir</Button>
+                </div>
+              </Card>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <ConfirmModal
         aberto={contaExcluindoId !== null}

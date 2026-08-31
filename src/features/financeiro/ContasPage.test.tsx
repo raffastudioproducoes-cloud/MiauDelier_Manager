@@ -25,7 +25,7 @@ describe('ContasPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /cadastrar conta/i }))
 
     await waitFor(() => expect(screen.getByText('Caixa do ateliê')).toBeInTheDocument())
-    expect(screen.getByText(/500/)).toBeInTheDocument()
+    expect(screen.getAllByText(/500/).length).toBeGreaterThan(0)
   })
 
   it('edita o nome de uma conta existente', async () => {
