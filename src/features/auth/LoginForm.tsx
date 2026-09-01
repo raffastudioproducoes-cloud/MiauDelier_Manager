@@ -51,13 +51,21 @@ export function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
+        <div className="mb-2 flex flex-col items-center gap-2">
+          <img
+            src="/brand/logo-miaudelier.jpg"
+            alt="MiauDelier"
+            className="h-20 w-20 rounded-2xl bg-white object-contain p-1"
+          />
+          <span className="text-label font-semibold text-on-surface">MiauDelier Manager</span>
+        </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <h1 className="text-xl font-semibold text-on-surface">
               {contaConfigurada ? 'Entrar' : 'Criar senha'}
             </h1>
             <p className="mt-1 text-label-sm text-on-surface-variant">
-              {contaConfigurada ? 'Acesse o painel do ateliê.' : 'Defina a senha que vai proteger seus dados.'}
+              {contaConfigurada ? 'Acessar controle da MiauDelier' : 'Defina a senha que vai proteger seus dados.'}
             </p>
           </div>
           <TextField
