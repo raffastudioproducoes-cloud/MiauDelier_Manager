@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
 import { Button } from '../../components/ui/Button'
+import logoMiauDelier from '../../assets/logo-miaudelier.jpg'
 
 export function LoginForm() {
   const navigate = useNavigate()
@@ -53,7 +54,7 @@ export function LoginForm() {
       <Card className="w-full max-w-sm">
         <div className="mb-2 flex flex-col items-center gap-2">
           <img
-            src="/brand/logo-miaudelier.jpg"
+            src={logoMiauDelier}
             alt="MiauDelier"
             className="h-20 w-20 rounded-2xl bg-white object-contain p-1"
           />
