@@ -125,24 +125,3 @@
   }
 }
 
-/* Tema neumórfico antigo — mantido (usado em ~21 arquivos .tsx) mas
-   redefinido com sombras mais sutis e cores baseadas no novo tema escuro,
-   em vez de caçar cada uso agora (tasks 2+ fazem essa migração gradual). */
-@layer utilities {
-  .elevation-base { background-color: var(--color-base); }
-  .elevation-raised {
-    background-color: var(--color-surface);
-    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.35), -1px -1px 3px rgba(255, 255, 255, 0.03);
-  }
-  .elevation-inset {
-    background-color: var(--color-surface);
-    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.35), inset -1px -1px 3px rgba(255, 255, 255, 0.03);
-  }
-  .elevation-pressed {
-    background-color: var(--color-surface);
-    box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.45), inset -1px -1px 2px rgba(255, 255, 255, 0.02);
-  }
-  .border-thin { border-width: 1px; }
-  .border-regular { border-width: 2px; }
-  .border-thick { border-width: 4px; }
-}

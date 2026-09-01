@@ -7,6 +7,7 @@ import { TextField } from '../../components/ui/TextField'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
+import { iniciais } from '../../lib/texto'
 import {
   criarCliente,
   listarClientes,
@@ -160,12 +161,7 @@ export function ClientesPage() {
             {clientesFiltrados.map((cliente) => (
               <Card key={cliente.id} className="glow-hover flex items-center gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container text-sm font-semibold text-primary">
-                  {cliente.nome
-                    .split(' ')
-                    .slice(0, 2)
-                    .map((parte) => parte.charAt(0))
-                    .join('')
-                    .toUpperCase()}
+                  {iniciais(cliente.nome)}
                 </div>
                 <Link to="/clientes/$clienteId" params={{ clienteId: String(cliente.id) }} className="flex-1">
                   <p className="font-medium text-on-surface">{cliente.nome}</p>

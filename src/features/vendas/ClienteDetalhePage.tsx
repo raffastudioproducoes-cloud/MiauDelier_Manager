@@ -4,6 +4,7 @@ import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/useToast'
+import { iniciais } from '../../lib/texto'
 import { listarClientes, type ClienteDecifrado } from './clientesRepo'
 import { listarPedidos, type PedidoComCliente } from './pedidosRepo'
 
@@ -49,12 +50,7 @@ export function ClienteDetalhePage() {
       <Card>
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container text-sm font-semibold text-primary">
-            {cliente.nome
-              .split(' ')
-              .slice(0, 2)
-              .map((parte) => parte.charAt(0))
-              .join('')
-              .toUpperCase()}
+            {iniciais(cliente.nome)}
           </div>
           <div>
             <h1 className="text-xl font-semibold text-on-surface">{cliente.nome}</h1>
