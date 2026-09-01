@@ -15,6 +15,7 @@ const ITENS_MENU = [
   { rotulo: 'Precificação', rota: '/precificacao' },
   { rotulo: 'Clientes', rota: '/clientes' },
   { rotulo: 'Pedidos', rota: '/pedidos' },
+  { rotulo: 'Agenda', rota: '/agenda' },
   { rotulo: 'Contas', rota: '/contas' },
   { rotulo: 'Transações', rota: '/transacoes' },
   { rotulo: 'Backup', rota: '/backup' },

@@ -4,6 +4,7 @@ import {
   criarPedido,
   listarPedidos,
   atualizarStatusPedido,
+  atualizarProgressoPedido,
   listarPecaIdsJaVinculadas,
   excluirPedido,
 } from './pedidosRepo'
@@ -50,6 +51,16 @@ describe('repositório de pedidos', () => {
 
     const pedidos = await listarPedidos()
     expect(pedidos[0].valorTotal).toBe(80)
+  })
+
+  it('atualiza prazo, etapa e progresso de um pedido', async () => {
+    const pedidoId = await criarPedido({ clienteId: 1, pecaIds: [] })
+    await atualizarProgressoPedido(pedidoId, { prazoEntrega: '2026-12-01', etapa: 'Em produção', progresso: 40 })
+    const pedidos = await listarPedidos()
+    const pedido = pedidos.find((p) => p.id === pedidoId)
+    expect(pedido?.prazoEntrega).toBe('2026-12-01')
+    expect(pedido?.etapa).toBe('Em produção')
+    expect(pedido?.progresso).toBe(40)
   })
 
   it('exclui um pedido', async () => {

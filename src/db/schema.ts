@@ -64,6 +64,9 @@ export interface Pedido {
   pecaIds: number[]
   status: StatusPedido
   criadoEm: string
+  prazoEntrega?: string
+  etapa?: string
+  progresso?: number
 }
 
 export type TipoTransacao = 'entrada' | 'saida'

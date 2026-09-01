@@ -3,8 +3,9 @@ import { getRouteApi } from '@tanstack/react-router'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { TextField } from '../../components/ui/TextField'
 import { useToast } from '../../components/ui/useToast'
-import { listarPedidos, atualizarStatusPedido, type PedidoComCliente } from './pedidosRepo'
+import { listarPedidos, atualizarStatusPedido, atualizarProgressoPedido, type PedidoComCliente } from './pedidosRepo'
 import { listarPecas, type PecaComForma } from '../producao/pecasRepo'
 import type { StatusPedido } from '../../db/schema'
 
@@ -19,14 +20,21 @@ export function PedidoDetalhePage() {
   const [pedido, setPedido] = useState<PedidoComCliente | undefined>(undefined)
   const [pecas, setPecas] = useState<PecaComForma[]>([])
   const [carregado, setCarregado] = useState(false)
+  const [prazoEntrega, setPrazoEntrega] = useState('')
+  const [etapa, setEtapa] = useState('')
+  const [progresso, setProgresso] = useState(0)
 
   const id = Number(pedidoId)
 
   async function recarregar() {
     const [pedidos, todasPecas] = await Promise.all([listarPedidos(), listarPecas()])
     if (!montado.current) return
-    setPedido(pedidos.find((p) => p.id === id))
+    const encontrado = pedidos.find((p) => p.id === id)
+    setPedido(encontrado)
     setPecas(todasPecas)
+    setPrazoEntrega(encontrado?.prazoEntrega ?? '')
+    setEtapa(encontrado?.etapa ?? '')
+    setProgresso(encontrado?.progresso ?? 0)
     setCarregado(true)
   }
 
@@ -49,6 +57,18 @@ export function PedidoDetalhePage() {
     } catch (falha) {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao atualizar status.', 'erro')
+    }
+  }
+
+  async function handleSalvarAgenda(dados: { prazoEntrega?: string; etapa?: string; progresso?: number }) {
+    try {
+      await atualizarProgressoPedido(id, dados)
+      if (!montado.current) return
+      mostrarToast('Agenda do pedido atualizada')
+      await recarregar()
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao atualizar agenda do pedido.', 'erro')
     }
   }
 
@@ -100,6 +120,44 @@ export function PedidoDetalhePage() {
           </ul>
         )}
         <p className="mt-3 text-right font-semibold text-primary">Total: R$ {pedido.valorTotal.toFixed(2)}</p>
+      </Card>
+
+      <Card>
+        <h2 className="mb-3 font-medium text-on-surface">Agenda do projeto</h2>
+        <div className="flex flex-col gap-3">
+          <TextField
+            id="prazo-entrega"
+            rotulo="Prazo de entrega"
+            type="date"
+            value={prazoEntrega}
+            onChange={(e) => setPrazoEntrega(e.target.value)}
+            onBlur={() => handleSalvarAgenda({ prazoEntrega: prazoEntrega || undefined })}
+          />
+          <TextField
+            id="etapa-pedido"
+            rotulo="Etapa"
+            placeholder="Ex: Em produção"
+            value={etapa}
+            onChange={(e) => setEtapa(e.target.value)}
+            onBlur={() => handleSalvarAgenda({ etapa: etapa || undefined })}
+          />
+          <div className="flex flex-col gap-1">
+            <label htmlFor="progresso-pedido" className="text-sm font-medium text-on-surface">
+              Progresso ({progresso}%)
+            </label>
+            <input
+              id="progresso-pedido"
+              type="range"
+              min={0}
+              max={100}
+              value={progresso}
+              onChange={(e) => setProgresso(Number(e.target.value))}
+              onMouseUp={() => handleSalvarAgenda({ progresso })}
+              onTouchEnd={() => handleSalvarAgenda({ progresso })}
+              onKeyUp={() => handleSalvarAgenda({ progresso })}
+            />
+          </div>
+        </div>
       </Card>
     </div>
   )

@@ -53,6 +53,21 @@ describe('PedidoDetalhePage', () => {
     await waitFor(() => expect(screen.getAllByText(/entregue/i).length).toBeGreaterThan(0))
   })
 
+  it('salva prazo, etapa e progresso da agenda do pedido', async () => {
+    const clienteId = await criarCliente({ nome: 'Joana Silva' })
+    const pedidoId = await criarPedido({ clienteId, pecaIds: [] })
+    pedidoIdAtual = String(pedidoId)
+
+    render(<ToastProvider><PedidoDetalhePage /></ToastProvider>)
+
+    await waitFor(() => expect(screen.getByText(/joana silva/i)).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText(/prazo de entrega/i), { target: { value: '2026-12-01' } })
+    fireEvent.blur(screen.getByLabelText(/prazo de entrega/i))
+
+    await waitFor(() => expect(screen.getByDisplayValue('2026-12-01')).toBeInTheDocument())
+  })
+
   it('mostra estado vazio quando o pedido não existe', async () => {
     pedidoIdAtual = '999'
     render(<ToastProvider><PedidoDetalhePage /></ToastProvider>)

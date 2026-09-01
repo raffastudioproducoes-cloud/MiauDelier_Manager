@@ -39,6 +39,13 @@ export async function atualizarStatusPedido(pedidoId: number, status: StatusPedi
   await db.pedidos.update(pedidoId, { status })
 }
 
+export async function atualizarProgressoPedido(
+  pedidoId: number,
+  dados: { prazoEntrega?: string; etapa?: string; progresso?: number },
+): Promise<void> {
+  await db.pedidos.update(pedidoId, dados)
+}
+
 export async function listarPecaIdsJaVinculadas(): Promise<number[]> {
   const pedidos = await db.pedidos.toArray()
   return pedidos.flatMap((pedido) => pedido.pecaIds)
