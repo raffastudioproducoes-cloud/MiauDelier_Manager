@@ -44,13 +44,12 @@ export function PedidoDetalhePage() {
   async function handleMudarStatus(novoStatus: StatusPedido) {
     try {
       await atualizarStatusPedido(id, novoStatus)
+      if (!montado.current) return
+      await recarregar()
     } catch (falha) {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao atualizar status.', 'erro')
-      return
     }
-    if (!montado.current) return
-    await recarregar()
   }
 
   if (!carregado) return null
