@@ -17,6 +17,7 @@ const ITENS_MENU = [
   { rotulo: 'Contas', rota: '/contas' },
   { rotulo: 'Transações', rota: '/transacoes' },
   { rotulo: 'Backup', rota: '/backup' },
+  { rotulo: 'Auditoria', rota: '/auditoria' },
   { rotulo: 'Configurações', rota: '/configuracoes' },
 ] as const
 

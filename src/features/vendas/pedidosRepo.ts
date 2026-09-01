@@ -1,4 +1,5 @@
 import { db, type Pedido, type StatusPedido } from '../../db/schema'
+import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovoPedido {
   clienteId: number
@@ -44,5 +45,8 @@ export async function listarPecaIdsJaVinculadas(): Promise<number[]> {
 }
 
 export async function excluirPedido(pedidoId: number): Promise<void> {
-  await db.pedidos.delete(pedidoId)
+  await db.transaction('rw', db.pedidos, db.auditoria, async () => {
+    await db.pedidos.delete(pedidoId)
+    await registrarAuditoria('pedido', pedidoId)
+  })
 }

@@ -1,5 +1,6 @@
 import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema'
 import { cifrarCampo } from '../../lib/camposCifrados'
+import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface ConsumoComMaterial {
   materialId: number
@@ -98,7 +99,16 @@ export async function atualizarStatusPeca(pecaId: number, novoStatus: StatusPeca
 }
 
 export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number): Promise<void> {
-  await db.pecas.update(pecaId, { precoVenda })
+  await db.transaction('rw', db.pecas, db.auditoria, async () => {
+    const pecaAnterior = await db.pecas.get(pecaId)
+    await db.pecas.update(pecaId, { precoVenda })
+    await registrarAuditoria(
+      'peca',
+      pecaId,
+      pecaAnterior?.precoVenda !== undefined ? pecaAnterior.precoVenda.toString() : undefined,
+      precoVenda.toString(),
+    )
+  })
 }
 
 export async function registrarVendaPeca(
@@ -111,7 +121,7 @@ export async function registrarVendaPeca(
   const valorCriptografado = await cifrarCampo(precoVenda.toString())
   const agora = new Date().toISOString()
 
-  await db.transaction('rw', db.pecas, db.eventosPeca, db.contas, db.transacoes, async () => {
+  await db.transaction('rw', db.pecas, db.eventosPeca, db.contas, db.transacoes, db.auditoria, async () => {
     await db.pecas.update(pecaId, { status: 'vendida', precoVenda })
     await db.eventosPeca.add({
       pecaId,
@@ -126,11 +136,12 @@ export async function registrarVendaPeca(
       descricao: descricaoTransacao,
       data: agora,
     })
+    await registrarAuditoria('peca', pecaId, undefined, precoVenda.toString())
   })
 }
 
 export async function excluirPeca(pecaId: number): Promise<void> {
-  await db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, async () => {
+  await db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.auditoria, async () => {
     const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
     for (const consumo of consumos) {
       const material = await db.materiais.get(consumo.materialId)
@@ -141,5 +152,6 @@ export async function excluirPeca(pecaId: number): Promise<void> {
     await db.consumosPeca.where('pecaId').equals(pecaId).delete()
     await db.eventosPeca.where('pecaId').equals(pecaId).delete()
     await db.pecas.delete(pecaId)
+    await registrarAuditoria('peca', pecaId)
   })
 }

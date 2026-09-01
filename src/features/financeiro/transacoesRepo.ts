@@ -1,5 +1,6 @@
 import { db, type TipoTransacao } from '../../db/schema'
 import { cifrarCampo, decifrarCampo } from '../../lib/camposCifrados'
+import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovaTransacao {
   contaId: number
@@ -42,7 +43,10 @@ export async function atualizarTransacao(transacaoId: number, dados: NovaTransac
 }
 
 export async function excluirTransacao(transacaoId: number): Promise<void> {
-  await db.transacoes.delete(transacaoId)
+  await db.transaction('rw', db.transacoes, db.auditoria, async () => {
+    await db.transacoes.delete(transacaoId)
+    await registrarAuditoria('transacao', transacaoId)
+  })
 }
 
 export async function listarTransacoesDaConta(contaId: number): Promise<TransacaoDecifrada[]> {

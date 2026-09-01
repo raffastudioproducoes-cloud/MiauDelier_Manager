@@ -1,5 +1,6 @@
 import { db } from '../../db/schema'
 import { cifrarCampo, decifrarCampo } from '../../lib/camposCifrados'
+import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovaConta {
   nome: string
@@ -45,5 +46,8 @@ export async function excluirConta(contaId: number): Promise<void> {
   if (quantidadeTransacoes > 0) {
     throw new Error('Não é possível excluir uma conta que já tem transações registradas.')
   }
-  await db.contas.delete(contaId)
+  await db.transaction('rw', db.contas, db.auditoria, async () => {
+    await db.contas.delete(contaId)
+    await registrarAuditoria('conta', contaId)
+  })
 }

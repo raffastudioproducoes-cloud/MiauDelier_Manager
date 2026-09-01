@@ -1,4 +1,5 @@
 import { db, type Forma } from '../../db/schema'
+import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export type NovaForma = Omit<Forma, 'id'>
 
@@ -16,5 +17,8 @@ export async function atualizarForma(formaId: number, dados: NovaForma): Promise
 }
 
 export async function excluirForma(formaId: number): Promise<void> {
-  await db.formas.delete(formaId)
+  await db.transaction('rw', db.formas, db.auditoria, async () => {
+    await db.formas.delete(formaId)
+    await registrarAuditoria('forma', formaId)
+  })
 }

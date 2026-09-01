@@ -1,5 +1,6 @@
 import { db } from '../../db/schema'
 import { cifrarCampo, decifrarCampo } from '../../lib/camposCifrados'
+import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovoCliente {
   nome: string
@@ -35,5 +36,8 @@ export async function atualizarCliente(clienteId: number, novo: NovoCliente): Pr
 }
 
 export async function excluirCliente(clienteId: number): Promise<void> {
-  await db.clientes.delete(clienteId)
+  await db.transaction('rw', db.clientes, db.auditoria, async () => {
+    await db.clientes.delete(clienteId)
+    await registrarAuditoria('cliente', clienteId)
+  })
 }
