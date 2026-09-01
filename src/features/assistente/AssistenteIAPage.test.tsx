@@ -33,6 +33,36 @@ describe('AssistenteIAPage', () => {
     expect(screen.getByText('Quanto tempo de cura?')).toBeInTheDocument()
   })
 
+  it('não duplica a pergunta atual dentro do histórico enviado ao Gemini', async () => {
+    await definirChaveGemini('chave-de-teste')
+    const mockChat = vi.spyOn(geminiClient, 'pedirRespostaChat').mockResolvedValue('Resposta 1')
+
+    render(<ToastProvider><AssistenteIAPage /></ToastProvider>)
+    await waitFor(() => expect(screen.queryByText(/chave de api do gemini não configurada/i)).not.toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText(/sua pergunta/i), { target: { value: 'Primeira pergunta' } })
+    fireEvent.click(screen.getByRole('button', { name: /enviar/i }))
+    await waitFor(() => expect(screen.getByText(/resposta 1/i)).toBeInTheDocument())
+
+    // Primeira chamada: histórico deve estar vazio (nenhuma mensagem anterior)
+    const [historicoChamada1, perguntaChamada1] = mockChat.mock.calls[0]
+    expect(historicoChamada1).toHaveLength(0)
+    expect(perguntaChamada1).toBe('Primeira pergunta')
+
+    mockChat.mockResolvedValue('Resposta 2')
+    await waitFor(() => expect(screen.getByRole('button', { name: /^enviar$/i })).toBeEnabled())
+    fireEvent.change(screen.getByLabelText(/sua pergunta/i), { target: { value: 'Segunda pergunta' } })
+    fireEvent.click(screen.getByRole('button', { name: /enviar/i }))
+    await waitFor(() => expect(screen.getByText(/resposta 2/i)).toBeInTheDocument())
+
+    // Segunda chamada: histórico deve conter só a pergunta 1 + resposta 1, NUNCA a "Segunda pergunta"
+    const [historicoChamada2, perguntaChamada2] = mockChat.mock.calls[1]
+    expect(perguntaChamada2).toBe('Segunda pergunta')
+    expect(historicoChamada2).toHaveLength(2)
+    expect(historicoChamada2.some((m: { texto: string }) => m.texto === 'Segunda pergunta')).toBe(false)
+    expect(historicoChamada2.map((m: { texto: string }) => m.texto)).toEqual(['Primeira pergunta', 'Resposta 1'])
+  })
+
   it('limpa a conversa após confirmar no modal', async () => {
     await definirChaveGemini('chave-de-teste')
     vi.spyOn(geminiClient, 'pedirRespostaChat').mockResolvedValue('Depende da resina.')

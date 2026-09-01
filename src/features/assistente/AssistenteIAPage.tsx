@@ -43,16 +43,20 @@ export function AssistenteIAPage() {
 
   async function handleEnviar() {
     const perguntaLimpa = pergunta.trim()
-    if (!perguntaLimpa || perguntaLimpa.length > TAMANHO_MAXIMO_PERGUNTA || enviando) return
+    if (!perguntaLimpa || enviando) return
+    if (perguntaLimpa.length > TAMANHO_MAXIMO_PERGUNTA) {
+      mostrarToast(`Pergunta muito longa (máximo de ${TAMANHO_MAXIMO_PERGUNTA} caracteres).`, 'erro')
+      return
+    }
     setEnviando(true)
     try {
+      const historicoAnterior = await listarMensagensIA()
       await criarMensagemIA('usuario', perguntaLimpa)
-      const historico = await listarMensagensIA()
       if (!montado.current) return
-      setMensagens(historico)
+      setMensagens(await listarMensagensIA())
       setPergunta('')
 
-      const resposta = await pedirRespostaChat(historico, perguntaLimpa)
+      const resposta = await pedirRespostaChat(historicoAnterior, perguntaLimpa)
       await criarMensagemIA('assistente', resposta)
       if (!montado.current) return
       setMensagens(await listarMensagensIA())
