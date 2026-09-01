@@ -90,7 +90,6 @@ export function CategoriasMaterialPage() {
     } catch (falha) {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao excluir categoria.', 'erro')
-      setCategoriaExcluindoId(null)
       return
     }
     if (!montado.current) return

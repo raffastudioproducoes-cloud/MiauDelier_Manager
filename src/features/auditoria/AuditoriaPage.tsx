@@ -13,7 +13,10 @@ function descricaoAcao(registro: RegistroAuditoria) {
   if (registro.valorAnterior === undefined && registro.valorNovo === undefined) {
     return 'Exclusão'
   }
-  return `Alteração: ${registro.valorAnterior ?? '—'} → ${registro.valorNovo ?? '—'}`
+  if (registro.valorAnterior === undefined) {
+    return `Preço de venda definido: R$ ${registro.valorNovo}`
+  }
+  return `Preço alterado: R$ ${registro.valorAnterior} → R$ ${registro.valorNovo}`
 }
 
 export function AuditoriaPage() {
