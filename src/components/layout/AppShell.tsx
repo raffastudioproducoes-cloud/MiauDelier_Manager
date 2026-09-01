@@ -7,6 +7,7 @@ import { DicaIA } from '../../features/ia/DicaIA'
 
 const ITENS_MENU = [
   { rotulo: 'Início', rota: '/' },
+  { rotulo: 'Analytics', rota: '/analytics' },
   { rotulo: 'Materiais', rota: '/materiais' },
   { rotulo: 'Categorias', rota: '/categorias' },
   { rotulo: 'Formas', rota: '/formas' },
