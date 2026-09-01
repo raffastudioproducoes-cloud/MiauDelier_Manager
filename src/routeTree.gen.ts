@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as AssistenteRouteImport } from './routes/assistente'
 import { Route as AuditoriaRouteImport } from './routes/auditoria'
 import { Route as BackupRouteImport } from './routes/backup'
 import { Route as CategoriasRouteImport } from './routes/categorias'
@@ -42,6 +43,11 @@ const AgendaRoute = AgendaRouteImport.update({
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssistenteRoute = AssistenteRouteImport.update({
+  id: '/assistente',
+  path: '/assistente',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditoriaRoute = AuditoriaRouteImport.update({
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/analytics': typeof AnalyticsRoute
+  '/assistente': typeof AssistenteRoute
   '/auditoria': typeof AuditoriaRoute
   '/backup': typeof BackupRoute
   '/categorias': typeof CategoriasRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/analytics': typeof AnalyticsRoute
+  '/assistente': typeof AssistenteRoute
   '/auditoria': typeof AuditoriaRoute
   '/backup': typeof BackupRoute
   '/categorias': typeof CategoriasRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/analytics': typeof AnalyticsRoute
+  '/assistente': typeof AssistenteRoute
   '/auditoria': typeof AuditoriaRoute
   '/backup': typeof BackupRoute
   '/categorias': typeof CategoriasRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/analytics'
+    | '/assistente'
     | '/auditoria'
     | '/backup'
     | '/categorias'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/analytics'
+    | '/assistente'
     | '/auditoria'
     | '/backup'
     | '/categorias'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/analytics'
+    | '/assistente'
     | '/auditoria'
     | '/backup'
     | '/categorias'
@@ -259,6 +271,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   AnalyticsRoute: typeof AnalyticsRoute
+  AssistenteRoute: typeof AssistenteRoute
   AuditoriaRoute: typeof AuditoriaRoute
   BackupRoute: typeof BackupRoute
   CategoriasRoute: typeof CategoriasRoute
@@ -295,6 +308,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/analytics'
       preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assistente': {
+      id: '/assistente'
+      path: '/assistente'
+      fullPath: '/assistente'
+      preLoaderRoute: typeof AssistenteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auditoria': {
@@ -449,6 +469,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   AnalyticsRoute: AnalyticsRoute,
+  AssistenteRoute: AssistenteRoute,
   AuditoriaRoute: AuditoriaRoute,
   BackupRoute: BackupRoute,
   CategoriasRoute: CategoriasRoute,

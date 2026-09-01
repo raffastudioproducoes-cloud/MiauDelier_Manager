@@ -109,6 +109,15 @@ export interface MetaBackup {
   tamanhoBytes: number
 }
 
+export type PapelMensagemIA = 'usuario' | 'assistente'
+
+export interface MensagemIA {
+  id?: number
+  papel: PapelMensagemIA
+  texto: string
+  criadoEm: string
+}
+
 class MiauDelierDB extends Dexie {
   categoriasMaterial!: EntityTable<CategoriaMaterial, 'id'>
   materiais!: EntityTable<Material, 'id'>
@@ -123,6 +132,7 @@ class MiauDelierDB extends Dexie {
   configuracoes!: EntityTable<Configuracao, 'id'>
   auditoria!: EntityTable<RegistroAuditoria, 'id'>
   backups!: EntityTable<MetaBackup, 'id'>
+  mensagensIA!: EntityTable<MensagemIA, 'id'>
 
   constructor() {
     super('MiauDelierManager')
@@ -140,6 +150,9 @@ class MiauDelierDB extends Dexie {
       configuracoes: '++id, &chave',
       auditoria: '++id, entidade, entidadeId, quando',
       backups: '++id, criadoEm',
+    })
+    this.version(2).stores({
+      mensagensIA: '++id, criadoEm',
     })
   }
 }

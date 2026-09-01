@@ -1,4 +1,5 @@
 import { obterChaveGemini, obterPersonalidade, type Personalidade } from './iaConfigRepo'
+import type { MensagemIA } from '../../db/schema'
 
 export class IaIndisponivelError extends Error {
   constructor(motivo: string) {
@@ -17,7 +18,7 @@ const PROMPTS_PERSONALIDADE: Record<Personalidade, string> = {
 
 const ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
 
-export async function pedirDicaIA(pergunta: string): Promise<string> {
+async function chamarGemini(contents: Array<{ role?: string; parts: Array<{ text: string }> }>): Promise<string> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     throw new IaIndisponivelError('Sem conexão com a internet.')
   }
@@ -38,7 +39,7 @@ export async function pedirDicaIA(pergunta: string): Promise<string> {
         systemInstruction: {
           parts: [{ text: `${INSTRUCAO_SISTEMA_FIXA} ${PROMPTS_PERSONALIDADE[personalidade]}` }],
         },
-        contents: [{ parts: [{ text: pergunta }] }],
+        contents,
       }),
     })
 
@@ -57,4 +58,19 @@ export async function pedirDicaIA(pergunta: string): Promise<string> {
     throw new IaIndisponivelError('Resposta inesperada do assistente.')
   }
   return texto
+}
+
+export async function pedirDicaIA(pergunta: string): Promise<string> {
+  return chamarGemini([{ parts: [{ text: pergunta }] }])
+}
+
+export async function pedirRespostaChat(historico: MensagemIA[], novaPergunta: string): Promise<string> {
+  const contents = [
+    ...historico.map((mensagem) => ({
+      role: mensagem.papel === 'usuario' ? 'user' : 'model',
+      parts: [{ text: mensagem.texto }],
+    })),
+    { role: 'user', parts: [{ text: novaPergunta }] },
+  ]
+  return chamarGemini(contents)
 }
