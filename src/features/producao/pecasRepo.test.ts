@@ -10,10 +10,12 @@ import {
   listarConsumosDaPeca,
   atualizarStatusPeca,
   registrarVendaPeca,
+  atualizarPrecoVendaPeca,
 } from './pecasRepo'
 import { listarMateriais } from './materiaisRepo'
 import { criarConta } from '../financeiro/contasRepo'
 import { setupAccount, clearSession } from '../../lib/auth'
+import { listarAuditoria } from '../auditoria/auditoriaRepo'
 
 describe('repositório de peças', () => {
   beforeEach(async () => {
@@ -108,6 +110,23 @@ describe('repositório de peças', () => {
     expect(await listarPecas()).toHaveLength(0)
     expect(await db.consumosPeca.count()).toBe(0)
     expect(await db.eventosPeca.count()).toBe(0)
+
+    const registros = await listarAuditoria()
+    const registro = registros.find((r) => r.entidade === 'peca' && r.entidadeId === pecaId)
+    expect(registro).toBeDefined()
+  })
+
+  it('atualizarPrecoVendaPeca registra auditoria com preço anterior e novo', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const pecaId = await criarPeca({ nome: 'Peça', formaId, consumos: [] })
+
+    await atualizarPrecoVendaPeca(pecaId, 30)
+    await atualizarPrecoVendaPeca(pecaId, 45)
+
+    const registros = await listarAuditoria()
+    const registro = registros.find((r) => r.entidade === 'peca' && r.entidadeId === pecaId && r.valorNovo === '45')
+    expect(registro).toBeDefined()
+    expect(registro?.valorAnterior).toBe('30')
   })
 
   it('lista consumos da peça decorados com o nome do material', async () => {
@@ -151,6 +170,10 @@ describe('repositório de peças', () => {
 
     const eventos = await listarEventosDaPeca(pecaId)
     expect(eventos.some((e) => e.tipo === 'mudanca_status' && e.descricao.includes('vendida'))).toBe(true)
+
+    const registros = await listarAuditoria()
+    const registro = registros.find((r) => r.entidade === 'peca' && r.entidadeId === pecaId && r.valorNovo === '50')
+    expect(registro).toBeDefined()
   })
 
   it('registrarVendaPeca não deixa a peça "vendida" órfã se a escrita da transação falhar (atomicidade)', async () => {

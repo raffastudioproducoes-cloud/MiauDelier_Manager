@@ -3,6 +3,7 @@ import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
 import { criarConta, listarContas, atualizarNomeConta, excluirConta } from './contasRepo'
 import { criarTransacao } from './transacoesRepo'
+import { listarAuditoria } from '../auditoria/auditoriaRepo'
 
 describe('repositório de contas', () => {
   beforeEach(async () => {
@@ -47,6 +48,10 @@ describe('repositório de contas', () => {
     const id = await criarConta({ nome: 'Caixa', saldoInicial: 0 })
     await excluirConta(id)
     expect(await listarContas()).toHaveLength(0)
+
+    const registros = await listarAuditoria()
+    const registro = registros.find((r) => r.entidade === 'conta' && r.entidadeId === id)
+    expect(registro).toBeDefined()
   })
 
   it('recusa excluir conta com transação', async () => {

@@ -8,6 +8,7 @@ import {
   atualizarTransacao,
   excluirTransacao,
 } from './transacoesRepo'
+import { listarAuditoria } from '../auditoria/auditoriaRepo'
 
 describe('repositório de transações', () => {
   beforeEach(async () => {
@@ -71,5 +72,9 @@ describe('repositório de transações', () => {
     const id = await criarTransacao({ contaId: 1, tipo: 'entrada', valor: 100, descricao: 'A', data: '2026-08-01' })
     await excluirTransacao(id)
     expect(await listarTransacoesDaConta(1)).toHaveLength(0)
+
+    const registros = await listarAuditoria()
+    const registro = registros.find((r) => r.entidade === 'transacao' && r.entidadeId === id)
+    expect(registro).toBeDefined()
   })
 })

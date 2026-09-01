@@ -7,6 +7,7 @@ import {
   listarPecaIdsJaVinculadas,
   excluirPedido,
 } from './pedidosRepo'
+import { listarAuditoria } from '../auditoria/auditoriaRepo'
 
 describe('repositório de pedidos', () => {
   beforeEach(async () => {
@@ -57,5 +58,9 @@ describe('repositório de pedidos', () => {
 
     const pedidos = await listarPedidos()
     expect(pedidos).toHaveLength(0)
+
+    const registros = await listarAuditoria()
+    const registro = registros.find((r) => r.entidade === 'pedido' && r.entidadeId === id)
+    expect(registro).toBeDefined()
   })
 })

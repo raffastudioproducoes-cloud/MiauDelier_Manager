@@ -8,6 +8,7 @@ import {
   atualizarMaterial,
   excluirMaterial,
 } from './materiaisRepo'
+import { listarAuditoria } from '../auditoria/auditoriaRepo'
 
 describe('repositório de materiais', () => {
   beforeEach(async () => {
@@ -54,5 +55,9 @@ describe('repositório de materiais', () => {
     const id = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 100, custoUnitario: 0.1 })
     await excluirMaterial(id)
     expect(await listarMateriais()).toHaveLength(0)
+
+    const registros = await listarAuditoria()
+    const registro = registros.find((r) => r.entidade === 'material' && r.entidadeId === id)
+    expect(registro).toBeDefined()
   })
 })

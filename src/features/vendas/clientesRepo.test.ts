@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
 import { criarCliente, listarClientes, atualizarCliente, excluirCliente } from './clientesRepo'
+import { listarAuditoria } from '../auditoria/auditoriaRepo'
 
 describe('repositório de clientes', () => {
   beforeEach(async () => {
@@ -48,5 +49,9 @@ describe('repositório de clientes', () => {
     await excluirCliente(id)
     const clientes = await listarClientes()
     expect(clientes).toHaveLength(0)
+
+    const registros = await listarAuditoria()
+    const registro = registros.find((r) => r.entidade === 'cliente' && r.entidadeId === id)
+    expect(registro).toBeDefined()
   })
 })
