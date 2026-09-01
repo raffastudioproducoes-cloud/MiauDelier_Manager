@@ -22,6 +22,7 @@ const ITENS_MENU = [
   { rotulo: 'Backup', rota: '/backup' },
   { rotulo: 'Auditoria', rota: '/auditoria' },
   { rotulo: 'Configurações', rota: '/configuracoes' },
+  { rotulo: 'Mais', rota: '/mais' },
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {

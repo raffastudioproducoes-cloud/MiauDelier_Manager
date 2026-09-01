@@ -21,6 +21,7 @@ import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ContasRouteImport } from './routes/contas'
 import { Route as FormasRouteImport } from './routes/formas'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MaisRouteImport } from './routes/mais'
 import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as PecasRouteImport } from './routes/pecas'
 import { Route as PedidosRouteImport } from './routes/pedidos'
@@ -90,6 +91,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MaisRoute = MaisRouteImport.update({
+  id: '/mais',
+  path: '/mais',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MateriaisRoute = MateriaisRouteImport.update({
   id: '/materiais',
   path: '/materiais',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/contas': typeof ContasRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
+  '/mais': typeof MaisRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/contas': typeof ContasRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
+  '/mais': typeof MaisRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/contas': typeof ContasRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
+  '/mais': typeof MaisRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/contas'
     | '/formas'
     | '/login'
+    | '/mais'
     | '/materiais'
     | '/pecas'
     | '/pedidos'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/contas'
     | '/formas'
     | '/login'
+    | '/mais'
     | '/materiais'
     | '/pecas'
     | '/pedidos'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/contas'
     | '/formas'
     | '/login'
+    | '/mais'
     | '/materiais'
     | '/pecas'
     | '/pedidos'
@@ -280,6 +292,7 @@ export interface RootRouteChildren {
   ContasRoute: typeof ContasRoute
   FormasRoute: typeof FormasRoute
   LoginRoute: typeof LoginRoute
+  MaisRoute: typeof MaisRoute
   MateriaisRoute: typeof MateriaisRoute
   PecasRoute: typeof PecasRouteWithChildren
   PedidosRoute: typeof PedidosRouteWithChildren
@@ -371,6 +384,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mais': {
+      id: '/mais'
+      path: '/mais'
+      fullPath: '/mais'
+      preLoaderRoute: typeof MaisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/materiais': {
@@ -478,6 +498,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContasRoute: ContasRoute,
   FormasRoute: FormasRoute,
   LoginRoute: LoginRoute,
+  MaisRoute: MaisRoute,
   MateriaisRoute: MateriaisRoute,
   PecasRoute: PecasRouteWithChildren,
   PedidosRoute: PedidosRouteWithChildren,
