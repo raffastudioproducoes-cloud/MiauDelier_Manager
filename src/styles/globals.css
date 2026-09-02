@@ -116,6 +116,58 @@
   }
 }
 
+/* Cartão de vidro translúcido — inspirado no dashboard dourado de referência.
+   Fundo semi-transparente + blur + borda sutil + realce dourado no topo. */
+@utility glass-card {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--surface-container) 62%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in oklab, var(--outline-variant) 70%, transparent);
+  box-shadow:
+    0 8px 24px -8px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 color-mix(in oklab, var(--primary) 18%, transparent);
+  transition: box-shadow 250ms ease, border-color 250ms ease, transform 250ms ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--primary) 10%, transparent) 0%,
+      transparent 45%
+    );
+    pointer-events: none;
+  }
+
+  &:hover {
+    border-color: color-mix(in oklab, var(--primary) 45%, var(--outline-variant));
+    box-shadow:
+      0 10px 28px -8px rgba(0, 0, 0, 0.5),
+      0 0 22px -4px color-mix(in oklab, var(--primary) 35%, transparent),
+      inset 0 1px 0 color-mix(in oklab, var(--primary) 28%, transparent);
+    transform: translateY(-1px);
+  }
+}
+
+/* Brilho radial dourado no canto — para destacar um cartão de KPI principal. */
+@utility glow-corner {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: -30%;
+    right: -20%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(circle, color-mix(in oklab, var(--primary) 45%, transparent) 0%, transparent 70%);
+    filter: blur(20px);
+    pointer-events: none;
+  }
+}
+
 /* Esconde a barra de rolagem em listas horizontais. */
 @utility no-scrollbar {
   -ms-overflow-style: none;

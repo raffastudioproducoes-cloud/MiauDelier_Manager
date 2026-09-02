@@ -69,26 +69,26 @@ export function DashboardPage() {
       ) : (
         <section>
           <div className="no-scrollbar -mx-1 flex gap-4 overflow-x-auto px-1 pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6">
-            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden bg-surface">
+            <Card className="glow-hover glow-corner min-w-[160px] flex-shrink-0 overflow-hidden">
               <p className="mb-1 text-label-sm text-on-surface-variant">Saldo total</p>
               <p className="text-headline-sm font-semibold text-primary">{formatarMoeda(resumo.saldoTotal)}</p>
             </Card>
-            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden bg-surface">
+            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden">
               <p className="mb-1 text-label-sm text-on-surface-variant">Lucro do mês</p>
               <p className="text-headline-sm font-semibold text-primary">{formatarMoeda(resumo.lucroDoMes)}</p>
             </Card>
-            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden bg-surface">
+            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden">
               <p className="mb-1 text-label-sm text-on-surface-variant">Peças em produção</p>
               <p className="text-headline-sm font-semibold text-primary">{resumo.pecasEmProducao}</p>
             </Card>
-            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden bg-surface">
+            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden">
               <p className="mb-1 text-label-sm text-on-surface-variant">Peças em cura</p>
               <p className="text-headline-sm font-semibold text-primary">{resumo.pecasEmCura}</p>
             </Card>
             <Card
               role="button"
               tabIndex={0}
-              className="glow-hover min-w-[160px] flex-shrink-0 cursor-pointer overflow-hidden bg-surface"
+              className="glow-hover min-w-[160px] flex-shrink-0 cursor-pointer overflow-hidden"
               onClick={() => navigate({ to: '/materiais' })}
               onKeyDown={(evento) => {
                 if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/materiais' })
@@ -100,7 +100,7 @@ export function DashboardPage() {
             <Card
               role="button"
               tabIndex={0}
-              className="glow-hover min-w-[160px] flex-shrink-0 cursor-pointer overflow-hidden bg-surface"
+              className="glow-hover min-w-[160px] flex-shrink-0 cursor-pointer overflow-hidden"
               onClick={() => navigate({ to: '/pedidos' })}
               onKeyDown={(evento) => {
                 if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/pedidos' })
@@ -124,10 +124,10 @@ export function DashboardPage() {
 
       {!erroCarga && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Card className="bg-surface lg:col-span-2">
+          <Card className="lg:col-span-2">
             <FluxoCaixaChart dados={resumo.fluxoCaixa14Dias} />
           </Card>
-          <Card className="bg-surface">
+          <Card>
             <p className="mb-2 text-sm font-medium text-on-surface">Eventos recentes de produção</p>
             {resumo.eventosRecentes.length === 0 ? (
               <p className="text-sm text-on-surface-variant">Nenhum evento registrado ainda.</p>

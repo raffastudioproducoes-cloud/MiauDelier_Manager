@@ -5,7 +5,7 @@ export function Card({ className, children, ...resto }: HTMLAttributes<HTMLDivEl
   return (
     <div
       className={cn(
-        'rounded-xl border border-outline-variant bg-surface-container text-on-surface shadow-sm p-4',
+        'glass-card rounded-xl text-on-surface p-4',
         className,
       )}
       {...resto}
