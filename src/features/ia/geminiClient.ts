@@ -16,7 +16,7 @@ const PROMPTS_PERSONALIDADE: Record<Personalidade, string> = {
   direta: 'Responda de forma curta e direta, sem rodeios, priorizando a ação prática.',
 }
 
-const ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+const ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent'
 
 async function chamarGemini(contents: Array<{ role?: string; parts: Array<{ text: string }> }>): Promise<string> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
