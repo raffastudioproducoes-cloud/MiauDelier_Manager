@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import Dexie from 'dexie'
 import { db, type Peca } from './schema'
 
 describe('MiauDelierDB schema', () => {
@@ -54,5 +55,44 @@ describe('MiauDelierDB schema', () => {
     const peca = await db.pecas.get(pecaId)
     expect(peca).toBeDefined()
     expect(peca!.precoVenda).toBe(45.5)
+  })
+
+  it('migração v1→v2 preserva dados existentes e adiciona mensagensIA', async () => {
+    await db.close()
+    await Dexie.delete('MiauDelierManager')
+
+    const dbV1 = new Dexie('MiauDelierManager')
+    dbV1.version(1).stores({
+      categoriasMaterial: '++id, nome',
+      materiais: '++id, nome, categoriaId',
+      formas: '++id, nome, geometria',
+      pecas: '++id, nome, formaId, status',
+      consumosPeca: '++id, pecaId, materialId',
+      eventosPeca: '++id, pecaId, tipo, criadoEm',
+      clientes: '++id, nome',
+      pedidos: '++id, clienteId, status, *pecaIds',
+      transacoes: '++id, contaId, tipo, data',
+      contas: '++id, nome',
+      configuracoes: '++id, &chave',
+      auditoria: '++id, entidade, entidadeId, quando',
+      backups: '++id, criadoEm',
+    })
+    await dbV1.open()
+    const materialId = await dbV1.table('materiais').add({
+      nome: 'Resina pré-migração',
+      categoriaId: 1,
+      unidade: 'ml',
+      quantidadeEstoque: 500,
+      custoUnitario: 0.2,
+    })
+    dbV1.close()
+
+    await db.open()
+
+    const material = await db.materiais.get(materialId as number)
+    expect(material?.nome).toBe('Resina pré-migração')
+
+    const msgId = await db.mensagensIA.add({ papel: 'usuario', texto: 'oi', criadoEm: new Date().toISOString() })
+    expect(await db.mensagensIA.get(msgId)).toBeDefined()
   })
 })

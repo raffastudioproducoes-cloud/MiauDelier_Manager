@@ -12,6 +12,7 @@ import type { StatusPedido } from '../../db/schema'
 const routeApi = getRouteApi('/pedidos/$pedidoId')
 
 const OPCOES_STATUS: StatusPedido[] = ['aberto', 'em_producao', 'entregue', 'cancelado']
+const ATRASO_DEBOUNCE_PROGRESSO_MS = 400
 
 export function PedidoDetalhePage() {
   const { pedidoId } = routeApi.useParams()
@@ -23,6 +24,7 @@ export function PedidoDetalhePage() {
   const [prazoEntrega, setPrazoEntrega] = useState('')
   const [etapa, setEtapa] = useState('')
   const [progresso, setProgresso] = useState(0)
+  const timeoutProgresso = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const id = Number(pedidoId)
 
@@ -46,6 +48,7 @@ export function PedidoDetalhePage() {
     })
     return () => {
       montado.current = false
+      clearTimeout(timeoutProgresso.current)
     }
   }, [pedidoId])
 
@@ -70,6 +73,14 @@ export function PedidoDetalhePage() {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao atualizar agenda do pedido.', 'erro')
     }
+  }
+
+  function handleMudarProgresso(valor: number) {
+    setProgresso(valor)
+    clearTimeout(timeoutProgresso.current)
+    timeoutProgresso.current = setTimeout(() => {
+      handleSalvarAgenda({ progresso: valor })
+    }, ATRASO_DEBOUNCE_PROGRESSO_MS)
   }
 
   if (!carregado) return null
@@ -151,10 +162,7 @@ export function PedidoDetalhePage() {
               min={0}
               max={100}
               value={progresso}
-              onChange={(e) => setProgresso(Number(e.target.value))}
-              onMouseUp={() => handleSalvarAgenda({ progresso })}
-              onTouchEnd={() => handleSalvarAgenda({ progresso })}
-              onKeyUp={() => handleSalvarAgenda({ progresso })}
+              onChange={(e) => handleMudarProgresso(Number(e.target.value))}
             />
           </div>
         </div>
