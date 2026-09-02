@@ -17,6 +17,7 @@ export function ConfiguracoesPage() {
   const [chaveConfigurada, setChaveConfigurada] = useState<boolean | null>(null)
   const [personalidade, setPersonalidadeEstado] = useState<Personalidade>('tecnica')
   const [chaveDigitada, setChaveDigitada] = useState('')
+  const [editandoChave, setEditandoChave] = useState(false)
 
   async function recarregar() {
     const [configurada, personalidadeAtual] = await Promise.all([hasChaveConfigurada(), obterPersonalidade()])
@@ -45,6 +46,7 @@ export function ConfiguracoesPage() {
       if (!montado.current) return
       mostrarToast('Chave salva com sucesso')
       setChaveDigitada('')
+      setEditandoChave(false)
       await recarregar()
     } catch (falha) {
       if (!montado.current) return
@@ -75,18 +77,32 @@ export function ConfiguracoesPage() {
       <section>
         <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Chave de API do Gemini</h2>
         <Card>
-          {chaveConfigurada ? (
-            <p className="text-sm text-success">
-              Chave configurada. A chave é definida uma única vez e não pode ser trocada por aqui.
-            </p>
+          {chaveConfigurada && !editandoChave ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-success">Chave configurada.</p>
+              <Button variante="ghost" onClick={() => setEditandoChave(true)}>Editar</Button>
+            </div>
           ) : (
             <form onSubmit={handleSalvarChave} className="flex flex-col gap-3">
               <p className="text-sm text-on-surface-variant">
-                Cole abaixo a chave de API do Gemini (gratuita). Essa chave é cifrada e só pode ser definida uma vez.
-                Confira a chave com atenção antes de salvar — depois de configurada, não é possível trocar por aqui. Se errar, a única saída é limpar o app ou restaurar um backup anterior.
+                Cole abaixo a chave de API do Gemini (gratuita). Ela é cifrada antes de ser salva.
               </p>
               <TextField id="chave-gemini" rotulo="Chave de API do Gemini" type="password" value={chaveDigitada} onChange={(e) => setChaveDigitada(e.target.value)} />
-              <Button type="submit">Salvar chave</Button>
+              <div className="flex gap-2">
+                <Button type="submit">Salvar chave</Button>
+                {chaveConfigurada && (
+                  <Button
+                    type="button"
+                    variante="ghost"
+                    onClick={() => {
+                      setEditandoChave(false)
+                      setChaveDigitada('')
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                )}
+              </div>
             </form>
           )}
         </Card>

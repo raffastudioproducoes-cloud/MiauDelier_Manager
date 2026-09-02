@@ -33,10 +33,10 @@ describe('configuração da IA', () => {
     expect(bruto?.valor).not.toContain('AIzaSy-chave-fake-de-teste')
   })
 
-  it('recusa redefinir a chave depois de configurada (set-once)', async () => {
+  it('permite redefinir a chave depois de já configurada', async () => {
     await definirChaveGemini('chave-original')
-    await expect(definirChaveGemini('chave-nova')).rejects.toThrow(/já configurada/i)
-    expect(await obterChaveGemini()).toBe('chave-original')
+    await definirChaveGemini('chave-nova')
+    expect(await obterChaveGemini()).toBe('chave-nova')
   })
 
   it('personalidade padrão é técnica quando nunca configurada', async () => {

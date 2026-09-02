@@ -13,11 +13,13 @@ export async function hasChaveConfigurada(): Promise<boolean> {
 }
 
 export async function definirChaveGemini(chave: string): Promise<void> {
-  if (await hasChaveConfigurada()) {
-    throw new Error('Chave já configurada — a chave de API é definida uma única vez.')
-  }
   const chaveCifrada = await cifrarCampo(chave)
-  await db.configuracoes.add({ chave: CHAVE_CONFIG_GEMINI, valor: chaveCifrada })
+  const existente = await db.configuracoes.where('chave').equals(CHAVE_CONFIG_GEMINI).first()
+  if (existente) {
+    await db.configuracoes.update(existente.id as number, { valor: chaveCifrada })
+  } else {
+    await db.configuracoes.add({ chave: CHAVE_CONFIG_GEMINI, valor: chaveCifrada })
+  }
 }
 
 export async function obterChaveGemini(): Promise<string | null> {

@@ -37,6 +37,21 @@ describe('ConfiguracoesPage', () => {
     expect(screen.queryByLabelText(/chave de api do gemini/i)).not.toBeInTheDocument()
   })
 
+  it('permite editar a chave já configurada', async () => {
+    await definirChaveGemini('chave-antiga')
+    render(<ToastProvider><ConfiguracoesPage /></ToastProvider>)
+
+    fireEvent.click(await screen.findByRole('button', { name: /editar/i }))
+    fireEvent.change(await screen.findByLabelText(/chave de api do gemini/i), { target: { value: 'chave-atualizada' } })
+    fireEvent.click(screen.getByRole('button', { name: /salvar chave/i }))
+
+    await waitFor(async () => {
+      const { obterChaveGemini } = await import('./iaConfigRepo')
+      expect(await obterChaveGemini()).toBe('chave-atualizada')
+    })
+    expect(screen.queryByLabelText(/chave de api do gemini/i)).not.toBeInTheDocument()
+  })
+
   it('permite escolher a personalidade do assistente', async () => {
     render(<ToastProvider><ConfiguracoesPage /></ToastProvider>)
 
