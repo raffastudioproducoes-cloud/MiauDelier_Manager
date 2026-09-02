@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Card } from '../../components/ui/Card'
+import { ICONES_MAIS } from './iconesMais'
 
 const SECOES = [
   {
@@ -53,13 +54,12 @@ export function MaisPage() {
         {SECOES.map((secao) => (
           <section key={secao.titulo} className="flex flex-col gap-4">
             <h2 className="text-lg font-medium text-on-surface">{secao.titulo}</h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {secao.links.map((item) => (
                 <Link key={item.rota} to={item.rota}>
-                  <Card className="glow-hover h-full">
-                    <div className="flex items-center justify-center py-6 text-center">
-                      <p className="font-medium text-on-surface">{item.rotulo}</p>
-                    </div>
+                  <Card className="glow-hover flex aspect-square flex-col items-center justify-center gap-2 text-center">
+                    <span className="text-on-surface-variant">{ICONES_MAIS[item.rota]}</span>
+                    <p className="text-sm font-medium text-on-surface">{item.rotulo}</p>
                   </Card>
                 </Link>
               ))}

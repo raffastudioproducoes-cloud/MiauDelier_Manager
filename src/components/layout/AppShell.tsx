@@ -66,9 +66,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <nav
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col gap-1 border-r border-outline-variant/10 bg-surface-container/95 p-3 backdrop-blur-md transition-transform duration-200 ease-out',
+          'fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col gap-1 overflow-y-auto border-r border-outline-variant/10 bg-surface-container/95 p-3 backdrop-blur-md transition-transform duration-200 ease-out',
           menuAberto && 'translate-x-0',
-          'md:static md:z-auto md:h-screen md:w-56 md:translate-x-0 md:gap-2 md:p-4',
+          'md:static md:z-auto md:min-h-screen md:w-56 md:translate-x-0 md:gap-2 md:p-4',
         )}
       >
         <span className="px-3 pb-2 text-headline-sm font-semibold tracking-tight text-primary">
@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => irPara(item.rota)}
           />
         ))}
-        <div className="mt-auto">
+        <div className="mt-4 shrink-0">
           <Button variante="ghost" onClick={sair}>Sair</Button>
         </div>
       </nav>
