@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/useToast'
 import { obterResumoDashboard, type ResumoDashboard } from './dashboardRepo'
 import { FluxoCaixaChart } from './FluxoCaixaChart'
+import { ResumoLojaCard } from './ResumoLojaCard'
 
 const RESUMO_VAZIO: ResumoDashboard = {
   saldoTotal: 0,
@@ -67,6 +68,8 @@ export function DashboardPage() {
           </p>
         </Card>
       ) : (
+        <>
+        <ResumoLojaCard resumo={resumo} />
         <section>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <Card className="glow-hover glow-corner overflow-hidden">
@@ -111,6 +114,7 @@ export function DashboardPage() {
             </Card>
           </div>
         </section>
+        </>
       )}
 
       <section>
