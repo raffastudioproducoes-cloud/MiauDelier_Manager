@@ -68,27 +68,27 @@ export function DashboardPage() {
         </Card>
       ) : (
         <section>
-          <div className="no-scrollbar -mx-1 flex gap-4 overflow-x-auto px-1 pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6">
-            <Card className="glow-hover glow-corner min-w-[160px] flex-shrink-0 overflow-hidden">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <Card className="glow-hover glow-corner overflow-hidden">
               <p className="mb-1 text-label-sm text-on-surface-variant">Saldo total</p>
               <p className="text-headline-sm font-semibold text-primary">{formatarMoeda(resumo.saldoTotal)}</p>
             </Card>
-            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden">
+            <Card className="glow-hover overflow-hidden">
               <p className="mb-1 text-label-sm text-on-surface-variant">Lucro do mês</p>
               <p className="text-headline-sm font-semibold text-primary">{formatarMoeda(resumo.lucroDoMes)}</p>
             </Card>
-            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden">
+            <Card className="glow-hover overflow-hidden">
               <p className="mb-1 text-label-sm text-on-surface-variant">Peças em produção</p>
               <p className="text-headline-sm font-semibold text-primary">{resumo.pecasEmProducao}</p>
             </Card>
-            <Card className="glow-hover min-w-[160px] flex-shrink-0 overflow-hidden">
+            <Card className="glow-hover overflow-hidden">
               <p className="mb-1 text-label-sm text-on-surface-variant">Peças em cura</p>
               <p className="text-headline-sm font-semibold text-primary">{resumo.pecasEmCura}</p>
             </Card>
             <Card
               role="button"
               tabIndex={0}
-              className="glow-hover min-w-[160px] flex-shrink-0 cursor-pointer overflow-hidden"
+              className="glow-hover cursor-pointer overflow-hidden"
               onClick={() => navigate({ to: '/materiais' })}
               onKeyDown={(evento) => {
                 if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/materiais' })
@@ -100,7 +100,7 @@ export function DashboardPage() {
             <Card
               role="button"
               tabIndex={0}
-              className="glow-hover min-w-[160px] flex-shrink-0 cursor-pointer overflow-hidden"
+              className="glow-hover cursor-pointer overflow-hidden"
               onClick={() => navigate({ to: '/pedidos' })}
               onKeyDown={(evento) => {
                 if (evento.key === 'Enter' || evento.key === ' ') navigate({ to: '/pedidos' })
