@@ -34,8 +34,11 @@ export interface Forma {
   custoFabricacao?: number
   vidaUtilUsos?: number
   usosRealizados?: number
+  materialSiliconeId?: number
+  quantidadeSiliconeUsada?: number
   cavidades?: CavidadeForma[]
 }
+
 
 export type StatusPeca = 'planejada' | 'em_producao' | 'curando' | 'acabamento' | 'pronta' | 'vendida'
 

@@ -24,7 +24,7 @@ export interface PecaComForma extends Peca {
 }
 
 export async function criarPeca(nova: NovaPeca): Promise<number> {
-  return db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, async () => {
+  return db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, async () => {
     const agora = new Date().toISOString()
     const totalExistente = await db.pecas.count()
     const numeroSerie = `#${String(totalExistente + 1).padStart(4, '0')}`
@@ -55,16 +55,33 @@ export async function criarPeca(nova: NovaPeca): Promise<number> {
       })
     }
 
+    let detalheMolde = ''
+    if (nova.formaId) {
+      const forma = await db.formas.get(nova.formaId)
+      if (forma && forma.id !== undefined) {
+        const novosUsos = (forma.usosRealizados ?? 0) + 1
+        await db.formas.update(forma.id, { usosRealizados: novosUsos })
+        if (forma.custoFabricacao && forma.vidaUtilUsos && forma.vidaUtilUsos > 0) {
+          const custoUso = (forma.custoFabricacao / forma.vidaUtilUsos).toFixed(2)
+          detalheMolde = ` (uso #${novosUsos} do molde "${forma.nome}", amortização: R$ ${custoUso})`
+        } else {
+          detalheMolde = ` (uso #${novosUsos} do molde "${forma.nome}")`
+        }
+      }
+    }
+
+
     await db.eventosPeca.add({
       pecaId,
       tipo: 'criacao',
-      descricao: 'Peça criada e consumo de material registrado',
+      descricao: `Peça criada e consumo de material registrado${detalheMolde}`,
       criadoEm: agora,
     })
 
     return pecaId
   })
 }
+
 
 export async function listarPecas(): Promise<PecaComForma[]> {
   const pecas = await db.pecas.toArray()

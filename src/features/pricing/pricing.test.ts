@@ -60,6 +60,23 @@ describe('motor de precificação', () => {
     expect(resultado.precoFinal).toBeCloseTo(290.178, 2)
   })
 
+  it('inclui amortização do molde de silicone (custoForma) nos custos diretos', () => {
+    const resultado = calcularPrecificacao({
+      custoMaterial: 50,
+      custoAcessorios: 10,
+      horasProducao: 1,
+      valorHora: 20,
+      rateioFixoPercent: 10,
+      margemLucroPercent: 30,
+      custoForma: 1.10, // Molde de R$ 55 usado 50 vezes = R$ 1,10 / uso
+    })
+
+    expect(resultado.custoForma).toBe(1.10)
+    // custoDireto = 50 + 10 + 0 (desperdicio) + 0 (energia) + 1.10 (forma) = 61.10
+    expect(resultado.custoDireto).toBeCloseTo(61.10)
+  })
+
+
   const base = {
     custoMaterial: 25,
     custoAcessorios: 5,

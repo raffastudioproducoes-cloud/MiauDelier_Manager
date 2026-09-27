@@ -8,7 +8,8 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
 import { calcularVolumeMl } from '../calculator/volume'
 import { criarForma, listarFormas, atualizarForma, excluirForma } from './formasRepo'
-import type { Forma, FormaGeometria } from '../../db/schema'
+import { listarMateriais } from './materiaisRepo'
+import type { Forma, FormaGeometria, Material } from '../../db/schema'
 
 const schemaForma = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da forma').max(120),
@@ -62,6 +63,7 @@ function resumoDimensoes(forma: Forma): string {
 export function FormasPage() {
   const { mostrarToast } = useToast()
   const [formas, setFormas] = useState<Forma[]>([])
+  const [materiais, setMateriais] = useState<Material[]>([])
   const [nome, setNome] = useState('')
   const [geometria, setGeometria] = useState<FormaGeometria>('cilindrico')
   const [comprimento, setComprimento] = useState('')
@@ -70,6 +72,13 @@ export function FormasPage() {
   const [raio, setRaio] = useState('')
   const [altura, setAltura] = useState('')
   const [volumeMl, setVolumeMl] = useState('')
+
+  // Silicone & Amortização do Molde
+  const [materialSiliconeId, setMaterialSiliconeId] = useState('')
+  const [qtdSilicone, setQtdSilicone] = useState('')
+  const [custoFabricacao, setCustoFabricacao] = useState('')
+  const [vidaUtilUsos, setVidaUtilUsos] = useState('50')
+
   const [erro, setErro] = useState<string | null>(null)
   const [formaEmEdicaoId, setFormaEmEdicaoId] = useState<number | null>(null)
   const [formaExcluindoId, setFormaExcluindoId] = useState<number | null>(null)
@@ -77,9 +86,13 @@ export function FormasPage() {
   const montado = useRef(true)
 
   async function recarregar() {
-    const formasCarregadas = await listarFormas()
+    const [formasCarregadas, materiaisCarregados] = await Promise.all([
+      listarFormas(),
+      listarMateriais(),
+    ])
     if (!montado.current) return
     setFormas(formasCarregadas)
+    setMateriais(materiaisCarregados)
   }
 
   useEffect(() => {
@@ -93,6 +106,18 @@ export function FormasPage() {
     }
   }, [])
 
+  // Auto calcula o custo do silicone se selecionado
+  useEffect(() => {
+    if (materialSiliconeId && qtdSilicone) {
+      const mat = materiais.find((m) => String(m.id) === materialSiliconeId)
+      const qtd = Number(qtdSilicone)
+      if (mat && !isNaN(qtd) && qtd > 0) {
+        const calc = (qtd * mat.custoUnitario).toFixed(2)
+        setCustoFabricacao(calc)
+      }
+    }
+  }, [materialSiliconeId, qtdSilicone, materiais])
+
   const volumeCalculado = useMemo(() => {
     try {
       return calcularVolumeMl({
@@ -105,6 +130,15 @@ export function FormasPage() {
     }
   }, [geometria, comprimento, largura, profundidade, raio, altura, volumeMl])
 
+  const custoPorUsoCalculado = useMemo(() => {
+    const c = Number(custoFabricacao)
+    const v = Number(vidaUtilUsos)
+    if (!isNaN(c) && c > 0 && !isNaN(v) && v > 0) {
+      return (c / v).toFixed(2)
+    }
+    return null
+  }, [custoFabricacao, vidaUtilUsos])
+
   function limparFormulario() {
     setNome('')
     setGeometria('cilindrico')
@@ -114,6 +148,10 @@ export function FormasPage() {
     setRaio('')
     setAltura('')
     setVolumeMl('')
+    setMaterialSiliconeId('')
+    setQtdSilicone('')
+    setCustoFabricacao('')
+    setVidaUtilUsos('50')
     setFormaEmEdicaoId(null)
     setErro(null)
   }
@@ -129,6 +167,10 @@ export function FormasPage() {
     setRaio(d.raio !== undefined ? String(d.raio) : '')
     setAltura(d.altura !== undefined ? String(d.altura) : '')
     setVolumeMl(forma.geometria === 'direto' && forma.volumeDiretoMl !== undefined ? String(forma.volumeDiretoMl) : '')
+    setMaterialSiliconeId(forma.materialSiliconeId !== undefined ? String(forma.materialSiliconeId) : '')
+    setQtdSilicone(forma.quantidadeSiliconeUsada !== undefined ? String(forma.quantidadeSiliconeUsada) : '')
+    setCustoFabricacao(forma.custoFabricacao !== undefined ? String(forma.custoFabricacao) : '')
+    setVidaUtilUsos(forma.vidaUtilUsos !== undefined ? String(forma.vidaUtilUsos) : '50')
     setErro(null)
   }
 
@@ -153,6 +195,10 @@ export function FormasPage() {
         geometria,
         dimensoesCm: dimensoesGeometria(geometria, { comprimento, largura, profundidade, raio, altura, volumeMl }),
         volumeDiretoMl: volumeCalculado,
+        materialSiliconeId: materialSiliconeId ? Number(materialSiliconeId) : undefined,
+        quantidadeSiliconeUsada: qtdSilicone ? Number(qtdSilicone) : undefined,
+        custoFabricacao: custoFabricacao ? Number(custoFabricacao) : undefined,
+        vidaUtilUsos: vidaUtilUsos ? Number(vidaUtilUsos) : 50,
       }
       if (formaEmEdicaoId !== null) {
         await atualizarForma(formaEmEdicaoId, dados)
@@ -169,6 +215,7 @@ export function FormasPage() {
     limparFormulario()
     await recarregar()
   }
+
 
   async function handleExcluir(formaId: number) {
     try {
@@ -236,6 +283,65 @@ export function FormasPage() {
             Volume calculado: <strong className="text-on-surface">{volumeCalculado !== null ? `${volumeCalculado.toFixed(1)} ml` : '—'}</strong>
           </p>
 
+          <div className="mt-3 pt-3 border-t border-outline-variant flex flex-col gap-3">
+            <h3 className="text-sm font-semibold text-on-surface">Fabricação & Amortização do Molde (Silicone)</h3>
+            
+            <div className="flex flex-col gap-1">
+              <label htmlFor="silicone-material" className="text-sm font-medium text-on-surface">Silicone Utilizado (opcional)</label>
+              <select
+                id="silicone-material"
+                value={materialSiliconeId}
+                onChange={(e) => setMaterialSiliconeId(e.target.value)}
+                className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                <option value="">Nenhum (custo avulso)</option>
+                {materiais.map((mat) => (
+                  <option key={mat.id} value={mat.id}>
+                    {mat.nome} (R$ {mat.custoUnitario.toFixed(2)}/{mat.unidade})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {materialSiliconeId !== '' && (
+              <TextField
+                id="qtd-silicone"
+                rotulo="Quantidade de Silicone Usada"
+                type="number"
+                value={qtdSilicone}
+                onChange={(e) => setQtdSilicone(e.target.value)}
+              />
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="w-full sm:w-1/2">
+                <TextField
+                  id="custo-fabricacao-forma"
+                  rotulo="Custo Total de Fabricação (R$)"
+                  type="number"
+                  step="0.01"
+                  value={custoFabricacao}
+                  onChange={(e) => setCustoFabricacao(e.target.value)}
+                />
+              </div>
+              <div className="w-full sm:w-1/2">
+                <TextField
+                  id="vida-util-forma"
+                  rotulo="Vida Útil Estimada (usos)"
+                  type="number"
+                  value={vidaUtilUsos}
+                  onChange={(e) => setVidaUtilUsos(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {custoPorUsoCalculado && (
+              <p className="text-xs text-primary font-medium">
+                Custo de amortização por uso da forma: <strong>R$ {custoPorUsoCalculado} / peça</strong> (R$ {custoFabricacao} ÷ {vidaUtilUsos} usos)
+              </p>
+            )}
+          </div>
+
           {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={volumeCalculado === null || volumeCalculado <= 0 || !nome.trim()}>
@@ -254,23 +360,43 @@ export function FormasPage() {
           <EmptyState titulo="Nenhuma forma cadastrada" descricao="Cadastre o primeiro molde do seu ateliê." />
         ) : (
           <ul className="flex flex-col gap-3">
-            {formas.map((forma) => (
-              <Card key={forma.id} className="glow-hover">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-medium text-on-surface">{forma.nome}</h3>
-                </div>
-                <p className="mt-1 text-label-sm text-on-surface-variant">
-                  {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Button variante="ghost" onClick={() => iniciarEdicao(forma)}>Editar</Button>
-                  <Button variante="ghost" onClick={() => setFormaExcluindoId(forma.id ?? null)}>Excluir</Button>
-                </div>
-              </Card>
-            ))}
+            {formas.map((forma) => {
+              const custoPorUso = forma.custoFabricacao && forma.vidaUtilUsos && forma.vidaUtilUsos > 0
+                ? (forma.custoFabricacao / forma.vidaUtilUsos).toFixed(2)
+                : null
+              const usos = forma.usosRealizados ?? 0
+              const limite = forma.vidaUtilUsos ?? 50
+              const restantes = Math.max(0, limite - usos)
+
+              return (
+                <Card key={forma.id} className="glow-hover">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-medium text-on-surface">{forma.nome}</h3>
+                    {custoPorUso && (
+                      <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
+                        R$ {custoPorUso} / uso
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-label-sm text-on-surface-variant">
+                    {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
+                  </p>
+                  {forma.custoFabricacao !== undefined && (
+                    <p className="mt-1 text-xs text-on-surface-variant">
+                      Fabricação: R$ {forma.custoFabricacao.toFixed(2)} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button variante="ghost" onClick={() => iniciarEdicao(forma)}>Editar</Button>
+                    <Button variante="ghost" onClick={() => setFormaExcluindoId(forma.id ?? null)}>Excluir</Button>
+                  </div>
+                </Card>
+              )
+            })}
           </ul>
         )}
       </section>
+
 
       <ConfirmModal
         aberto={formaExcluindoId !== null}

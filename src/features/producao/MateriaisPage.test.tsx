@@ -112,4 +112,31 @@ describe('MateriaisPage', () => {
 
     await waitFor(() => expect(screen.queryByText('Resina C')).not.toBeInTheDocument())
   })
+
+  it('permite cadastrar material sólido em gramas e material com unidade personalizada', async () => {
+    await criarCategoriaMaterial('Pigmentos')
+    render(<ToastProvider><MateriaisPage /></ToastProvider>)
+
+    // Test Gramas (g)
+    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Pigmento Mica Azul' } })
+    fireEvent.change(screen.getByLabelText(/unidade de medida/i), { target: { value: 'g' } })
+    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '50' } })
+    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.50' } })
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+
+    await waitFor(() => expect(screen.getByText('Pigmento Mica Azul')).toBeInTheDocument())
+    expect(screen.getByText(/50 g em estoque/i)).toBeInTheDocument()
+
+    // Test Custom unit (bisnaga)
+    fireEvent.change(screen.getByLabelText(/nome do material/i), { target: { value: 'Glitter Dourado' } })
+    fireEvent.change(screen.getByLabelText(/unidade de medida/i), { target: { value: '__outra__' } })
+    fireEvent.change(await screen.findByLabelText(/especificar unidade/i), { target: { value: 'bisnaga' } })
+    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '3.50' } })
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+
+    await waitFor(() => expect(screen.getByText('Glitter Dourado')).toBeInTheDocument())
+    expect(screen.getByText(/10 bisnaga em estoque/i)).toBeInTheDocument()
+  })
 })
+

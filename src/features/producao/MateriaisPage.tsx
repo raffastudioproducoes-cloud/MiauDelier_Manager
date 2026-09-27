@@ -23,6 +23,44 @@ const schemaMaterial = z.object({
   custoUnitario: z.number().finite().min(0, 'Custo unitário não pode ser negativo'),
 })
 
+export const GRUPOS_UNIDADES = [
+  {
+    titulo: 'Volume / Líquido',
+    opcoes: [
+      { valor: 'ml', rotulo: 'Mililitro (ml)' },
+      { valor: 'l', rotulo: 'Litro (l)' },
+    ],
+  },
+  {
+    titulo: 'Massa / Sólido / Grão',
+    opcoes: [
+      { valor: 'g', rotulo: 'Grama (g)' },
+      { valor: 'kg', rotulo: 'Quilograma (kg)' },
+    ],
+  },
+  {
+    titulo: 'Unidades e Contagem',
+    opcoes: [
+      { valor: 'un', rotulo: 'Unidade (un)' },
+      { valor: 'par', rotulo: 'Par (par)' },
+      { valor: 'pct', rotulo: 'Pacote (pct)' },
+      { valor: 'cx', rotulo: 'Caixa (cx)' },
+      { valor: 'kit', rotulo: 'Kit (kit)' },
+      { valor: 'folha', rotulo: 'Folha (folha)' },
+      { valor: 'rolo', rotulo: 'Rolo (rolo)' },
+    ],
+  },
+  {
+    titulo: 'Comprimento / Dimensão',
+    opcoes: [
+      { valor: 'cm', rotulo: 'Centímetro (cm)' },
+      { valor: 'm', rotulo: 'Metro (m)' },
+    ],
+  },
+]
+
+export const VALORES_UNIDADES_PADRAO = GRUPOS_UNIDADES.flatMap((g) => g.opcoes.map((o) => o.valor))
+
 const NOVA_CATEGORIA = '__nova__'
 
 function formatarMoeda(valor: number): string {
@@ -34,7 +72,8 @@ export function MateriaisPage() {
   const [categorias, setCategorias] = useState<CategoriaMaterial[]>([])
   const [materiais, setMateriais] = useState<Material[]>([])
   const [nome, setNome] = useState('')
-  const [unidade, setUnidade] = useState('')
+  const [unidadeSelecao, setUnidadeSelecao] = useState('ml')
+  const [unidadeCustom, setUnidadeCustom] = useState('')
   const [quantidadeEstoque, setQuantidadeEstoque] = useState('')
   const [custoUnitario, setCustoUnitario] = useState('')
   const [categoriaId, setCategoriaId] = useState<string>('')
@@ -68,7 +107,8 @@ export function MateriaisPage() {
 
   function limparFormulario() {
     setNome('')
-    setUnidade('')
+    setUnidadeSelecao('ml')
+    setUnidadeCustom('')
     setQuantidadeEstoque('')
     setCustoUnitario('')
     setCategoriaId('')
@@ -79,7 +119,14 @@ export function MateriaisPage() {
   function iniciarEdicao(material: Material) {
     setMaterialEmEdicaoId(material.id ?? null)
     setNome(material.nome)
-    setUnidade(material.unidade)
+    const ehPadrao = VALORES_UNIDADES_PADRAO.includes(material.unidade)
+    if (ehPadrao) {
+      setUnidadeSelecao(material.unidade)
+      setUnidadeCustom('')
+    } else {
+      setUnidadeSelecao('__outra__')
+      setUnidadeCustom(material.unidade)
+    }
     setQuantidadeEstoque(String(material.quantidadeEstoque))
     setCustoUnitario(String(material.custoUnitario))
     setCategoriaId(String(material.categoriaId))
@@ -90,9 +137,11 @@ export function MateriaisPage() {
     evento.preventDefault()
     setErro(null)
 
+    const unidadeFinal = unidadeSelecao === '__outra__' ? unidadeCustom.trim() : unidadeSelecao
+
     const resultado = schemaMaterial.safeParse({
       nome,
-      unidade,
+      unidade: unidadeFinal,
       quantidadeEstoque: Number(quantidadeEstoque),
       custoUnitario: Number(custoUnitario),
     })
@@ -185,7 +234,36 @@ export function MateriaisPage() {
         </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <TextField id="nome-material" rotulo="Nome do material" value={nome} onChange={(e) => setNome(e.target.value)} />
-          <TextField id="unidade-material" rotulo="Unidade" value={unidade} onChange={(e) => setUnidade(e.target.value)} />
+          
+          <div className="flex flex-col gap-1">
+            <label htmlFor="unidade-material" className="text-sm font-medium text-on-surface">Unidade de Medida</label>
+            <select
+              id="unidade-material"
+              value={unidadeSelecao}
+              onChange={(e) => setUnidadeSelecao(e.target.value)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              {GRUPOS_UNIDADES.map((grupo) => (
+                <optgroup key={grupo.titulo} label={grupo.titulo}>
+                  {grupo.opcoes.map((opcao) => (
+                    <option key={opcao.valor} value={opcao.valor}>
+                      {opcao.rotulo}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+              <option value="__outra__">+ Outra unidade (especificar)</option>
+            </select>
+          </div>
+          {unidadeSelecao === '__outra__' && (
+            <TextField
+              id="unidade-custom-material"
+              rotulo="Especificar unidade (ex: gota, bisnaga, frasco)"
+              value={unidadeCustom}
+              onChange={(e) => setUnidadeCustom(e.target.value)}
+            />
+          )}
+
           <TextField
             id="quantidade-material"
             rotulo={materialEmEdicaoId !== null ? 'Quantidade em estoque (use "Repor estoque" para alterar)' : 'Quantidade em estoque'}
@@ -211,6 +289,7 @@ export function MateriaisPage() {
               <option value={NOVA_CATEGORIA}>+ Nova categoria</option>
             </select>
           </div>
+
           {categoriaId === NOVA_CATEGORIA && (
             <TextField
               id="nova-categoria-material"

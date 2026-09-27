@@ -6,6 +6,7 @@ export interface PrecificacaoInput {
   rateioFixoPercent: number
   margemLucroPercent: number
   custoEnergia?: number
+  custoForma?: number
   percentualDesperdicio?: number
   percentualTaxas?: number
   taxaFixa?: number
@@ -15,6 +16,7 @@ export interface PrecificacaoResultado {
   custoDireto: number
   custoDesperdicio: number
   custoEnergia: number
+  custoForma: number
   custoMaoDeObra: number
   subtotal: number
   custoFixo: number
@@ -37,11 +39,13 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
   validarNaoNegativoFinito('valorHora', input.valorHora)
 
   const custoEnergia = input.custoEnergia ?? 0
+  const custoForma = input.custoForma ?? 0
   const percentualDesperdicio = input.percentualDesperdicio ?? 0
   const percentualTaxas = input.percentualTaxas ?? 0
   const taxaFixa = input.taxaFixa ?? 0
 
   validarNaoNegativoFinito('custoEnergia', custoEnergia)
+  validarNaoNegativoFinito('custoForma', custoForma)
   validarNaoNegativoFinito('percentualDesperdicio', percentualDesperdicio)
   validarNaoNegativoFinito('percentualTaxas', percentualTaxas)
   validarNaoNegativoFinito('taxaFixa', taxaFixa)
@@ -54,7 +58,7 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
   }
 
   const custoDesperdicio = input.custoMaterial * (percentualDesperdicio / 100)
-  const custoDireto = input.custoMaterial + input.custoAcessorios + custoDesperdicio + custoEnergia
+  const custoDireto = input.custoMaterial + input.custoAcessorios + custoDesperdicio + custoEnergia + custoForma
   const custoMaoDeObra = input.horasProducao * input.valorHora
   const subtotal = custoDireto + custoMaoDeObra
   const custoFixo = subtotal * (input.rateioFixoPercent / 100)
@@ -80,6 +84,7 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
     custoDireto,
     custoDesperdicio,
     custoEnergia,
+    custoForma,
     custoMaoDeObra,
     subtotal,
     custoFixo,
@@ -89,3 +94,4 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
     precoFinal,
   }
 }
+

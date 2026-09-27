@@ -22,6 +22,7 @@ export function PrecificacaoPage() {
   const [valorHora, setValorHora] = useState('')
   const [rateioFixoPercent, setRateioFixoPercent] = useState('')
   const [margemLucroPercent, setMargemLucroPercent] = useState('')
+  const [custoForma, setCustoForma] = useState('')
   const [carregado, setCarregado] = useState(false)
 
   useEffect(() => {
@@ -44,8 +45,12 @@ export function PrecificacaoPage() {
 
   async function handleSelecionarPeca(id: string) {
     setPecaSelecionadaId(id)
-    if (!id) return
+    if (!id) {
+      setCustoForma('')
+      return
+    }
     try {
+      const pecaTarget = pecas.find((p) => String(p.id) === id)
       const [consumos, materiais] = await Promise.all([listarConsumosDaPeca(Number(id)), listarMateriais()])
       if (!montado.current) return
       const soma = consumos.reduce((acumulado, consumo) => {
@@ -53,13 +58,23 @@ export function PrecificacaoPage() {
         return acumulado + consumo.quantidade * (material?.custoUnitario ?? 0)
       }, 0)
       setCustoMaterial(String(soma))
+
+      if (pecaTarget) {
+        const forma = await db.formas.get(pecaTarget.formaId)
+        if (forma && forma.custoFabricacao && forma.vidaUtilUsos && forma.vidaUtilUsos > 0) {
+          const amortizacao = (forma.custoFabricacao / forma.vidaUtilUsos).toFixed(2)
+          setCustoForma(amortizacao)
+        } else {
+          setCustoForma('')
+        }
+      }
     } catch (falha) {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar dados da peça.', 'erro')
     }
   }
 
-  const todosVazios = [custoMaterial, custoAcessorios, horasProducao, valorHora, rateioFixoPercent, margemLucroPercent].every(
+  const todosVazios = [custoMaterial, custoAcessorios, custoForma, horasProducao, valorHora, rateioFixoPercent, margemLucroPercent].every(
     (valor) => valor === '',
   )
 
@@ -68,6 +83,7 @@ export function PrecificacaoPage() {
       const calculado = calcularPrecificacao({
         custoMaterial: Number(custoMaterial) || 0,
         custoAcessorios: Number(custoAcessorios) || 0,
+        custoForma: Number(custoForma) || 0,
         horasProducao: Number(horasProducao) || 0,
         valorHora: Number(valorHora) || 0,
         rateioFixoPercent: Number(rateioFixoPercent) || 0,
@@ -77,7 +93,7 @@ export function PrecificacaoPage() {
     } catch (falha) {
       return { resultado: null, erroValidacao: falha instanceof Error ? falha.message : 'Dados inválidos.' }
     }
-  }, [custoMaterial, custoAcessorios, horasProducao, valorHora, rateioFixoPercent, margemLucroPercent])
+  }, [custoMaterial, custoAcessorios, custoForma, horasProducao, valorHora, rateioFixoPercent, margemLucroPercent])
 
   async function handleSalvarPreco() {
     if (!pecaSelecionadaId || !resultado) return
@@ -127,6 +143,7 @@ export function PrecificacaoPage() {
             </div>
             <TextField id="custo-material" rotulo="Custo do material (R$)" type="number" value={custoMaterial} onChange={(e) => setCustoMaterial(e.target.value)} />
             <TextField id="custo-acessorios" rotulo="Acessórios (R$)" type="number" value={custoAcessorios} onChange={(e) => setCustoAcessorios(e.target.value)} />
+            <TextField id="custo-forma" rotulo="Amortização da forma de silicone (R$ / uso)" type="number" value={custoForma} onChange={(e) => setCustoForma(e.target.value)} />
             <TextField id="horas-producao" rotulo="Horas de produção" type="number" value={horasProducao} onChange={(e) => setHorasProducao(e.target.value)} />
             <TextField id="valor-hora" rotulo="Valor da hora (R$)" type="number" value={valorHora} onChange={(e) => setValorHora(e.target.value)} />
             <TextField id="rateio-fixo" rotulo="Rateio de custo fixo (%)" type="number" value={rateioFixoPercent} onChange={(e) => setRateioFixoPercent(e.target.value)} />
@@ -147,14 +164,19 @@ export function PrecificacaoPage() {
           ) : resultado ? (
             <div className="flex flex-col gap-1">
               <p className="text-sm text-on-surface-variant">Custo direto: {formatarMoeda(resultado.custoDireto)}</p>
+              {resultado.custoForma > 0 && (
+                <p className="text-sm text-primary font-medium">Uso do molde de silicone: {formatarMoeda(resultado.custoForma)}</p>
+              )}
               <p className="text-sm text-on-surface-variant">Mão de obra: {formatarMoeda(resultado.custoMaoDeObra)}</p>
               <p className="text-sm text-on-surface-variant">Custo fixo: {formatarMoeda(resultado.custoFixo)}</p>
               <p className="text-sm text-on-surface-variant">Lucro: {formatarMoeda(resultado.lucro)}</p>
               <p className="mt-2 text-headline-sm font-semibold text-primary">Preço final: {formatarMoeda(resultado.precoFinal)}</p>
             </div>
+
           ) : (
             <p className="text-headline-sm font-semibold text-on-surface">Preço final: —</p>
           )}
+
 
           {pecaSelecionadaId && resultado && !todosVazios && (
             <Button className="mt-4" onClick={handleSalvarPreco}>Salvar como preço de venda</Button>
