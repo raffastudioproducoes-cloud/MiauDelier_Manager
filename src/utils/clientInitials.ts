@@ -1,6 +1,7 @@
 export function iniciais(nome: string): string {
-  return nome
-    .split(' ')
+  const partes = nome.trim().split(/\s+/).filter(Boolean)
+  if (partes.length === 0) return ''
+  return partes
     .slice(0, 2)
     .map((parte) => parte.charAt(0))
     .join('')

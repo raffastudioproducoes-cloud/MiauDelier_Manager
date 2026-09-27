@@ -4,7 +4,7 @@ import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/useToast'
-import { iniciais } from '../../lib/texto'
+import { iniciais } from '@/utils/clientInitials'
 import { listarClientes, type ClienteDecifrado } from './clientesRepo'
 import { listarPedidos, type PedidoComCliente } from './pedidosRepo'
 
