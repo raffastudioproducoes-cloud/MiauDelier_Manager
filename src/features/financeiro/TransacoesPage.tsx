@@ -245,37 +245,81 @@ export function TransacoesPage() {
       )}
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface">Últimas Transações</h2>
+        <h2 className="mb-3 text-sm font-semibold text-on-surface">Últimas Transações</h2>
         {transacoesFiltradas.length === 0 ? (
           <EmptyState titulo="Nenhuma transação registrada" descricao="Registre a primeira movimentação da conta." />
         ) : (
-          <ul className="flex flex-col gap-3">
+          <div className="relative pl-6 sm:pl-28 flex flex-col gap-5 before:absolute before:left-2.5 sm:before:left-[92px] before:top-3 before:bottom-3 before:w-[2px] before:bg-outline-variant/40 before:border-r before:border-dashed before:border-outline-variant/60">
             {transacoesFiltradas.map((transacao) => {
               const entrada = transacao.tipo === 'entrada'
               return (
-                <Card key={transacao.id} className="glow-hover flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-outline-variant bg-surface-container">
-                    <span className={entrada ? 'text-lg font-semibold text-primary' : 'text-lg font-semibold text-error'}>
-                      {entrada ? '↑' : '↓'}
+                <div key={transacao.id} className="relative flex flex-col sm:flex-row items-start gap-4">
+                  {/* Rótulo Esquerda (Desktop) */}
+                  <div className="hidden sm:flex flex-col items-end w-20 shrink-0 pt-1 text-right">
+                    <span className="text-xs font-mono font-medium text-on-surface">
+                      {formatarData(transacao.data)}
+                    </span>
+                    <span className={`text-[10px] uppercase font-semibold ${entrada ? 'text-primary' : 'text-error'}`}>
+                      {entrada ? 'Entrada' : 'Saída'}
                     </span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium text-on-surface">{transacao.descricao}</p>
-                      <p className={entrada ? 'text-sm font-semibold text-primary' : 'text-sm font-semibold text-error'}>
+
+                  {/* Marcador Central (Node Dot) */}
+                  <div className="absolute -left-6 sm:static sm:left-auto pt-1 shrink-0 z-10">
+                    <div
+                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shadow-sm text-xs font-bold ${
+                        entrada
+                          ? 'border-primary bg-primary/20 text-primary'
+                          : 'border-error bg-error/20 text-error'
+                      }`}
+                    >
+                      {entrada ? '↑' : '↓'}
+                    </div>
+                  </div>
+
+                  {/* Card de Conteúdo à Direita */}
+                  <Card className="flex-1 w-full glow-hover flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded border ${
+                          entrada
+                            ? 'bg-primary/10 text-primary border-primary/20'
+                            : 'bg-error/10 text-error border-error/20'
+                        }`}>
+                          {entrada ? '📈 Entrada (+)' : '📉 Saída (-)'}
+                        </span>
+                        {contaSelecionada && (
+                          <span className="text-xs text-on-surface-variant font-medium">
+                            {contaSelecionada.nome}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-base font-bold ${entrada ? 'text-primary' : 'text-error'}`}>
                         {entrada ? '+' : '-'} {transacao.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </p>
                     </div>
-                    <p className="mt-1 text-label-sm text-on-surface-variant">{formatarData(transacao.data)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variante="ghost" onClick={() => iniciarEdicao(transacao)}>Editar</Button>
-                    <Button variante="ghost" onClick={() => setTransacaoExcluindoId(transacao.id)}>Excluir</Button>
-                  </div>
-                </Card>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                      <div>
+                        <p className="font-medium text-on-surface text-sm">{transacao.descricao}</p>
+                        <p className="sm:hidden text-xs text-on-surface-variant font-mono mt-0.5">
+                          📅 {formatarData(transacao.data)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button variante="ghost" className="text-xs py-1" onClick={() => iniciarEdicao(transacao)}>
+                          Editar
+                        </Button>
+                        <Button variante="ghost" className="text-xs py-1 text-error hover:bg-error/10" onClick={() => setTransacaoExcluindoId(transacao.id)}>
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
               )
             })}
-          </ul>
+          </div>
         )}
       </section>
 
