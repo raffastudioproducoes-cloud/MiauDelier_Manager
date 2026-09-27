@@ -37,7 +37,7 @@ function CardKPI_Click({
   icon?: ReactNode
   destination?: { to: string }
   onClick?: () => void
-  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>
+  onKeyDown?: KeyboardEvent<HTMLDivElement>
 }) {
   return (
     <Card
