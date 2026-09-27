@@ -57,4 +57,14 @@ export const ICONES_MAIS: Record<string, ReactNode> = {
   '/assistente': (
     <svg {...PROPS_SVG}><path d="M4 6h16v10H9l-5 4V6Z" /><path d="M8 10h8M8 13h5" /></svg>
   ),
+  '/diagnostico': (
+    <svg {...PROPS_SVG}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><path d="m9 15 2 2 4-4" /></svg>
+  ),
+  '/equipamentos': (
+    <svg {...PROPS_SVG}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+  ),
+  '/taxas': (
+    <svg {...PROPS_SVG}><circle cx="12" cy="12" r="9" /><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1-1.8-1M12 6v12" /></svg>
+  ),
 }
+

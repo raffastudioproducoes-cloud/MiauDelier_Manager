@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { calcularVolumeMl, calcularProporcaoMistura } from './volume'
+import { calcularVolumeMl, calcularProporcaoMistura, calcularVolumeTotalForma } from './volume'
+
 
 describe('calculadora de volume', () => {
   it('calcula volume retangular sem margem', () => {
@@ -65,4 +66,16 @@ describe('calculadora de volume', () => {
     expect(() => calcularProporcaoMistura(NaN, '1:1')).toThrow(/inválido/i)
     expect(() => calcularProporcaoMistura(Infinity, '1:1')).toThrow(/inválido/i)
   })
+
+  it('calcula volume total de forma com múltiplas cavidades', () => {
+    const volume = calcularVolumeTotalForma({
+      geometria: 'retangular',
+      cavidades: [
+        { comprimentoCm: 5, larguraCm: 2, profundidadeCm: 1 }, // 10ml
+        { volumeManualMl: 15 }, // 15ml
+      ],
+    })
+    expect(volume).toBe(25)
+  })
 })
+

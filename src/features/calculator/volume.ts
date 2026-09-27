@@ -68,3 +68,38 @@ export function calcularProporcaoMistura(
   const { fracaoA, fracaoB } = PROPORCOES[proporcao]
   return { parteA: volumeMl * fracaoA, parteB: volumeMl * fracaoB }
 }
+
+export function calcularVolumeTotalForma(forma: {
+  geometria?: Geometria
+  dimensoesCm?: { comprimento?: number; largura?: number; profundidade?: number; raio?: number; altura?: number }
+  volumeDiretoMl?: number
+  cavidades?: Array<{
+    comprimentoCm?: number
+    larguraCm?: number
+    profundidadeCm?: number
+    volumeManualMl?: number
+  }>
+}): number {
+  if (forma.cavidades && forma.cavidades.length > 0) {
+    return forma.cavidades.reduce((total, cav) => {
+      if (typeof cav.volumeManualMl === 'number' && cav.volumeManualMl > 0) {
+        return total + cav.volumeManualMl
+      }
+      const c = cav.comprimentoCm ?? 0
+      const l = cav.larguraCm ?? 0
+      const p = cav.profundidadeCm ?? 0
+      return total + c * l * p
+    }, 0)
+  }
+
+  return calcularVolumeMl({
+    geometria: forma.geometria ?? 'direto',
+    comprimento: forma.dimensoesCm?.comprimento,
+    largura: forma.dimensoesCm?.largura,
+    profundidade: forma.dimensoesCm?.profundidade,
+    raio: forma.dimensoesCm?.raio,
+    altura: forma.dimensoesCm?.altura,
+    volumeMl: forma.volumeDiretoMl,
+  })
+}
+

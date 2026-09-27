@@ -9,6 +9,7 @@ const SECOES = [
       { rotulo: 'Materiais', rota: '/materiais' },
       { rotulo: 'Formas', rota: '/formas' },
       { rotulo: 'Peças', rota: '/pecas' },
+      { rotulo: 'Equipamentos (kWh)', rota: '/equipamentos' },
       { rotulo: 'Categorias', rota: '/categorias' },
     ],
   },
@@ -18,6 +19,7 @@ const SECOES = [
       { rotulo: 'Clientes', rota: '/clientes' },
       { rotulo: 'Pedidos', rota: '/pedidos' },
       { rotulo: 'Precificação', rota: '/precificacao' },
+      { rotulo: 'Taxas & Canais', rota: '/taxas' },
       { rotulo: 'Agenda', rota: '/agenda' },
     ],
   },
@@ -26,9 +28,11 @@ const SECOES = [
     links: [
       { rotulo: 'Contas', rota: '/contas' },
       { rotulo: 'Transações', rota: '/transacoes' },
+      { rotulo: 'Diagnóstico PDF', rota: '/diagnostico' },
       { rotulo: 'Analytics', rota: '/analytics' },
     ],
   },
+
   {
     titulo: 'Sistema',
     links: [

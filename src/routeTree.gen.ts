@@ -19,6 +19,8 @@ import { Route as CategoriasRouteImport } from './routes/categorias'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ContasRouteImport } from './routes/contas'
+import { Route as DiagnosticoRouteImport } from './routes/diagnostico'
+import { Route as EquipamentosRouteImport } from './routes/equipamentos'
 import { Route as FormasRouteImport } from './routes/formas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MaisRouteImport } from './routes/mais'
@@ -26,6 +28,7 @@ import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as PecasRouteImport } from './routes/pecas'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PrecificacaoRouteImport } from './routes/precificacao'
+import { Route as TaxasRouteImport } from './routes/taxas'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
 import { Route as ClientesClienteIdRouteImport } from './routes/clientes.$clienteId'
 import { Route as PecasPecaIdRouteImport } from './routes/pecas.$pecaId'
@@ -81,6 +84,16 @@ const ContasRoute = ContasRouteImport.update({
   path: '/contas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiagnosticoRoute = DiagnosticoRouteImport.update({
+  id: '/diagnostico',
+  path: '/diagnostico',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquipamentosRoute = EquipamentosRouteImport.update({
+  id: '/equipamentos',
+  path: '/equipamentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FormasRoute = FormasRouteImport.update({
   id: '/formas',
   path: '/formas',
@@ -116,6 +129,11 @@ const PrecificacaoRoute = PrecificacaoRouteImport.update({
   path: '/precificacao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TaxasRoute = TaxasRouteImport.update({
+  id: '/taxas',
+  path: '/taxas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TransacoesRoute = TransacoesRouteImport.update({
   id: '/transacoes',
   path: '/transacoes',
@@ -148,6 +166,8 @@ export interface FileRoutesByFullPath {
   '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
+  '/diagnostico': typeof DiagnosticoRoute
+  '/equipamentos': typeof EquipamentosRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/mais': typeof MaisRoute
@@ -155,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
   '/precificacao': typeof PrecificacaoRoute
+  '/taxas': typeof TaxasRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
@@ -171,6 +192,8 @@ export interface FileRoutesByTo {
   '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
+  '/diagnostico': typeof DiagnosticoRoute
+  '/equipamentos': typeof EquipamentosRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/mais': typeof MaisRoute
@@ -178,6 +201,7 @@ export interface FileRoutesByTo {
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
   '/precificacao': typeof PrecificacaoRoute
+  '/taxas': typeof TaxasRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
@@ -195,6 +219,8 @@ export interface FileRoutesById {
   '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
+  '/diagnostico': typeof DiagnosticoRoute
+  '/equipamentos': typeof EquipamentosRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
   '/mais': typeof MaisRoute
@@ -202,6 +228,7 @@ export interface FileRoutesById {
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
   '/precificacao': typeof PrecificacaoRoute
+  '/taxas': typeof TaxasRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
@@ -220,6 +247,8 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/configuracoes'
     | '/contas'
+    | '/diagnostico'
+    | '/equipamentos'
     | '/formas'
     | '/login'
     | '/mais'
@@ -227,6 +256,7 @@ export interface FileRouteTypes {
     | '/pecas'
     | '/pedidos'
     | '/precificacao'
+    | '/taxas'
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
@@ -243,6 +273,8 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/configuracoes'
     | '/contas'
+    | '/diagnostico'
+    | '/equipamentos'
     | '/formas'
     | '/login'
     | '/mais'
@@ -250,6 +282,7 @@ export interface FileRouteTypes {
     | '/pecas'
     | '/pedidos'
     | '/precificacao'
+    | '/taxas'
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
@@ -266,6 +299,8 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/configuracoes'
     | '/contas'
+    | '/diagnostico'
+    | '/equipamentos'
     | '/formas'
     | '/login'
     | '/mais'
@@ -273,6 +308,7 @@ export interface FileRouteTypes {
     | '/pecas'
     | '/pedidos'
     | '/precificacao'
+    | '/taxas'
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
@@ -290,6 +326,8 @@ export interface RootRouteChildren {
   ClientesRoute: typeof ClientesRouteWithChildren
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContasRoute: typeof ContasRoute
+  DiagnosticoRoute: typeof DiagnosticoRoute
+  EquipamentosRoute: typeof EquipamentosRoute
   FormasRoute: typeof FormasRoute
   LoginRoute: typeof LoginRoute
   MaisRoute: typeof MaisRoute
@@ -297,6 +335,7 @@ export interface RootRouteChildren {
   PecasRoute: typeof PecasRouteWithChildren
   PedidosRoute: typeof PedidosRouteWithChildren
   PrecificacaoRoute: typeof PrecificacaoRoute
+  TaxasRoute: typeof TaxasRoute
   TransacoesRoute: typeof TransacoesRoute
 }
 
@@ -372,6 +411,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/diagnostico': {
+      id: '/diagnostico'
+      path: '/diagnostico'
+      fullPath: '/diagnostico'
+      preLoaderRoute: typeof DiagnosticoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipamentos': {
+      id: '/equipamentos'
+      path: '/equipamentos'
+      fullPath: '/equipamentos'
+      preLoaderRoute: typeof EquipamentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/formas': {
       id: '/formas'
       path: '/formas'
@@ -419,6 +472,13 @@ declare module '@tanstack/react-router' {
       path: '/precificacao'
       fullPath: '/precificacao'
       preLoaderRoute: typeof PrecificacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/taxas': {
+      id: '/taxas'
+      path: '/taxas'
+      fullPath: '/taxas'
+      preLoaderRoute: typeof TaxasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transacoes': {
@@ -496,6 +556,8 @@ const rootRouteChildren: RootRouteChildren = {
   ClientesRoute: ClientesRouteWithChildren,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContasRoute: ContasRoute,
+  DiagnosticoRoute: DiagnosticoRoute,
+  EquipamentosRoute: EquipamentosRoute,
   FormasRoute: FormasRoute,
   LoginRoute: LoginRoute,
   MaisRoute: MaisRoute,
@@ -503,6 +565,7 @@ const rootRouteChildren: RootRouteChildren = {
   PecasRoute: PecasRouteWithChildren,
   PedidosRoute: PedidosRouteWithChildren,
   PrecificacaoRoute: PrecificacaoRoute,
+  TaxasRoute: TaxasRoute,
   TransacoesRoute: TransacoesRoute,
 }
 export const routeTree = rootRouteImport

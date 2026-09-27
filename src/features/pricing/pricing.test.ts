@@ -33,6 +33,33 @@ describe('motor de precificação', () => {
     expect(resultado.precoFinal).toBe(0)
   })
 
+  it('calcula custo com desperdício de material, energia elétrica e taxas de marketplace', () => {
+    const resultado = calcularPrecificacao({
+      custoMaterial: 100,
+      custoAcessorios: 10,
+      horasProducao: 1,
+      valorHora: 20,
+      rateioFixoPercent: 10,
+      margemLucroPercent: 30,
+      custoEnergia: 5,            // R$ 5 em energia
+      percentualDesperdicio: 10,  // 10% de perda no copo (R$ 10)
+      percentualTaxas: 14,        // 14% comissão Shopee
+      taxaFixa: 3.0,              // R$ 3,00 taxa fixa
+    })
+
+    // custoMaterial(100) + custoAcessorios(10) + desperdicio(10) + energia(5) = 125
+    expect(resultado.custoDesperdicio).toBe(10)
+    expect(resultado.custoEnergia).toBe(5)
+    expect(resultado.custoDireto).toBe(125)
+    expect(resultado.custoMaoDeObra).toBe(20)
+    expect(resultado.subtotal).toBe(145)
+    expect(resultado.custoFixo).toBeCloseTo(14.5)
+    expect(resultado.custoTotal).toBeCloseTo(159.5)
+
+    // Preço Ideal = (159.5 + 3) / (1 - (0.14 + 0.30)) = 162.5 / 0.56 = 290.1785
+    expect(resultado.precoFinal).toBeCloseTo(290.178, 2)
+  })
+
   const base = {
     custoMaterial: 25,
     custoAcessorios: 5,

@@ -26,7 +26,11 @@ export interface PecaComForma extends Peca {
 export async function criarPeca(nova: NovaPeca): Promise<number> {
   return db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, async () => {
     const agora = new Date().toISOString()
+    const totalExistente = await db.pecas.count()
+    const numeroSerie = `#${String(totalExistente + 1).padStart(4, '0')}`
+
     const pecaId = (await db.pecas.add({
+      numeroSerie,
       nome: nova.nome,
       formaId: nova.formaId,
       status: 'planejada',
