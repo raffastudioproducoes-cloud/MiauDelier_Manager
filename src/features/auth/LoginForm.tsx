@@ -100,28 +100,28 @@ export function LoginForm() {
       <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[140px] pointer-events-none" />
       <div className="absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 rounded-full bg-surface-container-high/30 blur-[160px] pointer-events-none" />
 
-      {/* LADO ESQUERDO — Imagem Hero dos Gatos MiauDelier (Desktop: 70-75% da tela, Mobile: Banner Topo) */}
-      <div className="relative w-full md:w-[70%] lg:w-[75%] min-h-[340px] sm:min-h-[420px] md:min-h-screen overflow-hidden flex flex-col justify-between p-6 sm:p-10 z-10">
+      {/* LADO ESQUERDO — Imagem Hero dos Gatos MiauDelier (Desktop: ~50-52% da tela, Mobile: Banner Topo) */}
+      <div className="relative w-full md:w-[52%] lg:w-[55%] min-h-[340px] sm:min-h-[420px] md:min-h-screen overflow-hidden flex flex-col justify-between p-6 sm:p-10 z-10">
         {/* Imagem de Fundo Completa sem Caixas ou Molduras */}
         <img
           src={catFeederBanner}
           alt="Comedor de Gatos MiauDelier"
-          className="absolute inset-0 h-full w-full object-cover object-center scale-105 transition-transform duration-1000 ease-out hover:scale-100"
+          className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-1000 ease-out hover:scale-105"
         />
 
         {/* Camada Escura Leve para Leitura de Texto/Logos */}
         <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
-        {/* MÁSCARA EM DEGRADÊ CRUZADO DA IMAGEM DA ESQUERDA PARA A DIREITA (80% de Mesclagem) */}
+        {/* MÁSCARA EM DEGRADÊ CRUZADO DA IMAGEM DA ESQUERDA PARA A DIREITA (Mesclagem na metade da tela) */}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent md:bg-gradient-to-r md:from-transparent md:via-background/50 md:to-background pointer-events-none" />
 
-        {/* Marca MiauDelier no Canto Superior Esquerdo */}
+        {/* Marca MiauDelier no Canto Superior Esquerdo com Logo Ampliada */}
         <div className="relative z-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 backdrop-blur-md bg-background/60 p-2.5 px-4 rounded-2xl border border-outline-variant/30 shadow-lg">
-            <img src={logoMiauDelier} alt="MiauDelier Logo" className="h-9 w-9 object-contain drop-shadow" />
+          <div className="flex items-center gap-3.5 backdrop-blur-md bg-background/70 p-3 px-5 sm:px-6 rounded-3xl border border-outline-variant/40 shadow-2xl">
+            <img src={logoMiauDelier} alt="MiauDelier Logo" className="h-12 w-12 sm:h-14 sm:w-14 object-contain drop-shadow-md" />
             <div>
-              <span className="text-base font-bold tracking-tight text-on-surface">MiauDelier</span>
-              <span className="block text-[9px] font-bold text-primary uppercase tracking-widest">Manager</span>
+              <span className="text-lg sm:text-xl font-extrabold tracking-tight text-on-surface block leading-tight">MiauDelier</span>
+              <span className="block text-xs font-extrabold text-primary uppercase tracking-widest mt-0.5">Manager</span>
             </div>
           </div>
         </div>
@@ -134,15 +134,15 @@ export function LoginForm() {
         </div>
       </div>
 
-      {/* GRADIENTE DE INTERSEÇÃO/TRANSIÇÃO CRUZADA (Mesclagem contínua entre a imagem e o formulário) */}
-      <div className="hidden md:block absolute left-[45%] lg:left-[50%] right-[15%] top-0 bottom-0 pointer-events-none z-20 bg-gradient-to-r from-transparent via-background/75 to-background" />
+      {/* GRADIENTE DE INTERSEÇÃO/TRANSIÇÃO CRUZADA CENTRALIZADO NA METADE DA TELA (~50%) */}
+      <div className="hidden md:block absolute left-[35%] lg:left-[40%] right-[30%] lg:right-[35%] top-0 bottom-0 pointer-events-none z-20 bg-gradient-to-r from-transparent via-background/80 to-background" />
 
-      {/* LADO DIREITO — Formulário de Autenticação Flutuante com Fundo de Tema em Degradê Cruzado */}
-      <div className="relative z-30 flex-1 flex flex-col justify-center p-6 sm:p-10 md:p-14 lg:p-16 min-h-[480px] md:min-h-screen bg-background md:bg-transparent">
+      {/* LADO DIREITO — Formulário de Autenticação Posicionado Mais À Esquerda (Desktop: ~48-50%) */}
+      <div className="relative z-30 flex-1 flex flex-col justify-center p-6 sm:p-10 md:p-12 lg:p-16 min-h-[480px] md:min-h-screen bg-background md:bg-transparent">
         {/* Fundo Colorido do Tema com Degradê da Direita para a Esquerda para Fazer a Junção Sem Linha Dura */}
         <div className="hidden md:block absolute inset-0 bg-gradient-to-l from-background via-background/95 to-transparent pointer-events-none -z-10" />
 
-        <div className="w-full max-w-md mx-auto flex flex-col gap-6">
+        <div className="w-full max-w-md mx-auto md:ml-8 lg:ml-12 flex flex-col gap-6">
           {/* Alternador Entrar / Cadastrar (Tabs Suaves) */}
           {contaConfigurada && (
             <div className="flex rounded-xl bg-surface-container-high/40 p-1 border border-outline-variant/30">
