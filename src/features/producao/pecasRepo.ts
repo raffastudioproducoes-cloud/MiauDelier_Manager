@@ -1,16 +1,19 @@
 import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema'
 import { cifrarCampo } from '../../lib/camposCifrados'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
+import { converterQuantidade, ehIncompativel } from '../../lib/unidades'
 
 export interface ConsumoComMaterial {
   materialId: number
   quantidade: number
   nomeMaterial: string
+  unidade?: string
 }
 
 export interface NovoConsumo {
   materialId: number
   quantidade: number
+  unidade?: string
 }
 
 export interface NovaPeca {
@@ -43,15 +46,34 @@ export async function criarPeca(nova: NovaPeca): Promise<number> {
       if (!Number.isFinite(consumo.quantidade) || consumo.quantidade <= 0) {
         throw new Error(`Quantidade consumida de "${material.nome}" precisa ser maior que zero.`)
       }
-      if (consumo.quantidade > material.quantidadeEstoque) {
+
+      const unidadeDigita = consumo.unidade || material.unidade
+      if (ehIncompativel(unidadeDigita, material.unidade)) {
         throw new Error(
-          `Estoque insuficiente de "${material.nome}": disponível ${material.quantidadeEstoque}, solicitado ${consumo.quantidade}`,
+          `Unidade "${unidadeDigita}" é incompatível com a unidade "${material.unidade}" do material "${material.nome}".`,
         )
       }
 
-      await db.consumosPeca.add({ pecaId, materialId: consumo.materialId, quantidade: consumo.quantidade })
+      const { quantidadeConvertida } = converterQuantidade(consumo.quantidade, unidadeDigita, material.unidade)
+
+      if (quantidadeConvertida > material.quantidadeEstoque) {
+        const descSolicitada =
+          unidadeDigita !== material.unidade
+            ? `${consumo.quantidade} ${unidadeDigita} (${quantidadeConvertida} ${material.unidade})`
+            : `${quantidadeConvertida} ${material.unidade}`
+        throw new Error(
+          `Estoque insuficiente de "${material.nome}": disponível ${material.quantidadeEstoque} ${material.unidade}, solicitado ${descSolicitada}`,
+        )
+      }
+
+      await db.consumosPeca.add({
+        pecaId,
+        materialId: consumo.materialId,
+        quantidade: quantidadeConvertida,
+        unidade: unidadeDigita,
+      })
       await db.materiais.update(consumo.materialId, {
-        quantidadeEstoque: material.quantidadeEstoque - consumo.quantidade,
+        quantidadeEstoque: material.quantidadeEstoque - quantidadeConvertida,
       })
     }
 
@@ -102,7 +124,13 @@ export async function listarConsumosDaPeca(pecaId: number): Promise<ConsumoComMa
   return Promise.all(
     consumos.map(async (consumo) => {
       const material = await db.materiais.get(consumo.materialId)
-      return { materialId: consumo.materialId, quantidade: consumo.quantidade, nomeMaterial: material?.nome ?? '—' }
+      const unidadeExibida = consumo.unidade || material?.unidade || ''
+      return {
+        materialId: consumo.materialId,
+        quantidade: consumo.quantidade,
+        nomeMaterial: material?.nome ?? '—',
+        unidade: unidadeExibida,
+      }
     }),
   )
 }

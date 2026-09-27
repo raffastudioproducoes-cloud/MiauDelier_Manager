@@ -152,7 +152,7 @@ export function PecaDetalhePage() {
           <ul className="flex flex-col gap-2">
             {consumos.map((consumo, indice) => (
               <li key={indice} className="text-sm text-on-surface-variant">
-                {consumo.nomeMaterial}: {consumo.quantidade}
+                {consumo.nomeMaterial}: {consumo.quantidade} {consumo.unidade ?? ''}
               </li>
             ))}
           </ul>

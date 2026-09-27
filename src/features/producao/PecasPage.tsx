@@ -12,6 +12,7 @@ import { criarPeca, listarPecas, excluirPeca, type PecaComForma } from './pecasR
 import { listarFormas } from './formasRepo'
 import { listarMateriais } from './materiaisRepo'
 import type { Forma, Material } from '../../db/schema'
+import { converterQuantidade, obterOpcoesUnidadeCompativeis } from '../../lib/unidades'
 
 const schemaPeca = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da peça').max(120),
@@ -20,10 +21,11 @@ const schemaPeca = z.object({
 interface LinhaConsumo {
   materialId: string
   quantidade: string
+  unidade: string
 }
 
 function linhaVazia(): LinhaConsumo {
-  return { materialId: '', quantidade: '' }
+  return { materialId: '', quantidade: '', unidade: '' }
 }
 
 export function PecasPage() {
@@ -80,6 +82,21 @@ export function PecasPage() {
     setConsumos((atual) => atual.map((linha, i) => (i === indice ? { ...linha, [campo]: valor } : linha)))
   }
 
+  function selecionarMaterialNaLinha(indice: number, materialIdStr: string) {
+    const mat = materiais.find((m) => m.id === Number(materialIdStr))
+    setConsumos((atual) =>
+      atual.map((linha, i) =>
+        i === indice
+          ? {
+              ...linha,
+              materialId: materialIdStr,
+              unidade: mat ? mat.unidade : '',
+            }
+          : linha,
+      ),
+    )
+  }
+
   function adicionarLinha() {
     setConsumos((atual) => [...atual, linhaVazia()])
   }
@@ -115,6 +132,7 @@ export function PecasPage() {
         consumos: linhasValidas.map((linha) => ({
           materialId: Number(linha.materialId),
           quantidade: Number(linha.quantidade),
+          unidade: linha.unidade || undefined,
         })),
       })
     } catch (falha) {
@@ -203,34 +221,84 @@ export function PecasPage() {
           </div>
 
           <p className="text-sm font-medium text-on-surface">Materiais consumidos (Resina, Pigmentos, Adornos)</p>
-          {consumos.map((linha, indice) => (
-            <div key={indice} className="flex items-end gap-2">
-              <div className="flex flex-1 flex-col gap-1">
-                <label htmlFor={`material-peca-${indice}`} className="text-sm font-medium text-on-surface">Material</label>
-                <select
-                  id={`material-peca-${indice}`}
-                  value={linha.materialId}
-                  onChange={(e) => atualizarLinha(indice, 'materialId', e.target.value)}
-                  className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                >
-                  <option value="">Selecione</option>
-                  {materiaisConsumiveisPeca.map((material) => (
-                    <option key={material.id} value={material.id}>{material.nome}</option>
-                  ))}
-                </select>
+          {consumos.map((linha, indice) => {
+            const matSelecionado = materiaisConsumiveisPeca.find((m) => m.id === Number(linha.materialId))
+            const opcoesUnidade = matSelecionado ? obterOpcoesUnidadeCompativeis(matSelecionado.unidade) : ['un']
+            const unidadeLinha = linha.unidade || (matSelecionado?.unidade ?? '')
+
+            const qtdNum = Number(linha.quantidade) || 0
+            const temCalculo = matSelecionado && qtdNum > 0
+            const { quantidadeConvertida } = temCalculo
+              ? converterQuantidade(qtdNum, unidadeLinha, matSelecionado.unidade)
+              : { quantidadeConvertida: 0 }
+            const restante = matSelecionado ? matSelecionado.quantidadeEstoque - quantidadeConvertida : 0
+            const ehInsuficiente = temCalculo && restante < 0
+
+            return (
+              <div key={indice} className="flex flex-col gap-2 rounded-xl border border-outline-variant/60 bg-surface-container/30 p-3">
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex flex-1 min-w-[200px] flex-col gap-1">
+                    <label htmlFor={`material-peca-${indice}`} className="text-sm font-medium text-on-surface">Material</label>
+                    <select
+                      id={`material-peca-${indice}`}
+                      value={linha.materialId}
+                      onChange={(e) => selecionarMaterialNaLinha(indice, e.target.value)}
+                      className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                    >
+                      <option value="">Selecione o insumo...</option>
+                      {materiaisConsumiveisPeca.map((material) => (
+                        <option key={material.id} value={material.id}>
+                          {material.nome} ({material.quantidadeEstoque} {material.unidade} em estoque)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="w-32">
+                    <TextField
+                      id={`quantidade-peca-${indice}`}
+                      rotulo="Quantidade"
+                      type="number"
+                      step="0.001"
+                      value={linha.quantidade}
+                      onChange={(e) => atualizarLinha(indice, 'quantidade', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1 w-28">
+                    <label htmlFor={`unidade-peca-${indice}`} className="text-sm font-medium text-on-surface">Unidade</label>
+                    <select
+                      id={`unidade-peca-${indice}`}
+                      value={unidadeLinha}
+                      onChange={(e) => atualizarLinha(indice, 'unidade', e.target.value)}
+                      className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                    >
+                      {opcoesUnidade.map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {consumos.length > 1 && (
+                    <Button type="button" variante="ghost" onClick={() => removerLinha(indice)} className="mb-0.5">×</Button>
+                  )}
+                </div>
+
+                {temCalculo && matSelecionado && (
+                  <p className={`text-xs ${ehInsuficiente ? 'text-error font-medium' : 'text-on-surface-variant'}`}>
+                    {unidadeLinha !== matSelecionado.unidade
+                      ? `Equivale a ${quantidadeConvertida.toFixed(3)} ${matSelecionado.unidade} do estoque. `
+                      : ''}
+                    {ehInsuficiente ? (
+                      <span>⚠️ Estoque insuficiente! Disponível: {matSelecionado.quantidadeEstoque} {matSelecionado.unidade}, Solicitado: {quantidadeConvertida.toFixed(3)} {matSelecionado.unidade}</span>
+                    ) : (
+                      <span>Estoque após consumo: <strong>{restante.toFixed(3)} {matSelecionado.unidade}</strong></span>
+                    )}
+                  </p>
+                )}
               </div>
-              <TextField
-                id={`quantidade-peca-${indice}`}
-                rotulo="Quantidade"
-                type="number"
-                value={linha.quantidade}
-                onChange={(e) => atualizarLinha(indice, 'quantidade', e.target.value)}
-              />
-              {consumos.length > 1 && (
-                <Button type="button" variante="ghost" onClick={() => removerLinha(indice)}>×</Button>
-              )}
-            </div>
-          ))}
+            )
+          })}
           <Button type="button" variante="ghost" onClick={adicionarLinha}>+ Adicionar material</Button>
 
           {erro && <p role="alert" className="text-sm text-error">{erro}</p>}

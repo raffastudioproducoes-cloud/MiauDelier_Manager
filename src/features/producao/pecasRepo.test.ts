@@ -253,4 +253,34 @@ describe('repositório de peças', () => {
     mat = await db.materiais.get(materialId)
     expect(mat?.quantidadeEstoque).toBe(400)
   })
+
+  it('converte unidades compatíveis ao registrar consumo (ex.: 0.2 L desconta 200 ml)', async () => {
+    const formaId = await criarForma({ nome: 'Mesa', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 200 })
+    const materialId = await criarMaterial({ nome: 'Resina Epóxi', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 1000, custoUnitario: 0.15 })
+
+    const pecaId = await criarPeca({
+      nome: 'Mesa de Resina',
+      formaId,
+      consumos: [{ materialId, quantidade: 0.2, unidade: 'l' }],
+    })
+
+    const mat = await db.materiais.get(materialId)
+    expect(mat?.quantidadeEstoque).toBe(800) // 1000ml - 200ml = 800ml
+
+    const consumos = await listarConsumosDaPeca(pecaId)
+    expect(consumos[0].quantidade).toBe(200)
+  })
+
+  it('rejeita consumo com unidade incompatível (ex.: kg em material ml)', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const materialId = await criarMaterial({ nome: 'Resina Líquida', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 1000, custoUnitario: 0.1 })
+
+    await expect(
+      criarPeca({
+        nome: 'Peça erro unidade',
+        formaId,
+        consumos: [{ materialId, quantidade: 1, unidade: 'kg' }],
+      }),
+    ).rejects.toThrow(/incompatível/i)
+  })
 })
