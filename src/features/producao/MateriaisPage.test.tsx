@@ -72,10 +72,11 @@ describe('MateriaisPage', () => {
     await waitFor(() => screen.getByText('Resina B'))
 
     fireEvent.click(screen.getByRole('button', { name: /repor estoque/i }))
-    fireEvent.change(screen.getByLabelText(/quantidade a adicionar/i), { target: { value: '50' } })
-    fireEvent.click(screen.getByRole('button', { name: /adicionar/i }))
+    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '50' } })
+    fireEvent.change(screen.getByLabelText(/valor total pago/i), { target: { value: '5' } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
 
-    await waitFor(() => expect(screen.getByText(/150/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/150 ml em estoque/i)).toBeInTheDocument())
   })
 
   it('cria uma categoria nova pelo select e vincula o material a ela', async () => {

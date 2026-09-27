@@ -491,7 +491,7 @@ export function MateriaisPage() {
                   </div>
                   {materiais.length === 0 ? (
                     <EmptyState
-                      titulo="Nenhum material em estoque"
+                      titulo="Nenhum material cadastrado"
                       descricao="Cadastre o primeiro insumo ou registre uma compra."
                     />
                   ) : (
@@ -504,12 +504,7 @@ export function MateriaisPage() {
                               <div>
                                 <h3 className="font-medium text-on-surface">{material.nome}</h3>
                                 <p className="mt-0.5 text-label-sm text-on-surface-variant">
-                                  <span className="font-semibold text-on-surface">
-                                    {material.quantidadeEstoque} {material.unidade}
-                                  </span>{' '}
-                                  em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade} · Total:{' '}
-                                  <span className="font-medium text-primary">{formatarMoeda(totalItem)}</span> · Categoria:{' '}
-                                  {nomeCategoria(material.categoriaId)}
+                                  {material.quantidadeEstoque} {material.unidade} em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade} · Total: {formatarMoeda(totalItem)} · Categoria: {nomeCategoria(material.categoriaId)}
                                 </p>
                               </div>
                               <div className="flex flex-wrap items-center gap-2">
@@ -517,7 +512,7 @@ export function MateriaisPage() {
                                   variante="ghost"
                                   onClick={() => material.id !== undefined && iniciarCompraParaMaterial(material.id)}
                                 >
-                                  🛒 Repor / Comprar
+                                  🛒 Repor Estoque
                                 </Button>
                                 <Button variante="ghost" onClick={() => iniciarEdicao(material)}>
                                   Editar
