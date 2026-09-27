@@ -41,7 +41,8 @@ describe('ConfiguracoesPage', () => {
     await definirChaveGemini('chave-antiga')
     render(<ToastProvider><ConfiguracoesPage /></ToastProvider>)
 
-    fireEvent.click(await screen.findByRole('button', { name: /editar/i }))
+    const botoesEditar = await screen.findAllByRole('button', { name: /editar/i })
+    fireEvent.click(botoesEditar[0])
     fireEvent.change(await screen.findByLabelText(/chave de api do gemini/i), { target: { value: 'chave-atualizada' } })
     fireEvent.click(screen.getByRole('button', { name: /salvar chave/i }))
 

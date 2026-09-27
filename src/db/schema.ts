@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import { getDbNameForPerfil } from '../lib/perfisRepo'
 
 export interface CategoriaMaterial {
   id?: number
@@ -226,7 +227,7 @@ class MiauDelierDB extends Dexie {
   taxas!: EntityTable<Taxa, 'id'>
 
   constructor() {
-    super('MiauDelierManager')
+    super(getDbNameForPerfil())
     this.version(1).stores({
       categoriasMaterial: '++id, nome',
       materiais: '++id, nome, categoriaId',

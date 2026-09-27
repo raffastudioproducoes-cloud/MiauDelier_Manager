@@ -35,7 +35,7 @@ describe('PrecificacaoPage', () => {
     fireEvent.change(screen.getByLabelText(/rateio de custo fixo/i), { target: { value: '15' } })
     fireEvent.change(screen.getByLabelText(/margem de lucro/i), { target: { value: '40' } })
 
-    await waitFor(() => expect(screen.getByText(/96,60|96\.60/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText(/96,60|96\.60/).length).toBeGreaterThan(0))
   })
 
   it('não quebra a tela com entrada inválida (percentual fora de faixa)', async () => {
@@ -61,8 +61,8 @@ describe('PrecificacaoPage', () => {
     fireEvent.change(screen.getByLabelText(/valor da hora/i), { target: { value: '20' } })
 
     await waitFor(() => {
-      expect(screen.getByText(/custo direto/i)).toBeInTheDocument()
-      expect(screen.getByText(/mão de obra/i)).toBeInTheDocument()
+      expect(screen.getAllByText(/custo direto/i).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/mão de obra/i).length).toBeGreaterThan(0)
     })
   })
 
@@ -80,7 +80,7 @@ describe('PrecificacaoPage', () => {
     fireEvent.change(screen.getByLabelText(/horas de produção/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/valor da hora/i), { target: { value: '20' } })
 
-    const botaoSalvar = await screen.findByRole('button', { name: /salvar como preço de venda/i })
+    const botaoSalvar = await screen.findByRole('button', { name: /salvar .* como preço de venda/i })
     fireEvent.click(botaoSalvar)
 
     await waitFor(async () => {

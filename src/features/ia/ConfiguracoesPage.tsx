@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
+import { Badge } from '../../components/ui/Badge'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
 import {
   hasChaveConfigurada,
@@ -14,9 +16,12 @@ import {
   listarPerfis,
   getPerfilAtivo,
   criarPerfil,
+  atualizarPerfil,
+  excluirPerfil,
   selecionarPerfil,
+  RESERVED_DEFAULT_PROFILE_ID,
+  type PerfilAtelie,
 } from '../../lib/perfisRepo'
-
 
 export function ConfiguracoesPage() {
   const { mostrarToast } = useToast()
@@ -141,57 +146,278 @@ function SeccaoPerfisAtelie() {
   const { mostrarToast } = useToast()
   const [perfis, setPerfis] = useState(listarPerfis())
   const [perfilAtivo, setPerfilAtivoEstado] = useState(getPerfilAtivo())
-  const [novoNome, setNovoNome] = useState('')
 
-  function handleTrocarPerfil(id: string) {
-    selecionarPerfil(id)
+  // Formulário de perfil
+  const [exibindoFormulario, setExibindoFormulario] = useState(false)
+  const [perfilEmEdicaoId, setPerfilEmEdicaoId] = useState<string | null>(null)
+  const [nomeAtelier, setNomeAtelier] = useState('')
+  const [nomeDono, setNomeDono] = useState('')
+  const [emailDono, setEmailDono] = useState('')
+  const [endereco, setEndereco] = useState('')
+  const [documento, setDocumento] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [erroForm, setErroForm] = useState<string | null>(null)
+
+  // Exclusão
+  const [perfilExcluindoId, setPerfilExcluindoId] = useState<string | null>(null)
+
+  function recarregarPerfis() {
+    const lista = listarPerfis()
+    setPerfis(lista)
     setPerfilAtivoEstado(getPerfilAtivo())
-    mostrarToast('Perfil de ateliê alterado com sucesso!')
   }
 
-  function handleCriarPerfil(e: React.FormEvent) {
+  function handleTrocarPerfil(id: string) {
+    if (id === perfilAtivo.id) return
+    selecionarPerfil(id)
+    mostrarToast('Ateliê ativo alterado! Carregando dados isolados...', 'sucesso')
+    setTimeout(() => {
+      window.location.reload()
+    }, 400)
+  }
+
+  function handleNovoPerfil() {
+    setPerfilEmEdicaoId(null)
+    setNomeAtelier('')
+    setNomeDono('')
+    setEmailDono('')
+    setEndereco('')
+    setDocumento('')
+    setTelefone('')
+    setErroForm(null)
+    setExibindoFormulario(true)
+  }
+
+  function handleEditarPerfil(perfil: PerfilAtelie) {
+    setPerfilEmEdicaoId(perfil.id)
+    setNomeAtelier(perfil.nome)
+    setNomeDono(perfil.nomeDono || '')
+    setEmailDono(perfil.emailDono || '')
+    setEndereco(perfil.endereco || '')
+    setDocumento(perfil.documento || '')
+    setTelefone(perfil.telefone || '')
+    setErroForm(null)
+    setExibindoFormulario(true)
+  }
+
+  function handleCancelarForm() {
+    setExibindoFormulario(false)
+    setPerfilEmEdicaoId(null)
+    setErroForm(null)
+  }
+
+  function handleSalvarPerfil(e: React.FormEvent) {
     e.preventDefault()
-    if (!novoNome.trim()) return
-    const novo = criarPerfil(novoNome.trim())
-    setNovoNome('')
-    setPerfis(listarPerfis())
-    selecionarPerfil(novo.id)
-    setPerfilAtivoEstado(novo)
-    mostrarToast(`Ateliê "${novo.nome}" criado e selecionado!`)
+    setErroForm(null)
+
+    if (!nomeAtelier.trim()) {
+      setErroForm('Informe o nome do ateliê.')
+      return
+    }
+
+    try {
+      if (perfilEmEdicaoId) {
+        atualizarPerfil(perfilEmEdicaoId, {
+          nome: nomeAtelier,
+          nomeDono,
+          emailDono,
+          endereco,
+          documento,
+          telefone,
+        })
+        mostrarToast(`Ateliê "${nomeAtelier.trim()}" atualizado com sucesso!`, 'sucesso')
+      } else {
+        const novo = criarPerfil({
+          nome: nomeAtelier,
+          nomeDono,
+          emailDono,
+          endereco,
+          documento,
+          telefone,
+        })
+        mostrarToast(`Novo ateliê "${novo.nome}" cadastrado com sucesso!`, 'sucesso')
+      }
+      recarregarPerfis()
+      setExibindoFormulario(false)
+      setPerfilEmEdicaoId(null)
+    } catch (err) {
+      setErroForm(err instanceof Error ? err.message : 'Erro ao salvar perfil de ateliê.')
+    }
+  }
+
+  async function handleConfirmarExclusao() {
+    if (!perfilExcluindoId) return
+    try {
+      const eraAtivo = perfilExcluindoId === perfilAtivo.id
+      await excluirPerfil(perfilExcluindoId)
+      mostrarToast('Perfil de ateliê e dados isolados excluídos com sucesso.', 'sucesso')
+      setPerfilExcluindoId(null)
+      if (eraAtivo) {
+        setTimeout(() => window.location.reload(), 400)
+      } else {
+        recarregarPerfis()
+      }
+    } catch (err) {
+      mostrarToast(err instanceof Error ? err.message : 'Erro ao excluir perfil.', 'erro')
+      setPerfilExcluindoId(null)
+    }
   }
 
   return (
-    <section>
-      <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Perfis de Ateliê (Multiperfis Isolados)</h2>
-      <Card className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <label htmlFor="perfil-ativo-select" className="text-sm font-medium text-on-surface">Ateliê Ativo</label>
-          <select
-            id="perfil-ativo-select"
-            value={perfilAtivo.id}
-            onChange={(e) => handleTrocarPerfil(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-          >
-            {perfis.map((p) => (
-              <option key={p.id} value={p.id}>{p.nome}</option>
-            ))}
-          </select>
+          <h2 className="text-sm font-semibold text-on-surface-variant">Perfis de Ateliê (Gestão Multiperfil Isolada)</h2>
+          <p className="text-xs text-on-surface-variant">
+            Cada perfil possui banco de dados 100% separado para estoque, faturas, peças, vendas e clientes.
+          </p>
         </div>
+        {!exibindoFormulario && (
+          <Button type="button" onClick={handleNovoPerfil}>
+            + Novo Ateliê
+          </Button>
+        )}
+      </div>
 
-        <form onSubmit={handleCriarPerfil} className="flex flex-col gap-2 pt-2 border-t border-outline-variant">
-          <p className="text-xs text-on-surface-variant">Criar novo perfil isolado para gerenciar outro ateliê:</p>
-          <div className="flex gap-2">
-            <TextField
-              id="novo-nome-perfil"
-              rotulo="Nome do Ateliê"
-              value={novoNome}
-              onChange={(e) => setNovoNome(e.target.value)}
-            />
-            <Button type="submit" className="self-end">Criar</Button>
-          </div>
-        </form>
-      </Card>
+      {exibindoFormulario && (
+        <Card className="border border-primary/30 bg-primary/5">
+          <h3 className="font-semibold text-on-surface mb-3">
+            {perfilEmEdicaoId ? 'Editar Perfil do Ateliê' : 'Cadastrar Novo Perfil de Ateliê'}
+          </h3>
+          <form onSubmit={handleSalvarPerfil} className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TextField
+                id="perfil-nome-atelier"
+                rotulo="Nome do Ateliê *"
+                value={nomeAtelier}
+                onChange={(e) => setNomeAtelier(e.target.value)}
+                placeholder="Ex: Ateliê MiauDelier Resinas"
+              />
+              <TextField
+                id="perfil-nome-dono"
+                rotulo="Nome do Dono"
+                value={nomeDono}
+                onChange={(e) => setNomeDono(e.target.value)}
+                placeholder="Ex: Rafaela Silva"
+              />
+              <TextField
+                id="perfil-email-dono"
+                rotulo="E-mail do Dono"
+                type="email"
+                value={emailDono}
+                onChange={(e) => setEmailDono(e.target.value)}
+                placeholder="Ex: contato@atelie.com"
+              />
+              <TextField
+                id="perfil-documento"
+                rotulo="CNPJ ou CPF"
+                value={documento}
+                onChange={(e) => setDocumento(e.target.value)}
+                placeholder="Ex: 00.000.000/0001-00 ou 000.000.000-00"
+              />
+              <TextField
+                id="perfil-telefone"
+                rotulo="Telefone / WhatsApp"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                placeholder="Ex: (11) 99999-8888"
+              />
+              <TextField
+                id="perfil-endereco"
+                rotulo="Endereço Completo"
+                value={endereco}
+                onChange={(e) => setEndereco(e.target.value)}
+                placeholder="Ex: Av. Paulista, 1000 - São Paulo / SP"
+              />
+            </div>
+
+            {erroForm && <p role="alert" className="text-xs text-error font-medium">{erroForm}</p>}
+
+            <div className="flex gap-2 justify-end mt-2">
+              <Button type="button" variante="ghost" onClick={handleCancelarForm}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {perfilEmEdicaoId ? 'Salvar Alterações' : 'Cadastrar Ateliê'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {perfis.map((p) => {
+          const ehAtivo = p.id === perfilAtivo.id
+          const ehPadrao = p.id === RESERVED_DEFAULT_PROFILE_ID
+
+          return (
+            <Card key={p.id} className={`flex flex-col justify-between gap-3 ${ehAtivo ? 'border-2 border-primary glow-hover' : ''}`}>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-bold text-on-surface flex items-center gap-2">
+                    🏢 {p.nome}
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    {ehAtivo && <Badge variant="success">✓ Ativo</Badge>}
+                    {ehPadrao && <Badge variant="neutral">Principal</Badge>}
+                  </div>
+                </div>
+
+                <div className="text-xs text-on-surface-variant flex flex-col gap-1 mt-1">
+                  {p.nomeDono && (
+                    <p>👤 <strong>Dono:</strong> {p.nomeDono} {p.emailDono ? `(${p.emailDono})` : ''}</p>
+                  )}
+                  {!p.nomeDono && p.emailDono && (
+                    <p>✉️ <strong>E-mail:</strong> {p.emailDono}</p>
+                  )}
+                  {p.documento && (
+                    <p>📄 <strong>CPF/CNPJ:</strong> {p.documento}</p>
+                  )}
+                  {p.telefone && (
+                    <p>📞 <strong>Telefone:</strong> {p.telefone}</p>
+                  )}
+                  {p.endereco && (
+                    <p>📍 <strong>Endereço:</strong> {p.endereco}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-outline-variant/50 gap-2">
+                <div>
+                  {!ehAtivo && (
+                    <Button type="button" className="px-3 py-1 text-xs" onClick={() => handleTrocarPerfil(p.id)}>
+                      Alternar para este perfil
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variante="ghost" className="px-3 py-1 text-xs" onClick={() => handleEditarPerfil(p)}>
+                    Editar
+                  </Button>
+                  {!ehPadrao && (
+                    <Button
+                      type="button"
+                      variante="ghost"
+                      className="px-3 py-1 text-xs text-error hover:bg-error/10"
+                      onClick={() => setPerfilExcluindoId(p.id)}
+                    >
+                      Excluir
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )
+        })}
+      </div>
+
+      <ConfirmModal
+        aberto={perfilExcluindoId !== null}
+        titulo="Excluir Perfil de Ateliê?"
+        descricao="Esta ação excluirá o perfil e todo o seu banco de dados isolado (estoque, faturas, peças, clientes). Esta ação não pode ser desfeita."
+        onConfirmar={handleConfirmarExclusao}
+        onCancelar={() => setPerfilExcluindoId(null)}
+      />
     </section>
   )
 }
-
