@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { TextField } from '../../components/ui/TextField'
 import { Button } from '../../components/ui/Button'
 import logoMiauDelier from '../../assets/logo-miaudelier.png'
+import catFeederBanner from '../../assets/cats-feeder-login.jpg'
 
 export function LoginForm() {
   const navigate = useNavigate()
@@ -94,47 +95,88 @@ export function LoginForm() {
     : 'Entrar'
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-background flex flex-col md:flex-row">
-      {/* Efeitos de Iluminação de Fundo */}
-      <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-primary/15 blur-[120px] pointer-events-none" />
-      <div className="absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 rounded-full bg-surface-container-high/40 blur-[150px] pointer-events-none" />
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-background text-on-surface flex flex-col md:flex-row font-sans">
+      {/* Luzes de Iluminação de Fundo de Suporte (Theme Ambient Glow) */}
+      <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[140px] pointer-events-none" />
+      <div className="absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 rounded-full bg-surface-container-high/30 blur-[160px] pointer-events-none" />
 
-      {/* LADO ESQUERDO — Mídia / Ilustração Destaque (Desktop: ~58% da tela, Mobile: Topo) */}
-      <div className="relative flex flex-col justify-between p-8 sm:p-12 md:w-[58%] lg:w-[62%] min-h-[320px] md:min-h-screen z-10">
-        {/* Marca MiauDelier */}
-        <div className="flex items-center gap-3">
-          <img src={logoMiauDelier} alt="MiauDelier Logo" className="h-12 w-12 object-contain drop-shadow-md" />
-          <div>
-            <span className="text-xl font-bold tracking-tight text-on-surface">MiauDelier</span>
-            <span className="block text-[10px] font-bold text-primary uppercase tracking-widest">Manager</span>
-          </div>
-        </div>
+      {/* LADO ESQUERDO — Imagem Hero dos Gatos MiauDelier (Desktop: 70-75% da tela, Mobile: Banner Topo) */}
+      <div className="relative w-full md:w-[70%] lg:w-[75%] min-h-[340px] sm:min-h-[420px] md:min-h-screen overflow-hidden flex flex-col justify-between p-6 sm:p-10 z-10">
+        {/* Imagem de Fundo Completa sem Caixas ou Molduras */}
+        <img
+          src={catFeederBanner}
+          alt="Comedor de Gatos MiauDelier"
+          className="absolute inset-0 h-full w-full object-cover object-center scale-105 transition-transform duration-1000 ease-out hover:scale-100"
+        />
 
-        {/* Slot de Mídia Ilustrativa (Container de destaque preparado para Imagem ou Vídeo) */}
-        <div className="my-auto py-8 flex flex-col items-center justify-center text-center">
-          <div className="relative w-full max-w-lg h-60 md:h-80 rounded-3xl border-2 border-dashed border-outline-variant/50 bg-surface-container/20 backdrop-blur-md flex flex-col items-center justify-center p-8 transition-all hover:border-primary/40 group shadow-inner">
-            <div className="h-16 w-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
-              ✨
+        {/* Camada Escura Leve para Leitura de Texto/Logos */}
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+
+        {/* MÁSCARA EM DEGRADÊ CRUZADO DA IMAGEM DA ESQUERDA PARA A DIREITA (80% de Mesclagem) */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent md:bg-gradient-to-r md:from-transparent md:via-background/50 md:to-background pointer-events-none" />
+
+        {/* Marca MiauDelier no Canto Superior Esquerdo */}
+        <div className="relative z-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 backdrop-blur-md bg-background/60 p-2.5 px-4 rounded-2xl border border-outline-variant/30 shadow-lg">
+            <img src={logoMiauDelier} alt="MiauDelier Logo" className="h-9 w-9 object-contain drop-shadow" />
+            <div>
+              <span className="text-base font-bold tracking-tight text-on-surface">MiauDelier</span>
+              <span className="block text-[9px] font-bold text-primary uppercase tracking-widest">Manager</span>
             </div>
-            <p className="text-base font-bold text-on-surface">Espaço para Imagem / Vídeo</p>
-            <p className="text-xs text-on-surface-variant mt-1.5 max-w-sm leading-relaxed">
-              Área reservada para demonstração visual do ateliê ou mídia institucional.
-            </p>
           </div>
         </div>
 
-        {/* Rodapé */}
-        <p className="text-xs text-on-surface-variant/80">
-          © {new Date().getFullYear()} MiauDelier Manager — Sistema de Gestão para Ateliês.
-        </p>
+        {/* Rodapé com Direitos no Canto Inferior Esquerdo */}
+        <div className="relative z-20 hidden sm:block">
+          <p className="text-xs font-medium text-on-surface/90 backdrop-blur-md bg-background/40 px-3.5 py-2 rounded-xl border border-outline-variant/20 inline-block">
+            © {new Date().getFullYear()} MiauDelier Manager — Sistema de Gestão para Ateliês.
+          </p>
+        </div>
       </div>
 
-      {/* GRADIENTE DE TRANSIÇÃO SUAVE ENTRE ESQUERDA E DIREITA */}
-      <div className="hidden md:block absolute left-[50%] top-0 bottom-0 w-[20%] bg-gradient-to-r from-transparent via-background/60 to-background pointer-events-none z-10" />
+      {/* GRADIENTE DE INTERSEÇÃO/TRANSIÇÃO CRUZADA (Mesclagem contínua entre a imagem e o formulário) */}
+      <div className="hidden md:block absolute left-[45%] lg:left-[50%] right-[15%] top-0 bottom-0 pointer-events-none z-20 bg-gradient-to-r from-transparent via-background/75 to-background" />
 
-      {/* LADO DIREITO — Formulário de Autenticação Seamless (Desktop: ~42% da tela, Mobile: Abaixo) */}
-      <div className="relative z-20 flex flex-col justify-center p-6 sm:p-10 md:p-16 md:w-[42%] lg:w-[38%] min-h-[500px] md:min-h-screen bg-background/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none">
+      {/* LADO DIREITO — Formulário de Autenticação Flutuante com Fundo de Tema em Degradê Cruzado */}
+      <div className="relative z-30 flex-1 flex flex-col justify-center p-6 sm:p-10 md:p-14 lg:p-16 min-h-[480px] md:min-h-screen bg-background md:bg-transparent">
+        {/* Fundo Colorido do Tema com Degradê da Direita para a Esquerda para Fazer a Junção Sem Linha Dura */}
+        <div className="hidden md:block absolute inset-0 bg-gradient-to-l from-background via-background/95 to-transparent pointer-events-none -z-10" />
+
         <div className="w-full max-w-md mx-auto flex flex-col gap-6">
+          {/* Alternador Entrar / Cadastrar (Tabs Suaves) */}
+          {contaConfigurada && (
+            <div className="flex rounded-xl bg-surface-container-high/40 p-1 border border-outline-variant/30">
+              <button
+                type="button"
+                onClick={() => {
+                  setModoCadastro(false)
+                  setErro(null)
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  !modoCadastro
+                    ? 'bg-primary text-on-primary shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Entrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModoCadastro(true)
+                  setErro(null)
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  modoCadastro
+                    ? 'bg-primary text-on-primary shadow-md'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Criar Conta
+              </button>
+            </div>
+          )}
+
           {/* Cabeçalho do Formulário */}
           <div>
             <h1 className="text-3xl font-extrabold text-on-surface tracking-tight">
@@ -151,7 +193,7 @@ export function LoginForm() {
               <TextField
                 id="nome"
                 rotulo="Nome completo"
-                placeholder="Seu nome"
+                placeholder="Seu nome completo"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
               />
@@ -181,7 +223,7 @@ export function LoginForm() {
               <button
                 type="button"
                 onClick={() => setMostrarSenha(!mostrarSenha)}
-                className="absolute right-3.5 top-9 text-xs text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                className="absolute right-3.5 top-9 text-xs font-medium text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
               >
                 {mostrarSenha ? '🙈 Ocultar' : '👁️ Mostrar'}
               </button>
@@ -207,37 +249,22 @@ export function LoginForm() {
             </Button>
           </form>
 
-          {/* Links Secundários (Esqueceu a senha / Criar conta) */}
-          {contaConfigurada && (
-            <div className="flex items-center justify-center gap-3 text-xs text-on-surface-variant pt-1">
-              {!modoCadastro && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => alert('Para redefinir a senha, utilize o backup ou limpe a sessão.')}
-                    className="hover:text-primary transition-colors cursor-pointer"
-                  >
-                    Esqueceu a senha?
-                  </button>
-                  <span>·</span>
-                </>
-              )}
+          {/* Links Secundários (Esqueceu a senha) */}
+          {contaConfigurada && !modoCadastro && (
+            <div className="flex items-center justify-center text-xs text-on-surface-variant">
               <button
                 type="button"
-                onClick={() => {
-                  setModoCadastro(!modoCadastro)
-                  setErro(null)
-                }}
-                className="font-semibold text-primary hover:underline cursor-pointer"
+                onClick={() => alert('Para redefinir a senha, utilize o backup ou limpe a sessão.')}
+                className="hover:text-primary transition-colors cursor-pointer"
               >
-                {modoCadastro ? 'Já tem uma conta? Entrar' : 'Criar conta'}
+                Esqueceu a senha?
               </button>
             </div>
           )}
 
           {/* Social Logins */}
           {contaConfigurada && (
-            <div className="flex flex-col gap-4 pt-4">
+            <div className="flex flex-col gap-4 pt-2">
               <div className="relative flex items-center justify-center">
                 <div className="w-full border-t border-outline-variant/40" />
                 <span className="absolute bg-background px-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">

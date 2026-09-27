@@ -42,7 +42,7 @@ describe('LoginForm', () => {
     render(<LoginForm />)
     const input = await screen.findByLabelText(/senha/i)
     fireEvent.change(input, { target: { value: 'senha-errada' } })
-    fireEvent.click(screen.getByRole('button', { name: /entrar/i }))
+    fireEvent.click(screen.getAllByRole('button', { name: /^entrar$/i }).find(b => b.getAttribute('type') === 'submit')!)
 
     // nota: pode ser intermitente sob carga da suíte completa (mesma classe de flakiness de TransacoesPage.test.tsx)
     expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(/senha incorreta/i)
@@ -63,7 +63,7 @@ describe('LoginForm', () => {
     render(<LoginForm />)
     const input = await screen.findByLabelText(/senha/i)
     fireEvent.change(input, { target: { value: 'qualquer-senha' } })
-    fireEvent.click(screen.getByRole('button', { name: /entrar/i }))
+    fireEvent.click(screen.getAllByRole('button', { name: /^entrar$/i }).find(b => b.getAttribute('type') === 'submit')!)
 
     const alerta = await screen.findByRole('alert')
     expect(alerta).toHaveTextContent(/conta corrompida/i)
