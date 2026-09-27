@@ -16,23 +16,53 @@ export interface Material {
 
 export type FormaGeometria = 'retangular' | 'cilindrico' | 'esferico' | 'direto'
 
+export interface CavidadeForma {
+  id: string
+  nome?: string
+  comprimentoCm?: number
+  larguraCm?: number
+  profundidadeCm?: number
+  volumeManualMl?: number
+}
+
 export interface Forma {
   id?: number
   nome: string
   geometria: FormaGeometria
   dimensoesCm: { comprimento?: number; largura?: number; profundidade?: number; raio?: number; altura?: number }
   volumeDiretoMl?: number
+  custoFabricacao?: number
+  vidaUtilUsos?: number
+  usosRealizados?: number
+  cavidades?: CavidadeForma[]
 }
 
 export type StatusPeca = 'planejada' | 'em_producao' | 'curando' | 'acabamento' | 'pronta' | 'vendida'
 
+export interface UsoEnergiaPeca {
+  equipamentoId: number
+  nomeEquipamento: string
+  potenciaWatts: number
+  minutosUso: number
+}
+
 export interface Peca {
   id?: number
+  numeroSerie?: string
   nome: string
   formaId: number
   status: StatusPeca
   criadaEm: string
   precoVenda?: number
+  curaIniciadaEm?: number
+  curaMinutos?: number
+  tipoProcesso?: string
+  duracaoProcessoMinutos?: number
+  horasMaoDeObra?: number
+  maoDeObraFixa?: number
+  usosEnergia?: UsoEnergiaPeca[]
+  percentualTaxas?: number
+  margemDesejada?: number
 }
 
 export interface ConsumoPeca {
@@ -118,6 +148,29 @@ export interface MensagemIA {
   criadoEm: string
 }
 
+export interface Notificacao {
+  id?: number
+  titulo: string
+  mensagem: string
+  lida: boolean
+  criadoEm: string
+}
+
+export interface Equipamento {
+  id?: number
+  nome: string
+  potenciaWatts: number
+  criadoEm: string
+}
+
+export interface Taxa {
+  id?: number
+  nome: string
+  percentual: number
+  valorFixo: number
+  criadoEm: string
+}
+
 class MiauDelierDB extends Dexie {
   categoriasMaterial!: EntityTable<CategoriaMaterial, 'id'>
   materiais!: EntityTable<Material, 'id'>
@@ -133,6 +186,9 @@ class MiauDelierDB extends Dexie {
   auditoria!: EntityTable<RegistroAuditoria, 'id'>
   backups!: EntityTable<MetaBackup, 'id'>
   mensagensIA!: EntityTable<MensagemIA, 'id'>
+  notificacoes!: EntityTable<Notificacao, 'id'>
+  equipamentos!: EntityTable<Equipamento, 'id'>
+  taxas!: EntityTable<Taxa, 'id'>
 
   constructor() {
     super('MiauDelierManager')
@@ -154,7 +210,13 @@ class MiauDelierDB extends Dexie {
     this.version(2).stores({
       mensagensIA: '++id, criadoEm',
     })
+    this.version(3).stores({
+      notificacoes: '++id, lida, criadoEm',
+      equipamentos: '++id, nome',
+      taxas: '++id, nome',
+    })
   }
 }
 
 export const db = new MiauDelierDB()
+
