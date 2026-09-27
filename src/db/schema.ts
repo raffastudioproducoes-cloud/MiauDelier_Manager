@@ -98,6 +98,7 @@ export interface RegistroAuditoria {
   entidadeId: number
   quem: string
   quando: string
+  acao: 'exclusao' | 'alteracao_preco' | 'venda'
   valorAnterior?: string
   valorNovo?: string
 }

@@ -45,7 +45,7 @@ export async function atualizarTransacao(transacaoId: number, dados: NovaTransac
 export async function excluirTransacao(transacaoId: number): Promise<void> {
   await db.transaction('rw', db.transacoes, db.auditoria, async () => {
     await db.transacoes.delete(transacaoId)
-    await registrarAuditoria('transacao', transacaoId)
+    await registrarAuditoria('transacao', transacaoId, 'exclusao')
   })
 }
 

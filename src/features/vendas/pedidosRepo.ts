@@ -54,6 +54,6 @@ export async function listarPecaIdsJaVinculadas(): Promise<number[]> {
 export async function excluirPedido(pedidoId: number): Promise<void> {
   await db.transaction('rw', db.pedidos, db.auditoria, async () => {
     await db.pedidos.delete(pedidoId)
-    await registrarAuditoria('pedido', pedidoId)
+    await registrarAuditoria('pedido', pedidoId, 'exclusao')
   })
 }
