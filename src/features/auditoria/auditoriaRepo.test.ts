@@ -9,7 +9,7 @@ describe('repositório de auditoria', () => {
   })
 
   it('registra uma entrada de auditoria', async () => {
-    await registrarAuditoria('material', 1, undefined, undefined)
+    await registrarAuditoria('material', 1, 'exclusao', undefined, undefined)
     const registros = await listarAuditoria()
     expect(registros).toHaveLength(1)
     expect(registros[0].entidade).toBe('material')
@@ -17,7 +17,7 @@ describe('repositório de auditoria', () => {
   })
 
   it('lista em ordem decrescente por data', async () => {
-    await registrarAuditoria('material', 1)
+    await registrarAuditoria('material', 1, 'exclusao')
     await new Promise((r) => setTimeout(r, 5))
     await registrarAuditoria('conta', 2)
     const registros = await listarAuditoria()

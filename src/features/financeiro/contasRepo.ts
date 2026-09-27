@@ -48,6 +48,6 @@ export async function excluirConta(contaId: number): Promise<void> {
   }
   await db.transaction('rw', db.contas, db.auditoria, async () => {
     await db.contas.delete(contaId)
-    await registrarAuditoria('conta', contaId)
+    await registrarAuditoria('conta', contaId, 'exclusao')
   })
 }

@@ -38,6 +38,6 @@ export async function atualizarCliente(clienteId: number, novo: NovoCliente): Pr
 export async function excluirCliente(clienteId: number): Promise<void> {
   await db.transaction('rw', db.clientes, db.auditoria, async () => {
     await db.clientes.delete(clienteId)
-    await registrarAuditoria('cliente', clienteId)
+    await registrarAuditoria('cliente', clienteId, 'exclusao')
   })
 }
