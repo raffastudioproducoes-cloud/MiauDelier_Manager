@@ -213,6 +213,8 @@ function SeccaoTarifasConfig() {
     setSalvando(true)
     try {
       const { salvarTarifasConfig } = await import('../pricing/tarifasConfigRepo')
+      const { sincronizarTarifasConcessionaria } = await import('../pricing/concessionariasService')
+
       await salvarTarifasConfig({
         valorHoraMaoDeObra: Number(valorHora) || 0,
         tarifaKwh: Number(tarifaKwh) || 0,
@@ -221,34 +223,44 @@ function SeccaoTarifasConfig() {
         estado,
         cidadeBairro,
       })
+
+      const res = await sincronizarTarifasConcessionaria(true, { pais, estado, cidadeBairro })
+
+      if (!montado.current) return
+      setConcessionariaLuz(res.concessionariaLuz)
+      setConcessionariaAgua(res.concessionariaAgua)
+      setUltimaAtualizacao(res.ultimaAtualizacaoIso)
+      setStatusMensagem(res.mensagemStatus)
+
       mostrarToast('Tarifas e localização do ateliê salvas com sucesso!', 'sucesso')
     } catch (err) {
+      if (!montado.current) return
       mostrarToast(err instanceof Error ? err.message : 'Erro ao salvar tarifas.', 'erro')
     } finally {
-      setSalvando(false)
+      if (montado.current) setSalvando(false)
     }
   }
 
   async function handleBuscarTarifasOnline() {
     setBuscandoTarifas(true)
     try {
-      const { salvarTarifasConfig } = await import('../pricing/tarifasConfigRepo')
-      await salvarTarifasConfig({ pais, estado, cidadeBairro })
-
       const { sincronizarTarifasConcessionaria } = await import('../pricing/concessionariasService')
-      const res = await sincronizarTarifasConcessionaria(true)
+      const res = await sincronizarTarifasConcessionaria(true, { pais, estado, cidadeBairro })
 
-      await carregarTarifas()
+      if (!montado.current) return
+      setTarifaKwh(String(res.tarifaKwh))
+      setTarifaAguaM3(String(res.tarifaAguaM3))
+      setConcessionariaLuz(res.concessionariaLuz)
+      setConcessionariaAgua(res.concessionariaAgua)
+      setUltimaAtualizacao(res.ultimaAtualizacaoIso)
+      setStatusMensagem(res.mensagemStatus)
 
-      if (res.houveAlteracaoDeValor) {
-        mostrarToast('Tarifas da concessionária foram alteradas e atualizadas no sistema!', 'sucesso')
-      } else {
-        mostrarToast('Consulta concluída: As concessionárias mantêm as mesmas tarifas (sem alteração).', 'sucesso')
-      }
+      mostrarToast(`Concessionárias de ${estado ? estado.toUpperCase() : 'SP'} atualizadas: ${res.concessionariaLuz} e ${res.concessionariaAgua}!`, 'sucesso')
     } catch (err) {
+      if (!montado.current) return
       mostrarToast(err instanceof Error ? err.message : 'Erro ao buscar tarifas na internet.', 'erro')
     } finally {
-      setBuscandoTarifas(false)
+      if (montado.current) setBuscandoTarifas(false)
     }
   }
 
@@ -263,28 +275,42 @@ function SeccaoTarifasConfig() {
             Informe a localização do seu ateliê para consultar automaticamente as concessionárias de energia elétrica e abastecimento de água.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <TextField
-              id="config-pais"
-              rotulo="País"
-              value={pais}
-              onChange={(e) => setPais(e.target.value)}
-              placeholder="Brasil"
-            />
-            <TextField
-              id="config-estado"
-              rotulo="Estado (UF)"
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              placeholder="SP, RJ, MG..."
-            />
-            <TextField
-              id="config-cidade-bairro"
-              rotulo="Cidade / Bairro"
-              value={cidadeBairro}
-              onChange={(e) => setCidadeBairro(e.target.value)}
-              placeholder="Ex: São Paulo / Centro"
-            />
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <TextField
+                id="config-pais"
+                rotulo="País"
+                value={pais}
+                onChange={(e) => setPais(e.target.value)}
+                placeholder="Brasil"
+              />
+              <TextField
+                id="config-estado"
+                rotulo="Estado (UF)"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                placeholder="SP, RJ, MG..."
+              />
+              <TextField
+                id="config-cidade-bairro"
+                rotulo="Cidade / Bairro"
+                value={cidadeBairro}
+                onChange={(e) => setCidadeBairro(e.target.value)}
+                placeholder="Ex: São Paulo / Centro"
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variante="ghost"
+                className="text-xs flex items-center gap-1.5 border border-primary/30 text-primary hover:bg-primary/10"
+                onClick={handleBuscarTarifasOnline}
+                disabled={buscandoTarifas}
+              >
+                {buscandoTarifas ? '⏳ Consultando...' : `🔄 Atualizar Concessionária de ${estado ? estado.toUpperCase() : 'SP'}`}
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-outline-variant/40">

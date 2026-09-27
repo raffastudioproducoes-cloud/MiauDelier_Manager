@@ -58,6 +58,8 @@ export interface Forma {
   dimensoesCm: { comprimento?: number; largura?: number; profundidade?: number; raio?: number; altura?: number }
   volumeDiretoMl?: number
   custoFabricacao?: number
+  custoCaixaEstrutura?: number
+  materialCaixaEstrutura?: string
   vidaUtilUsos?: number
   usosRealizados?: number
   materialSiliconeId?: number

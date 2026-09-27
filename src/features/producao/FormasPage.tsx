@@ -114,12 +114,15 @@ export function FormasPage() {
   const [largPes, setLargPes] = useState('4')
   const [margemSeguranca, setMargemSeguranca] = useState('10')
 
-  // Silicone & Amortização do Molde & Cura
+  // Silicone & Caixa de Contenção & Amortização do Molde & Cura
   const [materialSiliconeId, setMaterialSiliconeId] = useState('')
   const [qtdSilicone, setQtdSilicone] = useState('')
+  const [mostrarTodosMateriais, setMostrarTodosMateriais] = useState(false)
+  const [materialCaixaEstrutura, setMaterialCaixaEstrutura] = useState('')
+  const [custoCaixaEstrutura, setCustoCaixaEstrutura] = useState('')
   const [custoFabricacao, setCustoFabricacao] = useState('')
   const [vidaUtilUsos, setVidaUtilUsos] = useState('50')
-  const [curaHoras, setCuraHoras] = useState('24')
+  const [curaHoras, setCuraHoras] = useState('0')
 
   const [erro, setErro] = useState<string | null>(null)
   const [formaEmEdicaoId, setFormaEmEdicaoId] = useState<number | null>(null)
@@ -148,17 +151,36 @@ export function FormasPage() {
     }
   }, [])
 
-  // Auto calcula o custo do silicone se selecionado
+  // Lista de materiais filtrada para silicones/endurecedores/borrachas (com opção de ver todos)
+  const materiaisSilicone = useMemo(() => {
+    if (mostrarTodosMateriais) return materiais
+    return materiais.filter((m) => {
+      const nomeLower = m.nome.toLowerCase()
+      return (
+        nomeLower.includes('silicone') ||
+        nomeLower.includes('catalisador') ||
+        nomeLower.includes('endurecedor') ||
+        nomeLower.includes('borracha')
+      )
+    })
+  }, [materiais, mostrarTodosMateriais])
+
+  // Auto calcula o custo total do molde (Silicone + Caixa de Contenção / Estrutura)
   useEffect(() => {
+    let custoSiliconeCalc = 0
     if (materialSiliconeId && qtdSilicone) {
       const mat = materiais.find((m) => String(m.id) === materialSiliconeId)
       const qtd = Number(qtdSilicone)
       if (mat && !isNaN(qtd) && qtd > 0) {
-        const calc = (qtd * mat.custoUnitario).toFixed(2)
-        setCustoFabricacao(calc)
+        custoSiliconeCalc = qtd * mat.custoUnitario
       }
     }
-  }, [materialSiliconeId, qtdSilicone, materiais])
+    const custoCaixaNum = Number(custoCaixaEstrutura) || 0
+    const totalCalc = custoSiliconeCalc + custoCaixaNum
+    if (totalCalc > 0) {
+      setCustoFabricacao(totalCalc.toFixed(2))
+    }
+  }, [materialSiliconeId, qtdSilicone, custoCaixaEstrutura, materiais])
 
   const resultadoMesaResina = useMemo(() => {
     if (geometria !== 'retangular') return null
@@ -267,9 +289,11 @@ export function FormasPage() {
     setMargemSeguranca('10')
     setMaterialSiliconeId('')
     setQtdSilicone('')
+    setMaterialCaixaEstrutura('')
+    setCustoCaixaEstrutura('')
     setCustoFabricacao('')
     setVidaUtilUsos('50')
-    setCuraHoras('24')
+    setCuraHoras('0')
     setFormaEmEdicaoId(null)
     setErro(null)
   }
@@ -320,6 +344,8 @@ export function FormasPage() {
 
     setMaterialSiliconeId(forma.materialSiliconeId !== undefined ? String(forma.materialSiliconeId) : '')
     setQtdSilicone(forma.quantidadeSiliconeUsada !== undefined ? String(forma.quantidadeSiliconeUsada) : '')
+    setMaterialCaixaEstrutura(forma.materialCaixaEstrutura ?? '')
+    setCustoCaixaEstrutura(forma.custoCaixaEstrutura !== undefined ? String(forma.custoCaixaEstrutura) : '')
     setCustoFabricacao(forma.custoFabricacao !== undefined ? String(forma.custoFabricacao) : '')
     setVidaUtilUsos(forma.vidaUtilUsos !== undefined ? String(forma.vidaUtilUsos) : '50')
     setCuraHoras(forma.curaMinutos !== undefined ? String(forma.curaMinutos / 60) : '24')
@@ -386,6 +412,8 @@ export function FormasPage() {
         massaResinaKg: massaKg,
         materialSiliconeId: materialSiliconeId ? Number(materialSiliconeId) : undefined,
         quantidadeSiliconeUsada: qtdSilicone ? Number(qtdSilicone) : undefined,
+        materialCaixaEstrutura: materialCaixaEstrutura.trim() || undefined,
+        custoCaixaEstrutura: custoCaixaEstrutura ? Number(custoCaixaEstrutura) : undefined,
         custoFabricacao: custoFabricacao ? Number(custoFabricacao) : undefined,
         vidaUtilUsos: vidaUtilUsos ? Number(vidaUtilUsos) : 50,
         curaMinutos: curaMin > 0 ? curaMin : undefined,
@@ -591,7 +619,16 @@ export function FormasPage() {
             <h3 className="text-sm font-semibold text-on-surface">Fabricação & Amortização do Molde (Silicone)</h3>
             
             <div className="flex flex-col gap-1">
-              <label htmlFor="silicone-material" className="text-sm font-medium text-on-surface">Silicone Utilizado do Estoque</label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="silicone-material" className="text-sm font-medium text-on-surface">Silicone Utilizado do Estoque</label>
+                <button
+                  type="button"
+                  onClick={() => setMostrarTodosMateriais((prev) => !prev)}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  {mostrarTodosMateriais ? '🔍 Filtrar apenas silicones' : '🌐 Mostrar todos os materiais do estoque'}
+                </button>
+              </div>
               <select
                 id="silicone-material"
                 value={materialSiliconeId}
@@ -599,7 +636,7 @@ export function FormasPage() {
                 className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               >
                 <option value="">Nenhum (custo avulso)</option>
-                {materiais.map((mat) => (
+                {materiaisSilicone.map((mat) => (
                   <option key={mat.id} value={mat.id}>
                     {mat.nome} ({mat.quantidadeEstoque} {mat.unidade} em estoque · R$ {mat.custoUnitario.toFixed(2)}/{mat.unidade})
                   </option>
@@ -617,10 +654,38 @@ export function FormasPage() {
               />
             )}
 
+            {/* Caixa de Contenção / Estrutura Externa da Forma */}
+            <div className="rounded-lg border border-outline-variant/60 bg-surface-variant/10 p-3 flex flex-col gap-2">
+              <h4 className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                🪵 Caixa de Contenção / Estrutura da Forma (Madeira, MDF, Papelão ou Acrílico)
+              </h4>
+              <p className="text-[11px] text-on-surface-variant">
+                Informe o material e custo da caixa externa que segura o silicone líquido ao redor da mesa/modelo.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <TextField
+                  id="material-caixa-estrutura"
+                  rotulo="Material da Caixa/Estrutura (ex: Madeira / MDF, Papelão)"
+                  placeholder="Ex: MDF 15mm / Madeira"
+                  value={materialCaixaEstrutura}
+                  onChange={(e) => setMaterialCaixaEstrutura(e.target.value)}
+                />
+                <TextField
+                  id="custo-caixa-estrutura"
+                  rotulo="Custo da Caixa/Estrutura (R$)"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={custoCaixaEstrutura}
+                  onChange={(e) => setCustoCaixaEstrutura(e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <TextField
                 id="custo-fabricacao-forma"
-                rotulo="Custo de Fabricação (R$)"
+                rotulo="Custo de Fabricação Total (R$)"
                 type="number"
                 step="0.01"
                 value={custoFabricacao}
@@ -707,7 +772,8 @@ export function FormasPage() {
                       </p>
                       {forma.custoFabricacao !== undefined && (
                         <p className="mt-1 text-xs text-on-surface-variant">
-                          Fabricação: R$ {forma.custoFabricacao.toFixed(2)} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
+                          Fabricação: R$ {forma.custoFabricacao.toFixed(2)}
+                          {forma.materialCaixaEstrutura ? ` (Estrutura: ${forma.materialCaixaEstrutura}${forma.custoCaixaEstrutura !== undefined ? ` - R$ ${forma.custoCaixaEstrutura.toFixed(2)}` : ''})` : ''} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
                         </p>
                       )}
                     </div>

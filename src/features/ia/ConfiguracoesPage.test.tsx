@@ -63,4 +63,26 @@ describe('ConfiguracoesPage', () => {
       expect(await obterPersonalidade()).toBe('acolhedora')
     })
   })
+
+  it('atualiza concessionária e tarifas ao alterar o estado para RJ', async () => {
+    render(<ToastProvider><ConfiguracoesPage /></ToastProvider>)
+
+    // Aguarda o carregamento inicial da concessionária Padrão (Enel SP)
+    await screen.findByText(/Enel/i)
+
+    const estadoInput = screen.getByLabelText(/estado \(uf\)/i)
+    fireEvent.change(estadoInput, { target: { value: 'RJ' } })
+
+    const botaoAtualizar = screen.getByRole('button', { name: /atualizar concessionária de rj/i })
+    fireEvent.click(botaoAtualizar)
+
+    await waitFor(() => expect(screen.getByText(/Light/i)).toBeInTheDocument(), { timeout: 4000 })
+    expect(screen.getByText(/Águas do Rio/i)).toBeInTheDocument()
+
+    const { obterTarifasConfig } = await import('../pricing/tarifasConfigRepo')
+    const config = await obterTarifasConfig()
+    expect(config.estado).toBe('RJ')
+    expect(config.concessionariaLuz).toContain('Light')
+    expect(config.tarifaKwh).toBe(0.98)
+  })
 })
