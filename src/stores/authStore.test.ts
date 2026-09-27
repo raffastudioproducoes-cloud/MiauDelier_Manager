@@ -39,4 +39,14 @@ describe('authStore', () => {
     useAuthStore.getState().sair()
     expect(useAuthStore.getState().autenticado).toBe(false)
   })
+
+  it('restaura o estado de autenticado no carregarEstadoInicial se a sessão estiver salva', async () => {
+    await useAuthStore.getState().criarConta('senha-de-teste')
+    // Resetar o estado da store mantendo os dados de IndexedDB + localStorage
+    useAuthStore.setState({ autenticado: false, contaConfigurada: null })
+
+    await useAuthStore.getState().carregarEstadoInicial()
+    expect(useAuthStore.getState().contaConfigurada).toBe(true)
+    expect(useAuthStore.getState().autenticado).toBe(true)
+  })
 })

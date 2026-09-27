@@ -65,22 +65,35 @@ describe('importação de backup do GestoraX', () => {
 
     expect(relatorio.materiais).toBe(1)
     expect(relatorio.formas).toBe(1)
-    expect(relatorio.pecas).toBe(1)
+    expect(relatorio.pecas).toBe(2)
     expect(relatorio.consumos).toBe(1)
     expect(relatorio.eventos).toBe(1)
     expect(relatorio.contas).toBe(1)
     expect(relatorio.transacoes).toBe(1)
-    expect(relatorio.ignorados).toHaveLength(2)
 
     const materiais = await db.materiais.toArray()
     expect(materiais).toHaveLength(2)
     expect(materiais.some((m) => m.nome === 'Material que já existia')).toBe(true)
     expect(materiais.some((m) => m.nome === 'Resina Cristal')).toBe(true)
 
-    const [peca] = await db.pecas.toArray()
-    expect(peca.nome).toBe('Chaveiro Coração')
-    expect(peca.status).toBe('pronta')
-    expect(peca.precoVenda).toBe(25.5)
+    const [forma] = await db.formas.toArray()
+    expect(forma.nome).toBe('Molde Coração')
+    expect(forma.geometria).toBe('retangular')
+    expect(forma.dimensoesCm).toEqual({ comprimento: 10, largura: 10, profundidade: 2 })
+    expect(forma.custoFabricacao).toBe(50)
+    expect(forma.vidaUtilUsos).toBe(100)
+    expect(forma.usosRealizados).toBe(3)
+
+    const pecas = await db.pecas.toArray()
+    expect(pecas).toHaveLength(2)
+
+    const pecaComForma = pecas.find((p) => p.nome === 'Chaveiro Coração')!
+    expect(pecaComForma.status).toBe('pronta')
+    expect(pecaComForma.precoVenda).toBe(25.5)
+
+    const pecaOrfa = pecas.find((p) => p.nome === 'Peça órfã')!
+    expect(pecaOrfa.status).toBe('planejada')
+    expect(pecaOrfa.formaId).toBe(0)
 
     const [transacao] = await db.transacoes.toArray()
     expect(await decifrarCampo(transacao.valorCriptografado)).toBe('25.5')

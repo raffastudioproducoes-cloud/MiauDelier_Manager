@@ -17,12 +17,20 @@ export function LoginForm() {
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
+  const autenticado = useAuthStore((estado) => estado.autenticado)
+
   // Sem cleanup de propósito: carregarEstadoInicial() só faz set() na store Zustand, que não
   // gera warning nem efeito colateral local se o componente já tiver desmontado (diferente de
   // setState do React). Uma guarda "let ativo = true" aqui não protegeria nada real.
   useEffect(() => {
     carregarEstadoInicial()
   }, [carregarEstadoInicial])
+
+  useEffect(() => {
+    if (autenticado) {
+      navigate({ to: '/' })
+    }
+  }, [autenticado, navigate])
 
   if (contaConfigurada === null) return <p className="text-on-surface-variant">Carregando...</p>
 

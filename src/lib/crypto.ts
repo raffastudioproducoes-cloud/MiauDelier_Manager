@@ -15,7 +15,18 @@ export async function deriveKey(password: string, salt: Uint8Array): Promise<Cry
     { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
     baseKey,
     { name: 'AES-GCM', length: 256 },
-    false,
+    true,
+    ['encrypt', 'decrypt'],
+  )
+}
+
+export async function importSessionKey(base64Key: string): Promise<CryptoKey> {
+  const rawBytes = base64ToBytes(base64Key)
+  return crypto.subtle.importKey(
+    'raw',
+    rawBytes,
+    { name: 'AES-GCM', length: 256 },
+    true,
     ['encrypt', 'decrypt'],
   )
 }

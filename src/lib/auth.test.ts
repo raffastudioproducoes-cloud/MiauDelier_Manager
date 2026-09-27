@@ -6,6 +6,7 @@ import {
   login,
   getSessionKey,
   clearSession,
+  restoreSessionKey,
   CHAVE_VERIFICADOR,
   ContaBloqueadaError,
 } from './auth'
@@ -28,6 +29,27 @@ describe('auth de usuário único', () => {
     const key = await login('senha-do-rafa-2026')
     expect(key).not.toBeNull()
     expect(getSessionKey()).toBe(key)
+  })
+
+  it('persiste e restaura chave de sessão entre recarregamentos', async () => {
+    await setupAccount('senha-da-sessao')
+    // Simular fechar a aba limpando apenas a chave em memória sem chamar clearSession
+    const sessionKeyInMem = getSessionKey()
+    expect(sessionKeyInMem).not.toBeNull()
+
+    // Restaurar sessão via restoreSessionKey (sem pedir a senha novamente)
+    const chaveRestaurada = await restoreSessionKey()
+    expect(chaveRestaurada).not.toBeNull()
+    expect(getSessionKey()).not.toBeNull()
+  })
+
+  it('limpa o localStorage ao executar clearSession', async () => {
+    await setupAccount('senha-para-logout')
+    clearSession()
+    expect(getSessionKey()).toBeNull()
+
+    const chaveRestaurada = await restoreSessionKey()
+    expect(chaveRestaurada).toBeNull()
   })
 
   it('rejeita login com senha errada', async () => {

@@ -6,12 +6,14 @@ import {
   decryptText,
   bytesToBase64,
   base64ToBytes,
+  importSessionKey,
 } from './crypto'
 
 export const CHAVE_SALT = 'auth.salt'
 export const CHAVE_VERIFICADOR = 'auth.verificador'
 const CHAVE_TENTATIVAS_FALHAS = 'auth.tentativasFalhas'
 const CHAVE_BLOQUEADO_ATE = 'auth.bloqueadoAte'
+const CHAVE_LOCAL_STORAGE_SESSAO = 'miaudelier_session_key'
 const TEXTO_VERIFICACAO = 'miaudelier-ok'
 
 const MAX_TENTATIVAS = 5
@@ -21,6 +23,42 @@ const BLOQUEIO_MAX_MS = 15 * 60_000
 let sessionKey: CryptoKey | null = null
 
 export class ContaBloqueadaError extends Error {}
+
+async function persistSessionKey(key: CryptoKey): Promise<void> {
+  try {
+    const rawBytes = await crypto.subtle.exportKey('raw', key)
+    const base64Key = bytesToBase64(new Uint8Array(rawBytes))
+    localStorage.setItem(CHAVE_LOCAL_STORAGE_SESSAO, base64Key)
+  } catch {
+    // Se o localStorage não estiver disponível, mantemos a sessão apenas em memória.
+  }
+}
+
+export async function restoreSessionKey(): Promise<CryptoKey | null> {
+  try {
+    const base64Key = localStorage.getItem(CHAVE_LOCAL_STORAGE_SESSAO)
+    if (!base64Key) return null
+
+    const verificadorRegistro = await db.configuracoes.where('chave').equals(CHAVE_VERIFICADOR).first()
+    if (!verificadorRegistro) {
+      clearSession()
+      return null
+    }
+
+    const key = await importSessionKey(base64Key)
+    const texto = await decryptText(key, verificadorRegistro.valor)
+    if (texto !== TEXTO_VERIFICACAO) {
+      clearSession()
+      return null
+    }
+
+    sessionKey = key
+    return key
+  } catch {
+    clearSession()
+    return null
+  }
+}
 
 async function salvarConfiguracao(chave: string, valor: string): Promise<void> {
   const registro = await db.configuracoes.where('chave').equals(chave).first()
@@ -100,6 +138,7 @@ export async function setupAccount(
   })
 
   sessionKey = key
+  await persistSessionKey(key)
   return key
 }
 
@@ -137,6 +176,7 @@ export async function login(password: string): Promise<CryptoKey | null> {
 
   await limparTentativasFalhas()
   sessionKey = key
+  await persistSessionKey(key)
   return key
 }
 
@@ -146,4 +186,9 @@ export function getSessionKey(): CryptoKey | null {
 
 export function clearSession(): void {
   sessionKey = null
+  try {
+    localStorage.removeItem(CHAVE_LOCAL_STORAGE_SESSAO)
+  } catch {
+    // ignore
+  }
 }

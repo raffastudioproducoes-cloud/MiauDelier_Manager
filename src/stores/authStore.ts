@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { hasAccountConfigured, setupAccount, login, clearSession } from '../lib/auth'
+import { hasAccountConfigured, setupAccount, login, clearSession, restoreSessionKey } from '../lib/auth'
 
 interface AuthState {
   autenticado: boolean
@@ -16,7 +16,16 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   carregarEstadoInicial: async () => {
     const existe = await hasAccountConfigured()
-    set({ contaConfigurada: existe })
+    if (!existe) {
+      set({ contaConfigurada: false, autenticado: false })
+      return
+    }
+
+    const chaveRestaurada = await restoreSessionKey()
+    set({
+      contaConfigurada: true,
+      autenticado: chaveRestaurada !== null,
+    })
   },
 
   entrar: async (senha: string) => {

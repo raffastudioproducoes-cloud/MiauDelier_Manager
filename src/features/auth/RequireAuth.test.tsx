@@ -15,7 +15,7 @@ describe('RequireAuth', () => {
   beforeEach(() => {
     navegarMock.mockClear()
     caminhoAtual = '/'
-    useAuthStore.setState({ autenticado: false, contaConfigurada: null })
+    useAuthStore.setState({ autenticado: false, contaConfigurada: false })
   })
 
   it('redireciona para /login quando não autenticado fora de /login', () => {

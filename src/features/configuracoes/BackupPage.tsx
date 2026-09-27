@@ -121,11 +121,14 @@ export function BackupPage() {
               <li>Categorias: {relatorioGestoraX.categorias}</li>
               <li>Materiais: {relatorioGestoraX.materiais}</li>
               <li>Formas: {relatorioGestoraX.formas}</li>
+              {relatorioGestoraX.equipamentos > 0 && <li>Equipamentos: {relatorioGestoraX.equipamentos}</li>}
+              {relatorioGestoraX.taxas > 0 && <li>Taxas: {relatorioGestoraX.taxas}</li>}
               <li>Peças: {relatorioGestoraX.pecas}</li>
               <li>Consumos de material: {relatorioGestoraX.consumos}</li>
               <li>Eventos de produção: {relatorioGestoraX.eventos}</li>
               <li>Contas: {relatorioGestoraX.contas}</li>
               <li>Transações: {relatorioGestoraX.transacoes}</li>
+              {relatorioGestoraX.notificacoes > 0 && <li>Notificações: {relatorioGestoraX.notificacoes}</li>}
             </ul>
             {relatorioGestoraX.ignorados.length > 0 && (
               <div className="mt-3">
