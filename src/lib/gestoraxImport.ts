@@ -138,6 +138,26 @@ export async function importarBackupGestoraX(json: string): Promise<RelatorioImp
       db.configuracoes,
     ],
     async () => {
+const MAPA_NOMES_CATEGORIA_GESTORAX: Record<string, string> = {
+  liquidos: 'Resinas & Líquidos',
+  artes: 'Pigmentos & Artes',
+  consumiveis: 'Consumíveis & Lixas',
+  administrativo: 'Administrativo & Embalagens',
+}
+
+function resolverNomeCategoriaMaterial(material: Record<string, unknown>): string {
+  const cat = String(material.categoria || '').trim().toLowerCase()
+  const subcat = String(material.subcategoria || '').trim()
+
+  if (subcat && subcat.toLowerCase() !== 'matéria-prima') {
+    return subcat
+  }
+  if (cat && MAPA_NOMES_CATEGORIA_GESTORAX[cat]) {
+    return MAPA_NOMES_CATEGORIA_GESTORAX[cat]
+  }
+  return subcat || cat || 'Sem categoria'
+}
+
       // 1. Categorias
       for (const cat of categoriasOrigem) {
         const nome = String(cat.nome ?? 'Sem categoria')
@@ -156,7 +176,7 @@ export async function importarBackupGestoraX(json: string): Promise<RelatorioImp
       // 2. Materiais
       for (const material of materiaisOrigem) {
         const idOrigem = Number(material.id)
-        const nomeCategoria = String(material.subcategoria || material.categoria || 'Sem categoria')
+        const nomeCategoria = resolverNomeCategoriaMaterial(material)
         let categoriaId = mapaCategoria.get(nomeCategoria)
         if (categoriaId === undefined) {
           const catExistente = await db.categoriasMaterial.where('nome').equals(nomeCategoria).first()
@@ -300,22 +320,32 @@ export async function importarBackupGestoraX(json: string): Promise<RelatorioImp
       }
 
       // 9. Contas
-      for (let i = 0; i < contasOrigem.length; i += 1) {
-        const conta = contasOrigem[i]
-        const idOrigem = Number(conta.id)
-        const novoId = (await db.contas.add({
-          nome: String(conta.nome ?? 'Conta importada'),
-          saldoCriptografado: saldosCifrados[i],
+      if (contasOrigem.length === 0) {
+        const saldoCifradoCaixa = await cifrarCampo('0')
+        const caixaId = (await db.contas.add({
+          nome: 'Caixa',
+          saldoCriptografado: saldoCifradoCaixa,
         })) as number
-        mapaConta.set(idOrigem, novoId)
-        relatorio.contas += 1
+        mapaConta.set(1, caixaId)
+      } else {
+        for (let i = 0; i < contasOrigem.length; i += 1) {
+          const conta = contasOrigem[i]
+          const idOrigem = Number(conta.id)
+          const novoId = (await db.contas.add({
+            nome: String(conta.nome ?? 'Conta importada'),
+            saldoCriptografado: saldosCifrados[i],
+          })) as number
+          mapaConta.set(idOrigem, novoId)
+          relatorio.contas += 1
+        }
       }
 
       // 10. Transações
+      const contaPadraoId = mapaConta.values().next().value ?? (await db.contas.first())?.id
       for (let i = 0; i < transacoesOrigem.length; i += 1) {
         const transacao = transacoesOrigem[i]
         const contaIdOrigem = transacao.contaId === undefined ? undefined : Number(transacao.contaId)
-        const contaId = contaIdOrigem === undefined ? undefined : mapaConta.get(contaIdOrigem)
+        const contaId = (contaIdOrigem !== undefined ? mapaConta.get(contaIdOrigem) : undefined) ?? contaPadraoId
         const tipo = MAPA_TIPO_TRANSACAO[String(transacao.tipo)]
         if (contaId === undefined || !tipo) {
           relatorio.ignorados.push(

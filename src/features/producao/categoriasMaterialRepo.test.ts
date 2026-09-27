@@ -1,10 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
-import { criarCategoriaMaterial, listarCategoriasMaterial, atualizarCategoriaMaterial, excluirCategoriaMaterial } from './categoriasMaterialRepo'
+import {
+  criarCategoriaMaterial,
+  listarCategoriasMaterial,
+  atualizarCategoriaMaterial,
+  excluirCategoriaMaterial,
+  resetarInicializacaoCategoriasPadrao,
+} from './categoriasMaterialRepo'
 import { criarMaterial } from './materiaisRepo'
 
 describe('repositório de categorias de material', () => {
   beforeEach(async () => {
+    resetarInicializacaoCategoriasPadrao()
     await db.delete()
     await db.open()
   })
