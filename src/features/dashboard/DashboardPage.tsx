@@ -128,18 +128,21 @@ export function DashboardPage() {
 
       {!erroCarga && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-2">
+          {/* Card de Fluxo de Caixa Proporcional */}
+          <Card className="lg:col-span-2 flex flex-col justify-between h-[320px] sm:h-[350px] p-4 sm:p-5">
             <FluxoCaixaChart dados={resumo.fluxoCaixa14Dias} />
           </Card>
-          <Card className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+
+          {/* Card de Eventos Recentes de Produção com Altura Fixa e Scrollbar Customizada */}
+          <Card className="flex flex-col h-[320px] sm:h-[350px] p-4 sm:p-5 justify-between">
+            <h2 className="text-sm font-semibold text-on-surface flex items-center gap-1.5 shrink-0 mb-2">
               <span>⚡</span> Eventos recentes de produção
             </h2>
             {resumo.eventosRecentes.length === 0 ? (
-              <p className="text-xs text-on-surface-variant">Nenhum evento registrado ainda.</p>
+              <p className="text-xs text-on-surface-variant my-auto">Nenhum evento registrado ainda.</p>
             ) : (
-              <div className="flex flex-col gap-2.5">
-                {resumo.eventosRecentes.map((evento, indice) => {
+              <div className="flex flex-col gap-2 overflow-y-auto pr-1.5 custom-scrollbar flex-1 max-h-[280px]">
+                {resumo.eventosRecentes.slice(0, 10).map((evento, indice) => {
                   const ehCura = evento.tipo.includes('CURA')
                   const ehMaterial = evento.tipo.includes('MATERIAL')
                   const ehVenda = evento.tipo.includes('VENDA')
@@ -149,18 +152,18 @@ export function DashboardPage() {
                   return (
                     <div
                       key={`${evento.pecaId}-${indice}`}
-                      className="rounded-xl border border-outline-variant/50 bg-surface-container/30 p-3 flex flex-col gap-1.5 hover:border-primary/40 transition-all shadow-sm"
+                      className="rounded-xl border border-outline-variant/40 bg-surface-container/30 p-2.5 flex flex-col gap-1 hover:border-primary/40 transition-all shadow-sm shrink-0"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-sm shrink-0">{icone}</span>
+                          <span className="text-xs shrink-0">{icone}</span>
                           <span className="font-semibold text-xs text-on-surface truncate">{evento.nomePeca}</span>
                         </div>
-                        <Badge variant={variantBadge} className="shrink-0 text-[10px] px-1.5 py-0.5 uppercase tracking-wider">
+                        <Badge variant={variantBadge} className="shrink-0 text-[9px] px-1.5 py-0.5 uppercase tracking-wider">
                           {evento.tipo.replace('_', ' ')}
                         </Badge>
                       </div>
-                      <p className="text-xs text-on-surface-variant leading-relaxed pl-5">{evento.descricao}</p>
+                      <p className="text-[11px] text-on-surface-variant leading-normal pl-5">{evento.descricao}</p>
                     </div>
                   )
                 })}

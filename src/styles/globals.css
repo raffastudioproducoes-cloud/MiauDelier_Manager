@@ -177,3 +177,25 @@
   }
 }
 
+/* Barra de rolagem estilizada para o tema escuro do MiauDelier */
+@utility custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--primary) 40%, var(--surface-container-high)) transparent;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--primary) 35%, var(--surface-container-high));
+    border-radius: 9999px;
+    &:hover {
+      background: var(--primary);
+    }
+  }
+}
+

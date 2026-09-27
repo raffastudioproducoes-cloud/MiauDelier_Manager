@@ -54,11 +54,11 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
       : dados
 
   const SVG_WIDTH = 750
-  const SVG_HEIGHT = 220
-  const PADDING_LEFT = 60
-  const PADDING_RIGHT = 30
-  const PADDING_TOP = 25
-  const PADDING_BOTTOM = 35
+  const SVG_HEIGHT = 200
+  const PADDING_LEFT = 55
+  const PADDING_RIGHT = 25
+  const PADDING_TOP = 20
+  const PADDING_BOTTOM = 30
 
   const chartWidth = SVG_WIDTH - PADDING_LEFT - PADDING_RIGHT
   const chartHeight = SVG_HEIGHT - PADDING_TOP - PADDING_BOTTOM
@@ -95,9 +95,9 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
   })
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-3 w-full h-full justify-between">
       {/* Cabeçalho do Gráfico com Filtros */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-bold text-on-surface tracking-tight">Fluxo de caixa</h3>
           <span className="text-xs text-on-surface-variant/80 font-medium cursor-help" title="Evolução do saldo de entradas e saídas do ateliê">
@@ -127,37 +127,31 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
         </div>
       </div>
 
-      {/* SVG do Gráfico Estilo High-Tech Curve */}
-      <div className="relative w-full overflow-hidden rounded-2xl bg-surface-container-lowest/40 p-2 border border-outline-variant/20 shadow-inner">
+      {/* SVG do Gráfico Estilo High-Tech Curve ajustado à caixa */}
+      <div className="relative w-full flex-1 flex items-center justify-center overflow-hidden rounded-xl bg-surface-container-lowest/30 p-2 border border-outline-variant/20 shadow-inner min-h-[220px]">
         <svg
           width="100%"
+          height="100%"
           viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="none"
           role="img"
           aria-label="Gráfico de fluxo de caixa dos últimos dias"
-          className="overflow-visible"
+          className="overflow-visible w-full h-full"
         >
           <defs>
             {/* Gradiente Brilhante da Área Abaixo da Curva */}
             <linearGradient id="fluxoGradientArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-primary, #E89D75)" stopOpacity="0.45" />
-              <stop offset="60%" stopColor="var(--color-primary, #E89D75)" stopOpacity="0.12" />
+              <stop offset="0%" stopColor="var(--color-primary, #E89D75)" stopOpacity="0.35" />
+              <stop offset="60%" stopColor="var(--color-primary, #E89D75)" stopOpacity="0.08" />
               <stop offset="100%" stopColor="var(--color-primary, #E89D75)" stopOpacity="0.0" />
             </linearGradient>
-
-            {/* Filtro de Brilho da Linha */}
-            <filter id="glowLine" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
           </defs>
 
-          {/* Linhas de Grade de Fundo (Retângulos e Linhas para Acessibilidade e Testes) */}
+          {/* Linhas de Grade de Fundo */}
           {gridYValues.map(({ val, y }, idx) => (
             <g key={idx}>
-              {/* Elementos rect invisíveis/suaves para garantia de compatibilidade com testes */}
-              <rect x={PADDING_LEFT} y={y - 0.5} width={chartWidth} height={1} fill="var(--color-outline-variant)" opacity={0.15} />
-              <text x={PADDING_LEFT - 10} y={y + 4} textAnchor="end" className="text-[10px] font-semibold fill-on-surface-variant/70">
+              <rect x={PADDING_LEFT} y={y - 0.5} width={chartWidth} height={1} fill="var(--color-outline-variant)" opacity={0.12} />
+              <text x={PADDING_LEFT - 8} y={y + 3.5} textAnchor="end" className="text-[10px] font-semibold fill-on-surface-variant/70">
                 {formatarMoeda(val)}
               </text>
             </g>
@@ -165,14 +159,13 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
 
           {/* Eixo X - Rótulos de Datas */}
           {pontos.map((p, idx) => {
-            // Exibe rótulos intercalados para não sobrecarregar no mobile/desktop
             const ehUltimo = idx === pontos.length - 1
-            const deQuantoEmQuanto = Math.max(1, Math.floor(pontos.length / 5))
+            const deQuantoEmQuanto = Math.max(1, Math.floor(pontos.length / 6))
             const deveMostrar = idx % deQuantoEmQuanto === 0 || ehUltimo
 
             return (
               <g key={p.data.data} onMouseEnter={() => setIndiceAtivo(idx)} className="cursor-pointer">
-                {/* Área de Hover invisível em cada ponto */}
+                {/* Área de Hover em cada ponto */}
                 <rect
                   x={p.x - chartWidth / (pontos.length * 2)}
                   y={PADDING_TOP}
@@ -181,7 +174,7 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
                   fill="transparent"
                 />
                 {deveMostrar && (
-                  <text x={p.x} y={SVG_HEIGHT - 8} textAnchor="middle" className="text-[10px] font-medium fill-on-surface-variant/80">
+                  <text x={p.x} y={SVG_HEIGHT - 6} textAnchor="middle" className="text-[10px] font-medium fill-on-surface-variant/80">
                     {formatarDataCurta(p.data.data)}
                   </text>
                 )}
@@ -192,20 +185,19 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
           {/* Preenchimento de Área sob a Curva */}
           {pathArea && <path d={pathArea} fill="url(#fluxoGradientArea)" />}
 
-          {/* Linha Curva com Brilho Néon */}
+          {/* Linha Curva sem filtros com vazamento de sombra */}
           {pathLine && (
             <path
               d={pathLine}
               fill="none"
               stroke="var(--color-primary, #E89D75)"
-              strokeWidth="3.5"
+              strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
-              filter="url(#glowLine)"
             />
           )}
 
-          {/* Ponto Ativo Selecionado e Linha Indicadora Vertical */}
+          {/* Ponto Ativo Selecionado e Linha Indicadora Vertical Limpa (Sem artefato de sombra bugada) */}
           {pontoAtivo && (
             <g>
               {/* Linha Vertical pontilhada */}
@@ -216,55 +208,53 @@ export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
                 y2={PADDING_TOP + chartHeight}
                 stroke="var(--color-primary, #E89D75)"
                 strokeWidth="1.5"
-                strokeDasharray="4 4"
-                opacity="0.6"
+                strokeDasharray="3 3"
+                opacity="0.5"
+              />
+
+              {/* Halo Suave sem Animação Ping Bugada */}
+              <circle
+                cx={pontoAtivo.x}
+                cy={pontoAtivo.y}
+                r="8"
+                fill="var(--color-primary, #E89D75)"
+                opacity="0.3"
               />
 
               {/* Círculo do Ponto no Gráfico */}
               <circle
                 cx={pontoAtivo.x}
                 cy={pontoAtivo.y}
-                r="6"
+                r="5"
                 fill="var(--color-primary, #E89D75)"
-                stroke="var(--color-surface, #14171A)"
-                strokeWidth="3"
-                className="drop-shadow-lg"
-              />
-
-              {/* Círculo de Pulso Externo */}
-              <circle
-                cx={pontoAtivo.x}
-                cy={pontoAtivo.y}
-                r="10"
-                fill="var(--color-primary, #E89D75)"
-                opacity="0.25"
-                className="animate-ping"
+                stroke="var(--color-background, #14171A)"
+                strokeWidth="2.5"
               />
             </g>
           )}
         </svg>
 
-        {/* Card de Tooltip Flutuante Estilo Dashboard Dark */}
+        {/* Card de Tooltip Flutuante Compacto */}
         {pontoAtivo && (
           <div
-            className="absolute z-30 pointer-events-none rounded-xl bg-background/95 backdrop-blur-md p-2.5 px-3.5 border border-outline-variant/60 shadow-2xl transition-all duration-200"
+            className="absolute z-30 pointer-events-none rounded-xl bg-background/95 backdrop-blur-md p-2 px-3 border border-outline-variant/60 shadow-2xl transition-all duration-150"
             style={{
-              left: `${Math.min(82, Math.max(18, (pontoAtivo.x / SVG_WIDTH) * 100))}%`,
-              top: `${Math.max(10, Math.min(55, (pontoAtivo.y / SVG_HEIGHT) * 100 - 25))}%`,
+              left: `${Math.min(80, Math.max(20, (pontoAtivo.x / SVG_WIDTH) * 100))}%`,
+              top: `${Math.max(12, Math.min(50, (pontoAtivo.y / SVG_HEIGHT) * 100 - 20))}%`,
               transform: 'translate(-50%, -100%)',
             }}
           >
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-on-surface-variant">
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-on-surface-variant">
               <span>📅</span>
               <span>{formatarDataCurta(pontoAtivo.data.data)}</span>
             </div>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-bold text-primary">
+            <div className="mt-0.5 flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              <span className="text-xs font-extrabold text-primary">
                 {(pontoAtivo.data.entradas - pontoAtivo.data.saidas).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </span>
             </div>
-            <div className="mt-1 flex items-center justify-between gap-3 text-[10px] text-on-surface-variant/90 border-t border-outline-variant/30 pt-1">
+            <div className="mt-1 flex items-center justify-between gap-2.5 text-[9px] text-on-surface-variant/90 border-t border-outline-variant/30 pt-1">
               <span className="text-[var(--color-success)] font-medium">↑ +{formatarMoeda(pontoAtivo.data.entradas)}</span>
               <span className="text-[var(--color-danger)] font-medium">↓ -{formatarMoeda(pontoAtivo.data.saidas)}</span>
             </div>
