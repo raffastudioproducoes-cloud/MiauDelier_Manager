@@ -142,8 +142,8 @@ export function LoginForm() {
         {/* Fundo Colorido do Tema com Degradê da Direita para a Esquerda para Fazer a Junção Sem Linha Dura */}
         <div className="hidden md:block absolute inset-0 bg-gradient-to-l from-background via-background/95 to-transparent pointer-events-none -z-10" />
 
-        <div className="w-full max-w-md mx-auto md:ml-8 lg:ml-12 flex flex-col gap-6">
-          {/* Alternador Entrar / Cadastrar (Tabs Suaves) */}
+        <div className="w-full max-w-xs sm:max-w-sm mx-auto md:ml-6 lg:ml-10 flex flex-col gap-5">
+          {/* Alternador Entrar / Cadastrar (Tabs Suaves e Compactas) */}
           {contaConfigurada && (
             <div className="flex rounded-xl bg-surface-container-high/40 p-1 border border-outline-variant/30">
               <button
@@ -152,7 +152,7 @@ export function LoginForm() {
                   setModoCadastro(false)
                   setErro(null)
                 }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   !modoCadastro
                     ? 'bg-primary text-on-primary shadow-md'
                     : 'text-on-surface-variant hover:text-on-surface'
@@ -166,7 +166,7 @@ export function LoginForm() {
                   setModoCadastro(true)
                   setErro(null)
                 }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   modoCadastro
                     ? 'bg-primary text-on-primary shadow-md'
                     : 'text-on-surface-variant hover:text-on-surface'
@@ -179,16 +179,16 @@ export function LoginForm() {
 
           {/* Cabeçalho do Formulário */}
           <div>
-            <h1 className="text-3xl font-extrabold text-on-surface tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
               {tituloFormulario} 👋
             </h1>
-            <p className="mt-2 text-sm text-on-surface-variant">
+            <p className="mt-1.5 text-xs sm:text-sm text-on-surface-variant">
               {subTituloFormulario}
             </p>
           </div>
 
           {/* Formulário */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
             {modoCadastro && (
               <TextField
                 id="nome"
@@ -243,7 +243,7 @@ export function LoginForm() {
             <Button
               type="submit"
               disabled={enviando}
-              className="w-full py-3 text-sm font-bold glow-hover mt-2 rounded-xl"
+              className="w-full py-2.5 text-xs sm:text-sm font-bold glow-hover mt-1 rounded-xl"
             >
               {rotuloBotaoPrincipal}
             </Button>
@@ -264,7 +264,7 @@ export function LoginForm() {
 
           {/* Social Logins */}
           {contaConfigurada && (
-            <div className="flex flex-col gap-4 pt-2">
+            <div className="flex flex-col gap-3 pt-1">
               <div className="relative flex items-center justify-center">
                 <div className="w-full border-t border-outline-variant/40" />
                 <span className="absolute bg-background px-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
@@ -272,11 +272,11 @@ export function LoginForm() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => alert('Login com Google em breve')}
-                  className="flex items-center justify-center gap-2.5 rounded-xl border border-outline-variant/60 bg-surface-container/30 px-4 py-2.5 text-xs font-semibold text-on-surface hover:bg-surface-container/70 transition-all cursor-pointer shadow-sm"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/60 bg-surface-container/30 px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container/70 transition-all cursor-pointer shadow-sm"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -290,7 +290,7 @@ export function LoginForm() {
                 <button
                   type="button"
                   onClick={() => alert('Login com Apple em breve')}
-                  className="flex items-center justify-center gap-2.5 rounded-xl border border-outline-variant/60 bg-surface-container/30 px-4 py-2.5 text-xs font-semibold text-on-surface hover:bg-surface-container/70 transition-all cursor-pointer shadow-sm"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/60 bg-surface-container/30 px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container/70 transition-all cursor-pointer shadow-sm"
                 >
                   <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
                     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.85c.66-.8 1.11-1.92.99-3.04-.96.04-2.12.64-2.81 1.44-.61.71-1.15 1.86-1 2.97 1.08.08 2.16-.57 2.82-1.37z"/>
