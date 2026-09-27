@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import type { ReactNode, KeyboardEvent } from 'react'
+import type { ReactNode, KeyboardEvent, KeyboardEventHandler } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
@@ -37,7 +37,7 @@ function CardKPI_Click({
   icon?: ReactNode
   destination?: { to: string }
   onClick?: () => void
-  onKeyDown?: KeyboardEvent<HTMLDivElement>
+  onKeyDown?: KeyboardEventHandler<HTMLDivElement>
 }) {
   return (
     <Card
@@ -48,8 +48,8 @@ function CardKPI_Click({
       className="glow-hover overflow-hidden"
       role={destination ? 'button' : undefined}
       tabIndex={destination ? 0 : undefined}
-      onClick={destination ? onClick : onClick}
-      onKeyDown={destination ? onKeyDown : undefined}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
     />
   )
 }
@@ -97,6 +97,41 @@ export function DashboardPage() {
       evento.preventDefault()
       navegarPara(destino)
     }
+  }
+
+  function CardKPI_Click({
+    label,
+    value,
+    icon,
+    destination,
+  }: {
+    label: string
+    value: string | number
+    icon?: ReactNode
+    destination?: '/materiais' | '/pedidos'
+  }) {
+    return (
+      <Card
+        variant="kpi"
+        icon={icon}
+        label={label}
+        value={value}
+        className="glow-hover overflow-hidden"
+        role={destination ? 'button' : undefined}
+        tabIndex={destination ? 0 : undefined}
+        onClick={destination ? () => navegarPara(destination) : undefined}
+        onKeyDown={
+          destination
+            ? (evento) => {
+                if (evento.key === 'Enter' || evento.key === ' ') {
+                  evento.preventDefault()
+                  navegarPara(destination)
+                }
+              }
+            : undefined
+        }
+      />
+    )
   }
 
   return (
