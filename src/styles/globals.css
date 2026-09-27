@@ -152,13 +152,6 @@
   }
 }
 
-/* Cartão KPI — layout structured: ícone | valor + label + trend.
-   Herda glass-card para manter identidade visual. */
-@utility kpi-card {
-  display: flex;
-  align-items: stretch;
-}
-
 /* Brilho radial dourado no canto — para destacar um cartão de KPI principal. */
 @utility glow-corner {
   position: relative;

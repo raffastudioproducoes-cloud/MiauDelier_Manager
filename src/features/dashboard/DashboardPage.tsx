@@ -24,36 +24,6 @@ function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function CardKPI_Click({
-  label,
-  value,
-  icon,
-  destination,
-  onClick,
-  onKeyDown,
-}: {
-  label: string
-  value: string
-  icon?: ReactNode
-  destination?: { to: string }
-  onClick?: () => void
-  onKeyDown?: KeyboardEventHandler<HTMLDivElement>
-}) {
-  return (
-    <Card
-      variant="kpi"
-      icon={icon}
-      label={label}
-      value={value}
-      className="glow-hover overflow-hidden"
-      role={destination ? 'button' : undefined}
-      tabIndex={destination ? 0 : undefined}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-    />
-  )
-}
-
 export function DashboardPage() {
   const navigate = useNavigate()
   const { mostrarToast } = useToast()
@@ -153,15 +123,15 @@ export function DashboardPage() {
           <section>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               <Card
-                variant="kpi"
-                icon={
-                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-primary" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2v20M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                  </svg>
-                }
-                label="Saldo total"
-                value={formatarMoeda(resumo.saldoTotal)}
-                className="glow-hover glow-corner overflow-hidden"
+              variant="kpi"
+              icon={
+              <svg viewBox="0 0 24 24" className="h-5 w-5 text-primary" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v20M17 7H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              }
+              label="Saldo total"
+              value={formatarMoeda(resumo.saldoTotal)}
+              className="glow-corner"
               />
               <Card
                 variant="kpi"
@@ -172,7 +142,7 @@ export function DashboardPage() {
                 }
                 label="Lucro do mês"
                 value={formatarMoeda(resumo.lucroDoMes)}
-                className="glow-hover overflow-hidden"
+                className="glow-hover"
               />
               <Card
                 variant="kpi"
@@ -183,7 +153,7 @@ export function DashboardPage() {
                 }
                 label="Peças em produção"
                 value={resumo.pecasEmProducao}
-                className="glow-hover overflow-hidden"
+                className="glow-hover"
               />
               <Card
                 variant="kpi"
@@ -194,7 +164,7 @@ export function DashboardPage() {
                 }
                 label="Peças em cura"
                 value={resumo.pecasEmCura}
-                className="glow-hover overflow-hidden"
+                className="glow-hover"
               />
               <CardKPI_Click
                 label="Estoque baixo"

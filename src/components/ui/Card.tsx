@@ -12,7 +12,7 @@ type CardProps = HTMLAttributes<HTMLDivElement> & {
 const VARIANT_BASE: Record<string, string> = {
   default: 'glass-card rounded-xl text-on-surface p-4',
   kpi:
-    'kpi-card relative overflow-hidden glass-card rounded-xl text-on-surface p-4',
+    'flex relative glass-card rounded-xl text-on-surface p-4',
 }
 
 function kpiInner({ icon, label, value, trend }: { icon?: ReactNode; label?: ReactNode; value?: ReactNode; trend?: ReactNode }) {

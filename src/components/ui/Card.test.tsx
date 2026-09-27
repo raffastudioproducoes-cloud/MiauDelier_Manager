@@ -23,7 +23,7 @@ describe('Card', () => {
     expect(screen.getByText('R$ 1.234,00')).toHaveClass('text-headline-sm', 'font-semibold', 'text-primary')
     expect(screen.getByText('💰')).toBeInTheDocument()
     const kpi = container.firstChild as HTMLElement
-    expect(kpi).toHaveClass('kpi-card', 'glass-card', 'rounded-xl', 'text-on-surface', 'p-4')
+    expect(kpi).toHaveClass('glass-card', 'rounded-xl', 'text-on-surface', 'p-4')
   })
 
   it('oculta label quando omitido na variante kpi', () => {
