@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Button } from '../../components/ui/Button'
@@ -142,7 +142,22 @@ export function PecasPage() {
     await recarregar()
   }
 
-  const faltamPreRequisitos = formas.length === 0 || materiais.length === 0
+  const formasProntas = useMemo(() => {
+    return formas.filter((f) => f.status === undefined || f.status === 'pronta')
+  }, [formas])
+
+  const materiaisConsumiveisPeca = useMemo(() => {
+    return materiais.filter((m) => {
+      const nomeUpper = m.nome.toUpperCase()
+      // Oculta silicone do consumo direto da mesa (o silicone é consumido ao fabricar a forma/molde)
+      if (nomeUpper.includes('SILICONE') || nomeUpper.includes('BORRACHA DE SILICONE')) {
+        return false
+      }
+      return true
+    })
+  }, [materiais])
+
+  const faltamPreRequisitos = formasProntas.length === 0 || materiaisConsumiveisPeca.length === 0
 
   if (!carregado) {
     return (
@@ -178,14 +193,16 @@ export function PecasPage() {
               onChange={(e) => setFormaId(e.target.value)}
               className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             >
-              <option value="">Selecione</option>
-              {formas.map((forma) => (
-                <option key={forma.id} value={forma.id}>{forma.nome}</option>
+              <option value="">Selecione o molde...</option>
+              {formasProntas.map((forma) => (
+                <option key={forma.id} value={forma.id}>
+                  {forma.nome} {forma.custoFabricacao && forma.vidaUtilUsos ? `(Amortização: R$ ${(forma.custoFabricacao / forma.vidaUtilUsos).toFixed(2)}/uso)` : ''}
+                </option>
               ))}
             </select>
           </div>
 
-          <p className="text-sm font-medium text-on-surface">Materiais consumidos</p>
+          <p className="text-sm font-medium text-on-surface">Materiais consumidos (Resina, Pigmentos, Adornos)</p>
           {consumos.map((linha, indice) => (
             <div key={indice} className="flex items-end gap-2">
               <div className="flex flex-1 flex-col gap-1">
@@ -197,7 +214,7 @@ export function PecasPage() {
                   className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 >
                   <option value="">Selecione</option>
-                  {materiais.map((material) => (
+                  {materiaisConsumiveisPeca.map((material) => (
                     <option key={material.id} value={material.id}>{material.nome}</option>
                   ))}
                 </select>

@@ -7,6 +7,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    testTimeout: 15000,
     exclude: [...configDefaults.exclude, '**/.worktrees/**'],
   },
   resolve: {

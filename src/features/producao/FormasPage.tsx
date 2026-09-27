@@ -3,11 +3,12 @@ import { z } from 'zod'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
+import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
 import { calcularVolumeMl } from '../calculator/volume'
-import { criarForma, listarFormas, atualizarForma, excluirForma } from './formasRepo'
+import { criarForma, listarFormas, atualizarForma, excluirForma, finalizarCuraForma } from './formasRepo'
 import { listarMateriais } from './materiaisRepo'
 import type { Forma, FormaGeometria, Material } from '../../db/schema'
 
@@ -73,11 +74,12 @@ export function FormasPage() {
   const [altura, setAltura] = useState('')
   const [volumeMl, setVolumeMl] = useState('')
 
-  // Silicone & Amortização do Molde
+  // Silicone & Amortização do Molde & Cura
   const [materialSiliconeId, setMaterialSiliconeId] = useState('')
   const [qtdSilicone, setQtdSilicone] = useState('')
   const [custoFabricacao, setCustoFabricacao] = useState('')
   const [vidaUtilUsos, setVidaUtilUsos] = useState('50')
+  const [curaHoras, setCuraHoras] = useState('24')
 
   const [erro, setErro] = useState<string | null>(null)
   const [formaEmEdicaoId, setFormaEmEdicaoId] = useState<number | null>(null)
@@ -152,6 +154,7 @@ export function FormasPage() {
     setQtdSilicone('')
     setCustoFabricacao('')
     setVidaUtilUsos('50')
+    setCuraHoras('24')
     setFormaEmEdicaoId(null)
     setErro(null)
   }
@@ -171,6 +174,7 @@ export function FormasPage() {
     setQtdSilicone(forma.quantidadeSiliconeUsada !== undefined ? String(forma.quantidadeSiliconeUsada) : '')
     setCustoFabricacao(forma.custoFabricacao !== undefined ? String(forma.custoFabricacao) : '')
     setVidaUtilUsos(forma.vidaUtilUsos !== undefined ? String(forma.vidaUtilUsos) : '50')
+    setCuraHoras(forma.curaMinutos !== undefined ? String(forma.curaMinutos / 60) : '24')
     setErro(null)
   }
 
@@ -189,6 +193,8 @@ export function FormasPage() {
       return
     }
 
+    const curaMin = Number(curaHoras) * 60
+
     try {
       const dados = {
         nome: resultado.data.nome,
@@ -199,6 +205,7 @@ export function FormasPage() {
         quantidadeSiliconeUsada: qtdSilicone ? Number(qtdSilicone) : undefined,
         custoFabricacao: custoFabricacao ? Number(custoFabricacao) : undefined,
         vidaUtilUsos: vidaUtilUsos ? Number(vidaUtilUsos) : 50,
+        curaMinutos: curaMin > 0 ? curaMin : undefined,
       }
       if (formaEmEdicaoId !== null) {
         await atualizarForma(formaEmEdicaoId, dados)
@@ -211,11 +218,23 @@ export function FormasPage() {
       return
     }
     if (!montado.current) return
-    mostrarToast(formaEmEdicaoId !== null ? 'Forma atualizada com sucesso' : 'Forma cadastrada com sucesso')
+    mostrarToast(formaEmEdicaoId !== null ? 'Forma atualizada com sucesso' : 'Forma cadastrada e silicone abatido do estoque com sucesso')
     limparFormulario()
     await recarregar()
   }
 
+  async function handleFinalizarCura(formaId: number) {
+    try {
+      await finalizarCuraForma(formaId)
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao finalizar cura do molde.', 'erro')
+      return
+    }
+    if (!montado.current) return
+    mostrarToast('Cura do molde finalizada! Agora ele está disponível para produção de peças.')
+    await recarregar()
+  }
 
   async function handleExcluir(formaId: number) {
     try {
@@ -234,13 +253,13 @@ export function FormasPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-on-surface">Formas</h1>
-        <p className="text-label-sm text-on-surface-variant">Banco técnico de moldes do ateliê.</p>
+        <h1 className="text-xl font-semibold text-on-surface">Formas & Moldes</h1>
+        <p className="text-label-sm text-on-surface-variant">Banco técnico de fabricação de moldes do ateliê.</p>
       </div>
 
       <Card>
         <h2 className="mb-3 font-medium text-on-surface">
-          {formaEmEdicaoId !== null ? 'Editar forma' : 'Cadastrar forma'}
+          {formaEmEdicaoId !== null ? 'Editar forma' : 'Fabricar Novo Molde'}
         </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <TextField id="nome-forma" rotulo="Nome da forma" value={nome} onChange={(e) => setNome(e.target.value)} />
@@ -287,7 +306,7 @@ export function FormasPage() {
             <h3 className="text-sm font-semibold text-on-surface">Fabricação & Amortização do Molde (Silicone)</h3>
             
             <div className="flex flex-col gap-1">
-              <label htmlFor="silicone-material" className="text-sm font-medium text-on-surface">Silicone Utilizado (opcional)</label>
+              <label htmlFor="silicone-material" className="text-sm font-medium text-on-surface">Silicone Utilizado do Estoque</label>
               <select
                 id="silicone-material"
                 value={materialSiliconeId}
@@ -297,7 +316,7 @@ export function FormasPage() {
                 <option value="">Nenhum (custo avulso)</option>
                 {materiais.map((mat) => (
                   <option key={mat.id} value={mat.id}>
-                    {mat.nome} (R$ {mat.custoUnitario.toFixed(2)}/{mat.unidade})
+                    {mat.nome} ({mat.quantidadeEstoque} {mat.unidade} em estoque · R$ {mat.custoUnitario.toFixed(2)}/{mat.unidade})
                   </option>
                 ))}
               </select>
@@ -306,38 +325,49 @@ export function FormasPage() {
             {materialSiliconeId !== '' && (
               <TextField
                 id="qtd-silicone"
-                rotulo="Quantidade de Silicone Usada"
+                rotulo="Quantidade de Silicone Usada (subtraída do estoque)"
                 type="number"
                 value={qtdSilicone}
                 onChange={(e) => setQtdSilicone(e.target.value)}
               />
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="w-full sm:w-1/2">
-                <TextField
-                  id="custo-fabricacao-forma"
-                  rotulo="Custo Total de Fabricação (R$)"
-                  type="number"
-                  step="0.01"
-                  value={custoFabricacao}
-                  onChange={(e) => setCustoFabricacao(e.target.value)}
-                />
-              </div>
-              <div className="w-full sm:w-1/2">
-                <TextField
-                  id="vida-util-forma"
-                  rotulo="Vida Útil Estimada (usos)"
-                  type="number"
-                  value={vidaUtilUsos}
-                  onChange={(e) => setVidaUtilUsos(e.target.value)}
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <TextField
+                id="custo-fabricacao-forma"
+                rotulo="Custo de Fabricação (R$)"
+                type="number"
+                step="0.01"
+                value={custoFabricacao}
+                onChange={(e) => setCustoFabricacao(e.target.value)}
+              />
+              <TextField
+                id="vida-util-forma"
+                rotulo="Vida Útil (usos)"
+                type="number"
+                value={vidaUtilUsos}
+                onChange={(e) => setVidaUtilUsos(e.target.value)}
+              />
+              <div className="flex flex-col gap-1">
+                <label htmlFor="cura-horas-forma" className="text-sm font-medium text-on-surface">Tempo de Cura do Molde</label>
+                <select
+                  id="cura-horas-forma"
+                  value={curaHoras}
+                  onChange={(e) => setCuraHoras(e.target.value)}
+                  className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                >
+                  <option value="0">Sem tempo de cura (já pronto)</option>
+                  <option value="4">4 horas</option>
+                  <option value="12">12 horas</option>
+                  <option value="24">24 horas (padrão silicone)</option>
+                  <option value="48">48 horas</option>
+                </select>
               </div>
             </div>
 
             {custoPorUsoCalculado && (
               <p className="text-xs text-primary font-medium">
-                Custo de amortização por uso da forma: <strong>R$ {custoPorUsoCalculado} / peça</strong> (R$ {custoFabricacao} ÷ {vidaUtilUsos} usos)
+                Amortização por uso no preço final da peça: <strong>R$ {custoPorUsoCalculado} / uso</strong> (R$ {custoFabricacao} ÷ {vidaUtilUsos} usos)
               </p>
             )}
           </div>
@@ -367,28 +397,46 @@ export function FormasPage() {
               const usos = forma.usosRealizados ?? 0
               const limite = forma.vidaUtilUsos ?? 50
               const restantes = Math.max(0, limite - usos)
+              const ehCurando = forma.status === 'curando'
 
               return (
                 <Card key={forma.id} className="glow-hover">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium text-on-surface">{forma.nome}</h3>
-                    {custoPorUso && (
-                      <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
-                        R$ {custoPorUso} / uso
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-label-sm text-on-surface-variant">
-                    {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
-                  </p>
-                  {forma.custoFabricacao !== undefined && (
-                    <p className="mt-1 text-xs text-on-surface-variant">
-                      Fabricação: R$ {forma.custoFabricacao.toFixed(2)} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
-                    </p>
-                  )}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Button variante="ghost" onClick={() => iniciarEdicao(forma)}>Editar</Button>
-                    <Button variante="ghost" onClick={() => setFormaExcluindoId(forma.id ?? null)}>Excluir</Button>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-on-surface">{forma.nome}</h3>
+                        {ehCurando ? (
+                          <Badge variant="warning">🧪 Em Cura ({forma.curaMinutos ? `${forma.curaMinutos / 60}h` : 'aguardando'})</Badge>
+                        ) : (
+                          <Badge variant="success">✓ Pronto / Em Uso</Badge>
+                        )}
+                        {custoPorUso && (
+                          <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                            R$ {custoPorUso} / uso
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-label-sm text-on-surface-variant">
+                        {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
+                      </p>
+                      {forma.custoFabricacao !== undefined && (
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          Fabricação: R$ {forma.custoFabricacao.toFixed(2)} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {ehCurando && (
+                        <Button
+                          variante="primary"
+                          onClick={() => forma.id !== undefined && handleFinalizarCura(forma.id)}
+                        >
+                          ✓ Confirmar Cura Concluída
+                        </Button>
+                      )}
+                      <Button variante="ghost" onClick={() => iniciarEdicao(forma)}>Editar</Button>
+                      <Button variante="ghost" onClick={() => setFormaExcluindoId(forma.id ?? null)}>Excluir</Button>
+                    </div>
                   </div>
                 </Card>
               )
@@ -396,7 +444,6 @@ export function FormasPage() {
           </ul>
         )}
       </section>
-
 
       <ConfirmModal
         aberto={formaExcluindoId !== null}

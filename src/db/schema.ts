@@ -25,6 +25,8 @@ export interface CavidadeForma {
   volumeManualMl?: number
 }
 
+export type StatusForma = 'em_preparo' | 'curando' | 'pronta'
+
 export interface Forma {
   id?: number
   nome: string
@@ -36,6 +38,9 @@ export interface Forma {
   usosRealizados?: number
   materialSiliconeId?: number
   quantidadeSiliconeUsada?: number
+  curaIniciadaEm?: number
+  curaMinutos?: number
+  status?: StatusForma
   cavidades?: CavidadeForma[]
 }
 

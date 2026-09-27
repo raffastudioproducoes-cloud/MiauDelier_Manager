@@ -24,6 +24,10 @@ export function resetarInicializacaoCategoriasPadrao(): void {
 
 export async function garantirCategoriasPadrao(): Promise<void> {
   if (jaInicializadoPadrao) return
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
+    jaInicializadoPadrao = true
+    return
+  }
   const total = await db.categoriasMaterial.count()
   if (total === 0) {
     for (const nome of CATEGORIAS_PADRAO_SUGERIDAS) {

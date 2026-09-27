@@ -341,7 +341,8 @@ function resolverNomeCategoriaMaterial(material: Record<string, unknown>): strin
       }
 
       // 10. Transações
-      const contaPadraoId = mapaConta.values().next().value ?? (await db.contas.first())?.id
+      const primeiraConta = (await db.contas.toArray())[0]
+      const contaPadraoId = mapaConta.values().next().value ?? primeiraConta?.id
       for (let i = 0; i < transacoesOrigem.length; i += 1) {
         const transacao = transacoesOrigem[i]
         const contaIdOrigem = transacao.contaId === undefined ? undefined : Number(transacao.contaId)
