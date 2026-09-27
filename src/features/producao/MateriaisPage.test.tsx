@@ -22,9 +22,9 @@ describe('MateriaisPage', () => {
 
     fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina Cristal' } })
     fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '1000' } })
+    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '1000' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.15' } })
-    fireEvent.change(screen.getByLabelText(/categoria$/i), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText(/categoria principal/i), { target: { value: '1' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
 
     await waitFor(() => expect(screen.getByText('Resina Cristal')).toBeInTheDocument())
@@ -36,7 +36,7 @@ describe('MateriaisPage', () => {
 
     fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina' } })
     fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '-5' } })
+    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '-5' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
 
@@ -50,7 +50,7 @@ describe('MateriaisPage', () => {
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
     fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina A' } })
     fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '100' } })
+    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '100' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
     await waitFor(() => screen.getByText('Resina A'))
@@ -67,14 +67,14 @@ describe('MateriaisPage', () => {
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
     fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina B' } })
     fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '100' } })
+    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '100' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
     await waitFor(() => screen.getByText('Resina B'))
 
     fireEvent.click(screen.getByRole('button', { name: /repor estoque/i }))
     fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '50' } })
-    fireEvent.change(screen.getByLabelText(/valor total pago/i), { target: { value: '5' } })
+    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '5' } })
     fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
 
     await waitFor(() => expect(screen.getByText(/150 ml em estoque/i)).toBeInTheDocument())
@@ -86,10 +86,10 @@ describe('MateriaisPage', () => {
 
     fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Cola Quente' } })
     fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'un' } })
-    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '20' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '5' } })
-    fireEvent.change(screen.getByLabelText(/categoria$/i), { target: { value: '__nova__' } })
-    fireEvent.change(await screen.findByLabelText(/nome da nova categoria/i), { target: { value: 'Ferramentas' } })
+    fireEvent.change(screen.getByLabelText(/categoria principal/i), { target: { value: '__nova__' } })
+    fireEvent.change(await screen.findByLabelText(/nome da nova categoria principal/i), { target: { value: 'Ferramentas' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
 
     await waitFor(() => expect(screen.getByText('Cola Quente')).toBeInTheDocument())
@@ -104,7 +104,7 @@ describe('MateriaisPage', () => {
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
     fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina C' } })
     fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '10' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
     await waitFor(() => screen.getByText('Resina C'))
@@ -122,7 +122,7 @@ describe('MateriaisPage', () => {
     // Test Gramas (g)
     fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Pigmento Mica Azul' } })
     fireEvent.change(screen.getByLabelText(/unidade de medida/i), { target: { value: 'g' } })
-    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '50' } })
+    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '50' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.50' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
 
@@ -133,7 +133,7 @@ describe('MateriaisPage', () => {
     fireEvent.change(screen.getByLabelText(/nome do material/i), { target: { value: 'Glitter Dourado' } })
     fireEvent.change(screen.getByLabelText(/unidade de medida/i), { target: { value: '__outra__' } })
     fireEvent.change(await screen.findByLabelText(/especificar unidade/i), { target: { value: 'bisnaga' } })
-    fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '10' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '3.50' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
 

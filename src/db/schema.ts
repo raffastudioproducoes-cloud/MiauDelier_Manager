@@ -4,15 +4,18 @@ import { getDbNameForPerfil } from '../lib/perfisRepo'
 export interface CategoriaMaterial {
   id?: number
   nome: string
+  categoriaPaiId?: number
 }
 
 export interface Material {
   id?: number
   nome: string
   categoriaId: number
+  subcategoriaId?: number
   unidade: string
   quantidadeEstoque: number
   custoUnitario: number
+  valorFrete?: number
 }
 
 export type FormaGeometria = 'retangular' | 'cilindrico' | 'esferico' | 'direto'
@@ -253,6 +256,10 @@ class MiauDelierDB extends Dexie {
       notificacoes: '++id, lida, criadoEm',
       equipamentos: '++id, nome',
       taxas: '++id, nome',
+    })
+    this.version(4).stores({
+      categoriasMaterial: '++id, nome, categoriaPaiId',
+      materiais: '++id, nome, categoriaId, subcategoriaId',
     })
   }
 }

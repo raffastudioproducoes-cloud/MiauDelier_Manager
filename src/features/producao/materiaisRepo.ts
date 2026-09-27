@@ -5,9 +5,11 @@ import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 export interface NovoMaterial {
   nome: string
   categoriaId: number
+  subcategoriaId?: number
   unidade: string
   quantidadeEstoque: number
   custoUnitario: number
+  valorFrete?: number
 }
 
 export interface RegistrarCompraParams {
@@ -15,6 +17,7 @@ export interface RegistrarCompraParams {
   novoMaterial?: NovoMaterial
   quantidadeComprada: number
   valorTotalPago: number
+  valorFrete?: number
   atualizarCustoUnitario?: boolean
   novoCustoUnitarioCalculado?: number
   contaIdFinanceira?: number
@@ -73,6 +76,9 @@ export async function registrarCompraMaterial(params: RegistrarCompraParams): Pr
           params.novoCustoUnitarioCalculado >= 0
         ) {
           updates.custoUnitario = params.novoCustoUnitarioCalculado
+        }
+        if (params.valorFrete !== undefined) {
+          updates.valorFrete = params.valorFrete
         }
         await db.materiais.update(targetMaterialId, updates)
       }

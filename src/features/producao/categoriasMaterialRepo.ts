@@ -1,8 +1,8 @@
 import { db, type CategoriaMaterial } from '../../db/schema'
 
-export async function criarCategoriaMaterial(nome: string): Promise<number> {
+export async function criarCategoriaMaterial(nome: string, categoriaPaiId?: number): Promise<number> {
   jaInicializadoPadrao = true
-  const id = await db.categoriasMaterial.add({ nome })
+  const id = await db.categoriasMaterial.add({ nome, categoriaPaiId })
   return id as number
 }
 
@@ -45,14 +45,19 @@ export async function listarCategoriasMaterial(): Promise<CategoriaMaterial[]> {
   return db.categoriasMaterial.toArray()
 }
 
-export async function atualizarCategoriaMaterial(categoriaId: number, nome: string): Promise<void> {
-  await db.categoriasMaterial.update(categoriaId, { nome })
+export async function atualizarCategoriaMaterial(categoriaId: number, nome: string, categoriaPaiId?: number): Promise<void> {
+  await db.categoriasMaterial.update(categoriaId, { nome, categoriaPaiId })
 }
 
 export async function excluirCategoriaMaterial(categoriaId: number): Promise<void> {
-  const quantidadeMateriais = await db.materiais.where('categoriaId').equals(categoriaId).count()
-  if (quantidadeMateriais > 0) {
-    throw new Error('Não é possível excluir uma categoria que ainda tem material vinculado.')
+  const quantidadeMateriaisCat = await db.materiais.where('categoriaId').equals(categoriaId).count()
+  const quantidadeMateriaisSubcat = await db.materiais.where('subcategoriaId').equals(categoriaId).count()
+  if (quantidadeMateriaisCat > 0 || quantidadeMateriaisSubcat > 0) {
+    throw new Error('Não é possível excluir uma categoria/subcategoria que ainda tem material vinculado.')
+  }
+  const temSubcategorias = await db.categoriasMaterial.where('categoriaPaiId').equals(categoriaId).count()
+  if (temSubcategorias > 0) {
+    throw new Error('Não é possível excluir uma categoria que possui subcategorias vinculadas. Exclua as subcategorias primeiro.')
   }
   await db.categoriasMaterial.delete(categoriaId)
 }
