@@ -25,6 +25,26 @@ export interface CavidadeForma {
   volumeManualMl?: number
 }
 
+export interface FuroVazadoForma {
+  id: string
+  nome?: string
+  geometria: 'circulo' | 'retangulo'
+  quantidade: number
+  diametroCm?: number
+  comprimentoCm?: number
+  larguraCm?: number
+  profundidadeCm?: number
+}
+
+export interface PeMesaForma {
+  quantidade: number
+  geometria: 'cilindrico' | 'retangular'
+  raioCm?: number
+  alturaCm?: number
+  comprimentoCm?: number
+  larguraCm?: number
+}
+
 export type StatusForma = 'em_preparo' | 'curando' | 'pronta'
 
 export interface Forma {
@@ -42,6 +62,11 @@ export interface Forma {
   curaMinutos?: number
   status?: StatusForma
   cavidades?: CavidadeForma[]
+  furosVazados?: FuroVazadoForma[]
+  pesMesa?: PeMesaForma
+  margemSegurancaPercentual?: number
+  massaResinaKg?: number
+  litrosResina?: number
 }
 
 

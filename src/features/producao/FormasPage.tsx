@@ -7,10 +7,10 @@ import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { calcularVolumeMl } from '../calculator/volume'
+import { calcularVolumeMl, calcularVolumeMesaResina, type FuroVazadoInput, type PeMesaInput } from '../calculator/volume'
 import { criarForma, listarFormas, atualizarForma, excluirForma, finalizarCuraForma } from './formasRepo'
 import { listarMateriais } from './materiaisRepo'
-import type { Forma, FormaGeometria, Material } from '../../db/schema'
+import type { Forma, FormaGeometria, Material, FuroVazadoForma } from '../../db/schema'
 
 const schemaForma = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da forma').max(120),
@@ -22,6 +22,8 @@ const ROTULOS_GEOMETRIA: Record<FormaGeometria, string> = {
   esferico: 'Esférico',
   direto: 'Volume direto',
 }
+
+
 
 function dimensoesGeometria(geometria: FormaGeometria, dimensoes: {
   comprimento: string
@@ -49,16 +51,43 @@ function dimensoesGeometria(geometria: FormaGeometria, dimensoes: {
 
 function resumoDimensoes(forma: Forma): string {
   const d = forma.dimensoesCm
+  let base = ''
   switch (forma.geometria) {
     case 'retangular':
-      return `${d.comprimento} × ${d.largura} × ${d.profundidade} cm`
+      base = `${d.comprimento} × ${d.largura} × ${d.profundidade} cm`
+      break
     case 'cilindrico':
-      return `raio ${d.raio} cm · altura ${d.altura} cm`
+      base = `raio ${d.raio} cm · altura ${d.altura} cm`
+      break
     case 'esferico':
-      return `raio ${d.raio} cm`
+      base = `raio ${d.raio} cm`
+      break
     case 'direto':
-      return 'volume direto'
+      base = 'volume direto'
+      break
   }
+
+  if (forma.furosVazados && forma.furosVazados.length > 0) {
+    const totalFuros = forma.furosVazados.reduce((acc, f) => acc + (f.quantidade || 0), 0)
+    const diamStr = forma.furosVazados[0]?.diametroCm ? `ø${forma.furosVazados[0].diametroCm}cm` : ''
+    base += ` · 🐾 ${totalFuros} furo(s) ${diamStr}`.trim()
+  }
+
+  if (forma.pesMesa && forma.pesMesa.quantidade > 0) {
+    base += ` · 🦵 ${forma.pesMesa.quantidade} pé(s)`
+  }
+
+  return base
+}
+
+interface FuroVazadoFormState {
+  id: string
+  quantidade: string
+  diametroCm: string
+  comprimentoCm: string
+  larguraCm: string
+  profundidadeCm: string
+  geometria: 'circulo' | 'retangulo'
 }
 
 export function FormasPage() {
@@ -73,6 +102,17 @@ export function FormasPage() {
   const [raio, setRaio] = useState('')
   const [altura, setAltura] = useState('')
   const [volumeMl, setVolumeMl] = useState('')
+
+  // Furos / Vazados (Comedouros Pets) & Pés da Mesa
+  const [furos, setFuros] = useState<FuroVazadoFormState[]>([])
+  const [temPes, setTemPes] = useState(false)
+  const [qtdPes, setQtdPes] = useState('4')
+  const [geometriaPes, setGeometriaPes] = useState<'cilindrico' | 'retangular'>('cilindrico')
+  const [raioPes, setRaioPes] = useState('1.5')
+  const [alturaPes, setAlturaPes] = useState('10')
+  const [compPes, setCompPes] = useState('4')
+  const [largPes, setLargPes] = useState('4')
+  const [margemSeguranca, setMargemSeguranca] = useState('10')
 
   // Silicone & Amortização do Molde & Cura
   const [materialSiliconeId, setMaterialSiliconeId] = useState('')
@@ -120,7 +160,50 @@ export function FormasPage() {
     }
   }, [materialSiliconeId, qtdSilicone, materiais])
 
+  const resultadoMesaResina = useMemo(() => {
+    if (geometria !== 'retangular') return null
+    if (furos.length === 0 && !temPes) return null
+    const c = Number(comprimento)
+    const l = Number(largura)
+    const e = Number(profundidade)
+    if (isNaN(c) || c <= 0 || isNaN(l) || l <= 0 || isNaN(e) || e <= 0) return null
+
+    const furosConvertidos: FuroVazadoInput[] = furos
+      .map((f) => ({
+        quantidade: Number(f.quantidade) || 0,
+        geometria: f.geometria,
+        diametroCm: Number(f.diametroCm) || 0,
+        comprimentoCm: Number(f.comprimentoCm) || 0,
+        larguraCm: Number(f.larguraCm) || 0,
+        profundidadeCm: f.profundidadeCm ? Number(f.profundidadeCm) : undefined,
+      }))
+      .filter((f) => f.quantidade > 0)
+
+    const pesConvertidos: PeMesaInput | undefined = temPes && Number(qtdPes) > 0
+      ? {
+          quantidade: Number(qtdPes) || 0,
+          geometria: geometriaPes,
+          raioCm: Number(raioPes) || 0,
+          alturaCm: Number(alturaPes) || 0,
+          comprimentoCm: Number(compPes) || 0,
+          larguraCm: Number(largPes) || 0,
+        }
+      : undefined
+
+    return calcularVolumeMesaResina({
+      comprimentoCm: c,
+      larguraCm: l,
+      espessuraCm: e,
+      furosVazados: furosConvertidos,
+      pesMesa: pesConvertidos,
+      margemSegurancaPercentual: Number(margemSeguranca || '10'),
+    })
+  }, [geometria, comprimento, largura, profundidade, furos, temPes, qtdPes, geometriaPes, raioPes, alturaPes, compPes, largPes, margemSeguranca])
+
   const volumeCalculado = useMemo(() => {
+    if (geometria === 'retangular' && resultadoMesaResina) {
+      return resultadoMesaResina.volumeComMargemMl
+    }
     try {
       return calcularVolumeMl({
         geometria,
@@ -130,7 +213,7 @@ export function FormasPage() {
     } catch {
       return null
     }
-  }, [geometria, comprimento, largura, profundidade, raio, altura, volumeMl])
+  }, [geometria, resultadoMesaResina, comprimento, largura, profundidade, raio, altura, volumeMl])
 
   const custoPorUsoCalculado = useMemo(() => {
     const c = Number(custoFabricacao)
@@ -141,6 +224,29 @@ export function FormasPage() {
     return null
   }, [custoFabricacao, vidaUtilUsos])
 
+  function adicionarFuroVazado(geometriaFuro: 'circulo' | 'retangulo' = 'circulo') {
+    setFuros((prev) => [
+      ...prev,
+      {
+        id: String(Date.now() + Math.random()),
+        quantidade: '2',
+        diametroCm: '13',
+        comprimentoCm: '10',
+        larguraCm: '10',
+        profundidadeCm: '',
+        geometria: geometriaFuro,
+      },
+    ])
+  }
+
+  function removerFuroVazado(id: string) {
+    setFuros((prev) => prev.filter((f) => f.id !== id))
+  }
+
+  function atualizarFuroVazado(id: string, campo: keyof FuroVazadoFormState, valor: string) {
+    setFuros((prev) => prev.map((f) => (f.id === id ? { ...f, [campo]: valor } : f)))
+  }
+
   function limparFormulario() {
     setNome('')
     setGeometria('cilindrico')
@@ -150,6 +256,15 @@ export function FormasPage() {
     setRaio('')
     setAltura('')
     setVolumeMl('')
+    setFuros([])
+    setTemPes(false)
+    setQtdPes('4')
+    setGeometriaPes('cilindrico')
+    setRaioPes('1.5')
+    setAlturaPes('10')
+    setCompPes('4')
+    setLargPes('4')
+    setMargemSeguranca('10')
     setMaterialSiliconeId('')
     setQtdSilicone('')
     setCustoFabricacao('')
@@ -170,6 +285,39 @@ export function FormasPage() {
     setRaio(d.raio !== undefined ? String(d.raio) : '')
     setAltura(d.altura !== undefined ? String(d.altura) : '')
     setVolumeMl(forma.geometria === 'direto' && forma.volumeDiretoMl !== undefined ? String(forma.volumeDiretoMl) : '')
+
+    // Furos / Vazados
+    if (forma.furosVazados && forma.furosVazados.length > 0) {
+      setFuros(
+        forma.furosVazados.map((f) => ({
+          id: f.id || String(Math.random()),
+          quantidade: String(f.quantidade || 1),
+          diametroCm: f.diametroCm !== undefined ? String(f.diametroCm) : '13',
+          comprimentoCm: f.comprimentoCm !== undefined ? String(f.comprimentoCm) : '',
+          larguraCm: f.larguraCm !== undefined ? String(f.larguraCm) : '',
+          profundidadeCm: f.profundidadeCm !== undefined ? String(f.profundidadeCm) : '',
+          geometria: f.geometria || 'circulo',
+        })),
+      )
+    } else {
+      setFuros([])
+    }
+
+    // Pés
+    if (forma.pesMesa && forma.pesMesa.quantidade > 0) {
+      setTemPes(true)
+      setQtdPes(String(forma.pesMesa.quantidade))
+      setGeometriaPes(forma.pesMesa.geometria)
+      setRaioPes(forma.pesMesa.raioCm !== undefined ? String(forma.pesMesa.raioCm) : '1.5')
+      setAlturaPes(forma.pesMesa.alturaCm !== undefined ? String(forma.pesMesa.alturaCm) : '10')
+      setCompPes(forma.pesMesa.comprimentoCm !== undefined ? String(forma.pesMesa.comprimentoCm) : '4')
+      setLargPes(forma.pesMesa.larguraCm !== undefined ? String(forma.pesMesa.larguraCm) : '4')
+    } else {
+      setTemPes(false)
+    }
+
+    setMargemSeguranca(forma.margemSegurancaPercentual !== undefined ? String(forma.margemSegurancaPercentual) : '10')
+
     setMaterialSiliconeId(forma.materialSiliconeId !== undefined ? String(forma.materialSiliconeId) : '')
     setQtdSilicone(forma.quantidadeSiliconeUsada !== undefined ? String(forma.quantidadeSiliconeUsada) : '')
     setCustoFabricacao(forma.custoFabricacao !== undefined ? String(forma.custoFabricacao) : '')
@@ -195,12 +343,47 @@ export function FormasPage() {
 
     const curaMin = Number(curaHoras) * 60
 
+    const furosConvertidos: FuroVazadoForma[] = furos
+      .map((f) => ({
+        id: f.id,
+        quantidade: Number(f.quantidade) || 0,
+        geometria: f.geometria,
+        diametroCm: Number(f.diametroCm) || 0,
+        comprimentoCm: Number(f.comprimentoCm) || 0,
+        larguraCm: Number(f.larguraCm) || 0,
+        profundidadeCm: f.profundidadeCm ? Number(f.profundidadeCm) : undefined,
+      }))
+      .filter((f) => f.quantidade > 0)
+
+    const pesConvertidos: PeMesaInput | undefined = temPes && Number(qtdPes) > 0
+      ? {
+          quantidade: Number(qtdPes) || 0,
+          geometria: geometriaPes,
+          raioCm: Number(raioPes) || 0,
+          alturaCm: Number(alturaPes) || 0,
+          comprimentoCm: Number(compPes) || 0,
+          larguraCm: Number(largPes) || 0,
+        }
+      : undefined
+
+    const litros = resultadoMesaResina
+      ? resultadoMesaResina.litrosResina
+      : volumeCalculado / 1000
+    const massaKg = resultadoMesaResina
+      ? resultadoMesaResina.massaResinaKg
+      : litros * 1.1
+
     try {
       const dados = {
         nome: resultado.data.nome,
         geometria,
         dimensoesCm: dimensoesGeometria(geometria, { comprimento, largura, profundidade, raio, altura, volumeMl }),
         volumeDiretoMl: volumeCalculado,
+        furosVazados: furosConvertidos.length > 0 ? furosConvertidos : undefined,
+        pesMesa: pesConvertidos,
+        margemSegurancaPercentual: Number(margemSeguranca || '10'),
+        litrosResina: litros,
+        massaResinaKg: massaKg,
         materialSiliconeId: materialSiliconeId ? Number(materialSiliconeId) : undefined,
         quantidadeSiliconeUsada: qtdSilicone ? Number(qtdSilicone) : undefined,
         custoFabricacao: custoFabricacao ? Number(custoFabricacao) : undefined,
@@ -218,7 +401,7 @@ export function FormasPage() {
       return
     }
     if (!montado.current) return
-    mostrarToast(formaEmEdicaoId !== null ? 'Forma atualizada com sucesso' : 'Forma cadastrada e silicone abatido do estoque com sucesso')
+    mostrarToast(formaEmEdicaoId !== null ? 'Forma atualizada com sucesso' : 'Forma cadastrada com sucesso')
     limparFormulario()
     await recarregar()
   }
@@ -232,7 +415,7 @@ export function FormasPage() {
       return
     }
     if (!montado.current) return
-    mostrarToast('Cura do molde finalizada! Agora ele está disponível para produção de peças.')
+    mostrarToast('Cura do molde finalizada! Agora ele está disponível para fabricação de peças.')
     await recarregar()
   }
 
@@ -254,7 +437,7 @@ export function FormasPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold text-on-surface">Formas & Moldes</h1>
-        <p className="text-label-sm text-on-surface-variant">Banco técnico de fabricação de moldes do ateliê.</p>
+        <p className="text-label-sm text-on-surface-variant">Banco técnico de fabricação de moldes do ateliê (com suporte a mesas comedouro vazadas).</p>
       </div>
 
       <Card>
@@ -279,11 +462,73 @@ export function FormasPage() {
           </div>
 
           {geometria === 'retangular' && (
-            <>
-              <TextField id="comprimento-forma" rotulo="Comprimento (cm)" type="number" value={comprimento} onChange={(e) => setComprimento(e.target.value)} />
-              <TextField id="largura-forma" rotulo="Largura (cm)" type="number" value={largura} onChange={(e) => setLargura(e.target.value)} />
-              <TextField id="profundidade-forma" rotulo="Profundidade (cm)" type="number" value={profundidade} onChange={(e) => setProfundidade(e.target.value)} />
-            </>
+            <div className="flex flex-col gap-4 border-l-2 border-primary/30 pl-3 py-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <TextField id="comprimento-forma" rotulo="Comprimento (cm)" type="number" value={comprimento} onChange={(e) => setComprimento(e.target.value)} />
+                <TextField id="largura-forma" rotulo="Largura (cm)" type="number" value={largura} onChange={(e) => setLargura(e.target.value)} />
+                <TextField id="profundidade-forma" rotulo="Profundidade / Espessura (cm)" type="number" value={profundidade} onChange={(e) => setProfundidade(e.target.value)} />
+              </div>
+
+              {/* Furos / Vazados (Comedouros Pets) */}
+              <div className="flex flex-col gap-2 rounded-lg border border-outline-variant/60 bg-surface-variant/20 p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+                      🐾 Furos & Vazados (Tigelas Comedouros)
+                    </h4>
+                    <p className="text-xs text-on-surface-variant">
+                      Adicione os furos vazados para descontar o volume de resina gasto nas mesas de pet.
+                    </p>
+                  </div>
+                  <Button type="button" variante="ghost" className="border border-outline-variant text-xs" onClick={() => adicionarFuroVazado('circulo')}>
+                    + Adicionar Furo (Tigela)
+                  </Button>
+                </div>
+
+                {furos.map((furo, idx) => (
+                  <div key={furo.id} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center bg-surface p-2 rounded border border-outline-variant/40">
+                    <TextField
+                      id={`furo-qtd-${furo.id}`}
+                      rotulo={`Qtd Furos #${idx + 1}`}
+                      type="number"
+                      value={furo.quantidade}
+                      onChange={(e) => atualizarFuroVazado(furo.id, 'quantidade', e.target.value)}
+                    />
+                    <TextField
+                      id={`furo-diam-${furo.id}`}
+                      rotulo="Diâmetro (cm)"
+                      type="number"
+                      value={furo.diametroCm}
+                      onChange={(e) => atualizarFuroVazado(furo.id, 'diametroCm', e.target.value)}
+                    />
+                    <TextField
+                      id={`furo-prof-${furo.id}`}
+                      rotulo="Profundidade (cm - opcional)"
+                      type="number"
+                      placeholder={profundidade || '3'}
+                      value={furo.profundidadeCm}
+                      onChange={(e) => atualizarFuroVazado(furo.id, 'profundidadeCm', e.target.value)}
+                    />
+                    <div className="flex items-end h-full">
+                      <Button type="button" variante="ghost" onClick={() => removerFuroVazado(furo.id)} className="text-error text-xs">
+                        Excluir Furo
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Margem de segurança */}
+              <div className="w-full sm:w-64">
+                <TextField
+                  id="margem-seguranca"
+                  rotulo="Margem de Segurança (%)"
+                  type="number"
+                  value={margemSeguranca}
+                  onChange={(e) => setMargemSeguranca(e.target.value)}
+                />
+              </div>
+            </div>
           )}
           {geometria === 'cilindrico' && (
             <>
@@ -298,9 +543,49 @@ export function FormasPage() {
             <TextField id="volume-forma" rotulo="Volume (ml)" type="number" value={volumeMl} onChange={(e) => setVolumeMl(e.target.value)} />
           )}
 
-          <p className="text-sm text-on-surface-variant">
-            Volume calculado: <strong className="text-on-surface">{volumeCalculado !== null ? `${volumeCalculado.toFixed(1)} ml` : '—'}</strong>
-          </p>
+          {resultadoMesaResina ? (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col gap-2.5">
+              <h4 className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                📊 Cálculo Técnico de Resina da Mesa Comedouro
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-on-surface">
+                <div>
+                  <span>Volume Bruto do Tampo:</span> <strong>{resultadoMesaResina.volumeBrutoTampoMl.toFixed(0)} ml</strong>
+                </div>
+                <div>
+                  <span>Desconto dos Furos Vazados:</span> <strong className="text-error">-{resultadoMesaResina.volumeVazadosMl.toFixed(0)} ml</strong>
+                </div>
+                {resultadoMesaResina.volumePesMl > 0 && (
+                  <div>
+                    <span>Volume dos Pés:</span> <strong>+{resultadoMesaResina.volumePesMl.toFixed(0)} ml</strong>
+                  </div>
+                )}
+                <div>
+                  <span>Volume Líquido Sem Margem:</span> <strong>{resultadoMesaResina.volumeLiquidoResinaMl.toFixed(0)} ml</strong>
+                </div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-primary/20 flex flex-wrap gap-4 items-center">
+                <div className="bg-surface px-3 py-2 rounded border border-primary/20 flex items-center gap-2">
+                  <span className="text-xl">💧</span>
+                  <div>
+                    <p className="text-[10px] text-on-surface-variant uppercase font-medium">Volume Estimado em Litros</p>
+                    <p className="text-base font-bold text-primary">{resultadoMesaResina.litrosResina.toFixed(2)} Litros</p>
+                  </div>
+                </div>
+                <div className="bg-surface px-3 py-2 rounded border border-primary/20 flex items-center gap-2">
+                  <span className="text-xl">⚖️</span>
+                  <div>
+                    <p className="text-[10px] text-on-surface-variant uppercase font-medium">Massa Estimada em Quilos</p>
+                    <p className="text-base font-bold text-primary">{resultadoMesaResina.massaResinaKg.toFixed(2)} kg</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-on-surface-variant">
+              Volume calculado: <strong className="text-on-surface">{volumeCalculado !== null ? `${volumeCalculado.toFixed(1)} ml (${(volumeCalculado / 1000).toFixed(2)} L · ${((volumeCalculado / 1000) * 1.1).toFixed(2)} kg)` : '—'}</strong>
+            </p>
+          )}
 
           <div className="mt-3 pt-3 border-t border-outline-variant flex flex-col gap-3">
             <h3 className="text-sm font-semibold text-on-surface">Fabricação & Amortização do Molde (Silicone)</h3>
@@ -418,6 +703,7 @@ export function FormasPage() {
                       </div>
                       <p className="mt-1 text-label-sm text-on-surface-variant">
                         {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
+                        {forma.litrosResina ? ` (${forma.litrosResina.toFixed(2)} L / ${forma.massaResinaKg?.toFixed(2)} kg)` : ''}
                       </p>
                       {forma.custoFabricacao !== undefined && (
                         <p className="mt-1 text-xs text-on-surface-variant">

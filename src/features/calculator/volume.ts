@@ -69,6 +69,106 @@ export function calcularProporcaoMistura(
   return { parteA: volumeMl * fracaoA, parteB: volumeMl * fracaoB }
 }
 
+export interface FuroVazadoInput {
+  quantidade: number
+  geometria?: 'circulo' | 'retangulo'
+  diametroCm?: number
+  comprimentoCm?: number
+  larguraCm?: number
+  profundidadeCm?: number
+}
+
+export interface PeMesaInput {
+  quantidade: number
+  geometria: 'cilindrico' | 'retangular'
+  raioCm?: number
+  alturaCm?: number
+  comprimentoCm?: number
+  larguraCm?: number
+}
+
+export interface VolumeMesaResinaInput {
+  comprimentoCm: number
+  larguraCm: number
+  espessuraCm: number
+  furosVazados?: FuroVazadoInput[]
+  pesMesa?: PeMesaInput
+  densidadeResinaKgL?: number
+  margemSegurancaPercentual?: number
+}
+
+export interface ResultadoVolumeMesaResina {
+  volumeBrutoTampoMl: number
+  volumeVazadosMl: number
+  volumePesMl: number
+  volumeLiquidoResinaMl: number
+  volumeComMargemMl: number
+  litrosResina: number
+  massaResinaKg: number
+}
+
+export function calcularVolumeMesaResina(input: VolumeMesaResinaInput): ResultadoVolumeMesaResina {
+  const c = Math.max(0, input.comprimentoCm || 0)
+  const l = Math.max(0, input.larguraCm || 0)
+  const e = Math.max(0, input.espessuraCm || 0)
+
+  const volumeBrutoTampoMl = c * l * e
+
+  let volumeVazadosMl = 0
+  if (input.furosVazados && input.furosVazados.length > 0) {
+    for (const furo of input.furosVazados) {
+      const qtd = Math.max(0, furo.quantidade || 0)
+      if (qtd === 0) continue
+      const prof = furo.profundidadeCm && furo.profundidadeCm > 0 ? furo.profundidadeCm : e
+      if (furo.geometria === 'retangulo') {
+        const fc = Math.max(0, furo.comprimentoCm || 0)
+        const fl = Math.max(0, furo.larguraCm || 0)
+        volumeVazadosMl += qtd * (fc * fl * prof)
+      } else {
+        // Círculo (padrão tigelas comedouro pets)
+        const d = Math.max(0, furo.diametroCm || 0)
+        const r = d / 2
+        volumeVazadosMl += qtd * (Math.PI * Math.pow(r, 2) * prof)
+      }
+    }
+  }
+
+  let volumePesMl = 0
+  if (input.pesMesa && input.pesMesa.quantidade > 0) {
+    const p = input.pesMesa
+    const qtd = Math.max(0, p.quantidade)
+    if (p.geometria === 'retangular') {
+      const pc = Math.max(0, p.comprimentoCm || 0)
+      const pl = Math.max(0, p.larguraCm || 0)
+      const pa = Math.max(0, p.alturaCm || 0)
+      volumePesMl = qtd * (pc * pl * pa)
+    } else {
+      // Cilíndrico
+      const pr = Math.max(0, p.raioCm || 0)
+      const pa = Math.max(0, p.alturaCm || 0)
+      volumePesMl = qtd * (Math.PI * Math.pow(pr, 2) * pa)
+    }
+  }
+
+  const volumeLiquidoResinaMl = Math.max(0, volumeBrutoTampoMl - volumeVazadosMl + volumePesMl)
+  const margem = Math.max(0, input.margemSegurancaPercentual ?? 10) / 100
+  const volumeComMargemMl = volumeLiquidoResinaMl * (1 + margem)
+
+  const densidade = input.densidadeResinaKgL ?? 1.1
+  const litrosResina = volumeComMargemMl / 1000
+  const massaResinaKg = litrosResina * densidade
+
+  return {
+    volumeBrutoTampoMl,
+    volumeVazadosMl,
+    volumePesMl,
+    volumeLiquidoResinaMl,
+    volumeComMargemMl,
+    litrosResina,
+    massaResinaKg,
+  }
+}
+
 export function calcularVolumeTotalForma(forma: {
   geometria?: Geometria
   dimensoesCm?: { comprimento?: number; largura?: number; profundidade?: number; raio?: number; altura?: number }
@@ -79,7 +179,29 @@ export function calcularVolumeTotalForma(forma: {
     profundidadeCm?: number
     volumeManualMl?: number
   }>
+  furosVazados?: FuroVazadoInput[]
+  pesMesa?: PeMesaInput
+  margemSegurancaPercentual?: number
 }): number {
+  if (
+    forma.geometria === 'retangular' &&
+    forma.dimensoesCm &&
+    forma.dimensoesCm.comprimento &&
+    forma.dimensoesCm.largura &&
+    forma.dimensoesCm.profundidade &&
+    ((forma.furosVazados && forma.furosVazados.length > 0) || (forma.pesMesa && forma.pesMesa.quantidade > 0))
+  ) {
+    const res = calcularVolumeMesaResina({
+      comprimentoCm: forma.dimensoesCm.comprimento,
+      larguraCm: forma.dimensoesCm.largura,
+      espessuraCm: forma.dimensoesCm.profundidade,
+      furosVazados: forma.furosVazados,
+      pesMesa: forma.pesMesa,
+      margemSegurancaPercentual: forma.margemSegurancaPercentual ?? 10,
+    })
+    return res.volumeComMargemMl
+  }
+
   if (forma.cavidades && forma.cavidades.length > 0) {
     return forma.cavidades.reduce((total, cav) => {
       if (typeof cav.volumeManualMl === 'number' && cav.volumeManualMl > 0) {
