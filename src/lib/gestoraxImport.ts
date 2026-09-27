@@ -23,6 +23,8 @@ const MAPA_STATUS_PECA: Record<string, StatusPeca> = {
   cura: 'curando',
   finalizada: 'pronta',
   vendida: 'vendida',
+  cancelada: 'cancelada',
+  cancelado: 'cancelada',
 }
 
 const MAPA_TIPO_TRANSACAO: Record<string, TipoTransacao> = {

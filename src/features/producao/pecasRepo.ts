@@ -108,7 +108,75 @@ export async function listarConsumosDaPeca(pecaId: number): Promise<ConsumoComMa
 }
 
 export async function atualizarStatusPeca(pecaId: number, novoStatus: StatusPeca): Promise<void> {
-  await db.transaction('rw', db.pecas, db.eventosPeca, async () => {
+  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas], async () => {
+    const peca = await db.pecas.get(pecaId)
+    if (!peca) throw new Error(`Peça ${pecaId} não encontrada`)
+
+    const statusAnterior = peca.status
+    if (statusAnterior === novoStatus) return
+
+    // Se transicionando PARA 'cancelada' (e antes não era cancelada): devolve material ao estoque e estorna o uso da forma
+    if (novoStatus === 'cancelada' && statusAnterior !== 'cancelada') {
+      const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
+      for (const consumo of consumos) {
+        const material = await db.materiais.get(consumo.materialId)
+        if (material) {
+          await db.materiais.update(consumo.materialId, {
+            quantidadeEstoque: material.quantidadeEstoque + consumo.quantidade,
+          })
+        }
+      }
+      if (peca.formaId) {
+        const forma = await db.formas.get(peca.formaId)
+        if (forma && forma.id !== undefined && (forma.usosRealizados ?? 0) > 0) {
+          await db.formas.update(forma.id, { usosRealizados: (forma.usosRealizados ?? 1) - 1 })
+        }
+      }
+      await db.pecas.update(pecaId, { status: 'cancelada' })
+      await db.eventosPeca.add({
+        pecaId,
+        tipo: 'mudanca_status',
+        descricao: 'Produção cancelada: materiais devolvidos ao estoque e uso do molde estornado',
+        criadoEm: new Date().toISOString(),
+      })
+      return
+    }
+
+    // Se transicionando DE 'cancelada' PARA um status ativo: verifica estoque e debita novamente
+    if (statusAnterior === 'cancelada' && novoStatus !== 'cancelada') {
+      const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
+      for (const consumo of consumos) {
+        const material = await db.materiais.get(consumo.materialId)
+        if (!material) throw new Error(`Material ${consumo.materialId} não encontrado`)
+        if (material.quantidadeEstoque < consumo.quantidade) {
+          throw new Error(
+            `Estoque insuficiente de "${material.nome}" para reativar a produção: disponível ${material.quantidadeEstoque}, necessário ${consumo.quantidade}`,
+          )
+        }
+      }
+      for (const consumo of consumos) {
+        const material = (await db.materiais.get(consumo.materialId))!
+        await db.materiais.update(consumo.materialId, {
+          quantidadeEstoque: material.quantidadeEstoque - consumo.quantidade,
+        })
+      }
+      if (peca.formaId) {
+        const forma = await db.formas.get(peca.formaId)
+        if (forma && forma.id !== undefined) {
+          await db.formas.update(forma.id, { usosRealizados: (forma.usosRealizados ?? 0) + 1 })
+        }
+      }
+      await db.pecas.update(pecaId, { status: novoStatus })
+      await db.eventosPeca.add({
+        pecaId,
+        tipo: 'mudanca_status',
+        descricao: `Produção reativada (${novoStatus}): materiais novamente debitados do estoque`,
+        criadoEm: new Date().toISOString(),
+      })
+      return
+    }
+
+    // Mudança normal entre status ativos
     await db.pecas.update(pecaId, { status: novoStatus })
     await db.eventosPeca.add({
       pecaId,
@@ -123,7 +191,10 @@ export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number
   await db.transaction('rw', db.pecas, db.auditoria, async () => {
     const pecaAnterior = await db.pecas.get(pecaId)
     await db.pecas.update(pecaId, { precoVenda })
-    await registrarAuditoria('peca', pecaId, 'alteracao_preco',
+    await registrarAuditoria(
+      'peca',
+      pecaId,
+      'alteracao_preco',
       pecaAnterior?.precoVenda !== undefined ? pecaAnterior.precoVenda.toString() : undefined,
       precoVenda.toString(),
     )
@@ -160,12 +231,24 @@ export async function registrarVendaPeca(
 }
 
 export async function excluirPeca(pecaId: number): Promise<void> {
-  await db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.auditoria, async () => {
-    const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
-    for (const consumo of consumos) {
-      const material = await db.materiais.get(consumo.materialId)
-      if (material) {
-        await db.materiais.update(consumo.materialId, { quantidadeEstoque: material.quantidadeEstoque + consumo.quantidade })
+  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.auditoria], async () => {
+    const peca = await db.pecas.get(pecaId)
+    // Se a peça NÃO estava cancelada, devolve o material ao estoque e estorna o uso do molde
+    if (peca && peca.status !== 'cancelada') {
+      const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
+      for (const consumo of consumos) {
+        const material = await db.materiais.get(consumo.materialId)
+        if (material) {
+          await db.materiais.update(consumo.materialId, {
+            quantidadeEstoque: material.quantidadeEstoque + consumo.quantidade,
+          })
+        }
+      }
+      if (peca.formaId) {
+        const forma = await db.formas.get(peca.formaId)
+        if (forma && forma.id !== undefined && (forma.usosRealizados ?? 0) > 0) {
+          await db.formas.update(forma.id, { usosRealizados: (forma.usosRealizados ?? 1) - 1 })
+        }
       }
     }
     await db.consumosPeca.where('pecaId').equals(pecaId).delete()

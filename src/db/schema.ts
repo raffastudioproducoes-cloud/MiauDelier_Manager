@@ -45,7 +45,7 @@ export interface Forma {
 }
 
 
-export type StatusPeca = 'planejada' | 'em_producao' | 'curando' | 'acabamento' | 'pronta' | 'vendida'
+export type StatusPeca = 'planejada' | 'em_producao' | 'curando' | 'acabamento' | 'pronta' | 'vendida' | 'cancelada'
 
 export interface UsoEnergiaPeca {
   equipamentoId: number

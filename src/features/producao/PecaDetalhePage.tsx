@@ -21,7 +21,7 @@ import type { EventoPeca, StatusPeca } from '../../db/schema'
 
 const routeApi = getRouteApi('/pecas/$pecaId')
 
-const OPCOES_STATUS: StatusPeca[] = ['planejada', 'em_producao', 'curando', 'acabamento', 'pronta', 'vendida']
+const OPCOES_STATUS: StatusPeca[] = ['planejada', 'em_producao', 'curando', 'acabamento', 'pronta', 'vendida', 'cancelada']
 
 const schemaValorVenda = z.coerce.number().min(0.01, 'Informe um valor de venda maior que zero')
 
@@ -121,7 +121,9 @@ export function PecaDetalhePage() {
           <p className="mt-1 text-label-sm text-on-surface-variant">Forma: {peca.nomeForma}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="neutral">{peca.status}</Badge>
+          <Badge variant={peca.status === 'cancelada' ? 'danger' : peca.status === 'vendida' ? 'success' : 'neutral'}>
+            {peca.status}
+          </Badge>
           <label htmlFor="status-peca" className="sr-only">Status</label>
           <select
             id="status-peca"
@@ -135,6 +137,12 @@ export function PecaDetalhePage() {
           </select>
         </div>
       </div>
+
+      {peca.status === 'cancelada' && (
+        <div role="alert" className="rounded-xl border border-error/30 bg-error/10 p-4 text-sm text-error">
+          <strong>Produção Cancelada:</strong> Os materiais consumidos foram devolvidos ao estoque e o uso do molde foi estornado.
+        </div>
+      )}
 
       <Card>
         <h2 className="mb-2 font-medium text-on-surface">Materiais consumidos</h2>

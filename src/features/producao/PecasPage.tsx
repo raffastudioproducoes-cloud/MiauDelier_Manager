@@ -251,7 +251,9 @@ export function PecasPage() {
                   <p className="mt-1 text-label-sm text-on-surface-variant">{peca.nomeForma}</p>
                 </Link>
                 <div className="flex items-center gap-2">
-                  <Badge variant="neutral">{peca.status}</Badge>
+                  <Badge variant={peca.status === 'cancelada' ? 'danger' : peca.status === 'vendida' ? 'success' : 'neutral'}>
+                    {peca.status}
+                  </Badge>
                   <Button variante="ghost" onClick={() => setPecaExcluindoId(peca.id ?? null)}>Excluir</Button>
                 </div>
               </Card>

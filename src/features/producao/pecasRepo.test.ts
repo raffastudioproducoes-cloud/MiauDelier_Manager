@@ -199,4 +199,58 @@ describe('repositório de peças', () => {
     const eventos = await listarEventosDaPeca(pecaId)
     expect(eventos.some((e) => e.tipo === 'mudanca_status')).toBe(false)
   })
+
+  it('cancelar produção devolve materiais ao estoque e estorna uso da forma', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    const materialId = await criarMaterial({ nome: 'Resina Epóxi', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 1000, custoUnitario: 0.15 })
+
+    const pecaId = await criarPeca({
+      nome: 'Peça teste',
+      formaId,
+      consumos: [{ materialId, quantidade: 200 }],
+    })
+
+    // Verifica que debitou estoque (800) e incrementou uso da forma (1)
+    let mat = await db.materiais.get(materialId)
+    let forma = await db.formas.get(formaId)
+    expect(mat?.quantidadeEstoque).toBe(800)
+    expect(forma?.usosRealizados).toBe(1)
+
+    // Cancela a produção
+    await atualizarStatusPeca(pecaId, 'cancelada')
+
+    // Materiais devem ter retornado ao estoque (1000) e uso da forma estornado (0)
+    mat = await db.materiais.get(materialId)
+    forma = await db.formas.get(formaId)
+    expect(mat?.quantidadeEstoque).toBe(1000)
+    expect(forma?.usosRealizados).toBe(0)
+
+    const pecas = await listarPecas()
+    expect(pecas[0].status).toBe('cancelada')
+
+    // Excluir peça cancelada NÃO deve duplicar a devolução ao estoque
+    await excluirPeca(pecaId)
+    mat = await db.materiais.get(materialId)
+    expect(mat?.quantidadeEstoque).toBe(1000)
+  })
+
+  it('reativar peça cancelada debita o estoque novamente', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    const materialId = await criarMaterial({ nome: 'Pigmento', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 500, custoUnitario: 0.5 })
+
+    const pecaId = await criarPeca({
+      nome: 'Peça pigmentada',
+      formaId,
+      consumos: [{ materialId, quantidade: 100 }],
+    })
+
+    await atualizarStatusPeca(pecaId, 'cancelada')
+    let mat = await db.materiais.get(materialId)
+    expect(mat?.quantidadeEstoque).toBe(500)
+
+    // Reativa a peça
+    await atualizarStatusPeca(pecaId, 'em_producao')
+    mat = await db.materiais.get(materialId)
+    expect(mat?.quantidadeEstoque).toBe(400)
+  })
 })

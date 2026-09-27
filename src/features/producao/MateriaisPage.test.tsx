@@ -24,6 +24,7 @@ describe('MateriaisPage', () => {
     fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
     fireEvent.change(screen.getByLabelText(/quantidade em estoque/i), { target: { value: '1000' } })
     fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.15' } })
+    fireEvent.change(screen.getByLabelText(/categoria$/i), { target: { value: '1' } })
     fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
 
     await waitFor(() => expect(screen.getByText('Resina Cristal')).toBeInTheDocument())
