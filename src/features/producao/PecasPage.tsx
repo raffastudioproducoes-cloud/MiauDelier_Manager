@@ -311,22 +311,58 @@ export function PecasPage() {
         {pecas.length === 0 ? (
           <EmptyState titulo="Nenhuma peça cadastrada" descricao="Cadastre a primeira peça em produção." />
         ) : (
-          <ul className="flex flex-col gap-3">
-            {pecas.map((peca) => (
-              <Card key={peca.id} className="glow-hover flex items-center justify-between gap-3">
-                <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} className="flex-1">
-                  <p className="font-medium text-on-surface">{peca.nome}</p>
-                  <p className="mt-1 text-label-sm text-on-surface-variant">{peca.nomeForma}</p>
-                </Link>
-                <div className="flex items-center gap-2">
-                  <Badge variant={peca.status === 'cancelada' ? 'danger' : peca.status === 'vendida' ? 'success' : 'neutral'}>
-                    {peca.status}
-                  </Badge>
-                  <Button variante="ghost" onClick={() => setPecaExcluindoId(peca.id ?? null)}>Excluir</Button>
-                </div>
-              </Card>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-3">
+            {pecas.map((peca) => {
+              const statusStr = peca.status || 'pronta'
+              const statusFormatado = statusStr.toUpperCase().replace('_', ' ')
+              const statusVariant =
+                statusStr === 'vendida'
+                  ? 'success'
+                  : statusStr === 'cancelada'
+                  ? 'danger'
+                  : statusStr === 'curando'
+                  ? 'warning'
+                  : 'neutral'
+
+              return (
+                <Card key={peca.id} className="glow-hover flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-semibold">
+                      🧩
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} className="hover:underline font-semibold text-on-surface text-base truncate">
+                        {peca.nome}
+                      </Link>
+                      {peca.nomeForma && (
+                        <p className="text-xs text-on-surface-variant flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] font-medium bg-surface-container px-2 py-0.5 rounded border border-outline-variant/40">
+                            Molde: {peca.nomeForma}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-outline-variant/30">
+                    <Badge variant={statusVariant} className="uppercase font-bold tracking-wider text-[10px] px-2.5 py-1">
+                      {statusFormatado}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }}>
+                        <Button variante="ghost" className="text-xs">
+                          Detalhes →
+                        </Button>
+                      </Link>
+                      <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setPecaExcluindoId(peca.id ?? null)}>
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
         )}
       </section>
 

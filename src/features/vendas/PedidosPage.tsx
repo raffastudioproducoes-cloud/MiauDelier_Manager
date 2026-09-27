@@ -180,22 +180,56 @@ export function PedidosPage() {
         {pedidos.length === 0 ? (
           <EmptyState titulo="Nenhum pedido cadastrado" descricao="Crie o primeiro pedido do seu ateliê." />
         ) : (
-          <ul className="flex flex-col gap-3">
-            {pedidos.map((pedido) => (
-              <Card key={pedido.id} className="glow-hover flex items-center justify-between gap-3">
-                <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }} className="flex-1">
-                  <p className="font-medium text-on-surface">Cliente: {pedido.nomeCliente}</p>
-                  <p className="mt-1 text-label-sm text-on-surface-variant">
-                    R$ {pedido.valorTotal.toFixed(2)}
-                  </p>
-                </Link>
-                <div className="flex items-center gap-2">
-                  <Badge variant="neutral">{pedido.status}</Badge>
-                  <Button variante="ghost" onClick={() => setPedidoExcluindoId(pedido.id ?? null)}>Excluir</Button>
-                </div>
-              </Card>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-3">
+            {pedidos.map((pedido) => {
+              const statusStr = pedido.status || 'orçamento'
+              const statusFormatado = statusStr.toUpperCase().replace('_', ' ')
+              const statusVariant =
+                statusStr.includes('concluido') || statusStr.includes('entregue')
+                  ? 'success'
+                  : statusStr.includes('cancelado')
+                  ? 'danger'
+                  : statusStr.includes('andamento') || statusStr.includes('producao')
+                  ? 'warning'
+                  : 'neutral'
+
+              return (
+                <Card key={pedido.id} className="glow-hover flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-bold">
+                      🛍️
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }} className="hover:underline font-semibold text-on-surface text-base truncate">
+                        Pedido #{pedido.id} · {pedido.nomeCliente}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
+                          R$ {pedido.valorTotal.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-outline-variant/30">
+                    <Badge variant={statusVariant} className="uppercase font-bold tracking-wider text-[10px] px-2.5 py-1">
+                      {statusFormatado}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }}>
+                        <Button variante="ghost" className="text-xs">
+                          Ver pedido →
+                        </Button>
+                      </Link>
+                      <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setPedidoExcluindoId(pedido.id ?? null)}>
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
         )}
       </section>
 

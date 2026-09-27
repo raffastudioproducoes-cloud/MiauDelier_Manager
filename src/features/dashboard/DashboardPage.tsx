@@ -131,20 +131,40 @@ export function DashboardPage() {
           <Card className="lg:col-span-2">
             <FluxoCaixaChart dados={resumo.fluxoCaixa14Dias} />
           </Card>
-          <Card>
-            <p className="mb-2 text-sm font-medium text-on-surface">Eventos recentes de produção</p>
+          <Card className="flex flex-col gap-3">
+            <h2 className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+              <span>⚡</span> Eventos recentes de produção
+            </h2>
             {resumo.eventosRecentes.length === 0 ? (
-              <p className="text-sm text-on-surface-variant">Nenhum evento registrado ainda.</p>
+              <p className="text-xs text-on-surface-variant">Nenhum evento registrado ainda.</p>
             ) : (
-              <ul className="flex flex-col gap-3">
-                {resumo.eventosRecentes.map((evento, indice) => (
-                  <li key={`${evento.pecaId}-${indice}`} className="text-sm">
-                    <Badge variant="neutral">{evento.tipo}</Badge>{' '}
-                    <span className="font-medium text-on-surface">{evento.nomePeca}</span>
-                    <p className="text-xs text-on-surface-variant">{evento.descricao}</p>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex flex-col gap-2.5">
+                {resumo.eventosRecentes.map((evento, indice) => {
+                  const ehCura = evento.tipo.includes('CURA')
+                  const ehMaterial = evento.tipo.includes('MATERIAL')
+                  const ehVenda = evento.tipo.includes('VENDA')
+                  const icone = ehCura ? '🧪' : ehMaterial ? '📦' : ehVenda ? '💰' : '✨'
+                  const variantBadge = ehCura ? 'warning' : ehVenda ? 'success' : 'neutral'
+
+                  return (
+                    <div
+                      key={`${evento.pecaId}-${indice}`}
+                      className="rounded-xl border border-outline-variant/50 bg-surface-container/30 p-3 flex flex-col gap-1.5 hover:border-primary/40 transition-all shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-sm shrink-0">{icone}</span>
+                          <span className="font-semibold text-xs text-on-surface truncate">{evento.nomePeca}</span>
+                        </div>
+                        <Badge variant={variantBadge} className="shrink-0 text-[10px] px-1.5 py-0.5 uppercase tracking-wider">
+                          {evento.tipo.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-on-surface-variant leading-relaxed pl-5">{evento.descricao}</p>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </Card>
         </div>
