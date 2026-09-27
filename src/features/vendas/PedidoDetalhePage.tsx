@@ -12,7 +12,7 @@ import type { StatusPedido } from '../../db/schema'
 const routeApi = getRouteApi('/pedidos/$pedidoId')
 
 const OPCOES_STATUS: StatusPedido[] = ['aberto', 'em_producao', 'entregue', 'cancelado']
-const ATRASO_DEBOUNCE_PROGRESSO_MS = 400
+const ATRASO_DEBOUNCE_PROGRESSO_MS = 300
 
 export function PedidoDetalhePage() {
   const { pedidoId } = routeApi.useParams()
@@ -77,7 +77,6 @@ export function PedidoDetalhePage() {
 
   function handleMudarProgresso(valor: number) {
     setProgresso(valor)
-    clearTimeout(timeoutProgresso.current)
     timeoutProgresso.current = setTimeout(() => {
       handleSalvarAgenda({ progresso: valor })
     }, ATRASO_DEBOUNCE_PROGRESSO_MS)
