@@ -16,7 +16,8 @@ const PROMPTS_PERSONALIDADE: Record<Personalidade, string> = {
   direta: 'Responda de forma curta e direta, sem rodeios, priorizando a ação prática.',
 }
 
-const ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent'
+const ENDPOINT_GEMINI_PRIMARY = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const ENDPOINT_GEMINI_FALLBACK = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
 
 async function chamarGemini(contents: Array<{ role?: string; parts: Array<{ text: string }> }>): Promise<string> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -29,22 +30,31 @@ async function chamarGemini(contents: Array<{ role?: string; parts: Array<{ text
   }
 
   const personalidade = await obterPersonalidade()
+  const payload = {
+    systemInstruction: {
+      parts: [{ text: `${INSTRUCAO_SISTEMA_FIXA} ${PROMPTS_PERSONALIDADE[personalidade]}` }],
+    },
+    contents,
+  }
 
   let dados: any
   try {
-    const resposta = await fetch(`${ENDPOINT_GEMINI}?key=${chave}`, {
+    let resposta = await fetch(`${ENDPOINT_GEMINI_PRIMARY}?key=${chave}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: `${INSTRUCAO_SISTEMA_FIXA} ${PROMPTS_PERSONALIDADE[personalidade]}` }],
-        },
-        contents,
-      }),
+      body: JSON.stringify(payload),
     })
 
     if (!resposta.ok) {
-      throw new IaIndisponivelError('Não foi possível falar com o assistente agora.')
+      resposta = await fetch(`${ENDPOINT_GEMINI_FALLBACK}?key=${chave}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    }
+
+    if (!resposta.ok) {
+      throw new IaIndisponivelError('Não foi possível falar com o assistente agora. Verifique sua chave de API.')
     }
 
     dados = await resposta.json()

@@ -23,7 +23,7 @@ describe('DashboardPage', () => {
     await criarConta({ nome: 'Caixa', saldoInicial: 300 })
     render(<ToastProvider><DashboardPage /></ToastProvider>)
 
-    await waitFor(() => expect(screen.getByText(/300/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText(/300/).length).toBeGreaterThan(0))
   })
 
   it('mostra estado vazio informativo quando não há nenhum dado cadastrado', async () => {
