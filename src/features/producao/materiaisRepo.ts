@@ -1,4 +1,5 @@
 import { db, type Material } from '../../db/schema'
+import { cifrarCampo } from '../../lib/camposCifrados'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovoMaterial {
@@ -7,6 +8,17 @@ export interface NovoMaterial {
   unidade: string
   quantidadeEstoque: number
   custoUnitario: number
+}
+
+export interface RegistrarCompraParams {
+  materialId?: number
+  novoMaterial?: NovoMaterial
+  quantidadeComprada: number
+  valorTotalPago: number
+  atualizarCustoUnitario?: boolean
+  novoCustoUnitarioCalculado?: number
+  contaIdFinanceira?: number
+  dataCompra?: string
 }
 
 export async function criarMaterial(novo: NovoMaterial): Promise<number> {
@@ -26,6 +38,58 @@ export async function reporEstoqueMaterial(materialId: number, quantidadeAdicion
   const material = await db.materiais.get(materialId)
   if (!material) throw new Error('Material não encontrado')
   await db.materiais.update(materialId, { quantidadeEstoque: material.quantidadeEstoque + quantidadeAdicionada })
+}
+
+export async function registrarCompraMaterial(params: RegistrarCompraParams): Promise<number> {
+  const data = params.dataCompra ?? new Date().toISOString()
+  const valorCifrado =
+    params.contaIdFinanceira && params.valorTotalPago > 0
+      ? await cifrarCampo(params.valorTotalPago.toString())
+      : ''
+
+  return db.transaction(
+    'rw',
+    [db.materiais, db.categoriasMaterial, db.contas, db.transacoes, db.auditoria],
+    async () => {
+      let targetMaterialId = params.materialId
+      let nomeMaterial = ''
+      let unidadeMaterial = 'un'
+
+      if (!targetMaterialId) {
+        if (!params.novoMaterial) throw new Error('Dados do novo material são obrigatórios')
+        targetMaterialId = (await db.materiais.add(params.novoMaterial)) as number
+        nomeMaterial = params.novoMaterial.nome
+        unidadeMaterial = params.novoMaterial.unidade
+      } else {
+        const mat = await db.materiais.get(targetMaterialId)
+        if (!mat) throw new Error('Material não encontrado')
+        nomeMaterial = mat.nome
+        unidadeMaterial = mat.unidade
+        const novaQtd = mat.quantidadeEstoque + params.quantidadeComprada
+        const updates: Partial<Material> = { quantidadeEstoque: novaQtd }
+        if (
+          params.atualizarCustoUnitario &&
+          params.novoCustoUnitarioCalculado !== undefined &&
+          params.novoCustoUnitarioCalculado >= 0
+        ) {
+          updates.custoUnitario = params.novoCustoUnitarioCalculado
+        }
+        await db.materiais.update(targetMaterialId, updates)
+      }
+
+      if (params.contaIdFinanceira && valorCifrado) {
+        await db.transacoes.add({
+          contaId: params.contaIdFinanceira,
+          tipo: 'saida',
+          valorCriptografado: valorCifrado,
+          descricao: `Compra de insumos: ${nomeMaterial} (+${params.quantidadeComprada} ${unidadeMaterial})`,
+          data,
+        })
+      }
+
+      return targetMaterialId
+    },
+  )
 }
 
 export async function atualizarMaterial(materialId: number, dados: Omit<NovoMaterial, 'quantidadeEstoque'>): Promise<void> {
