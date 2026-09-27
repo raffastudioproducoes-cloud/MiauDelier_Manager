@@ -68,7 +68,7 @@ describe('ConfiguracoesPage', () => {
     render(<ToastProvider><ConfiguracoesPage /></ToastProvider>)
 
     // Aguarda o carregamento inicial da concessionária Padrão (Enel SP)
-    await screen.findByText(/Enel/i)
+    await screen.findAllByText(/Enel/i)
 
     const estadoInput = screen.getByLabelText(/estado \(uf\)/i)
     fireEvent.change(estadoInput, { target: { value: 'RJ' } })
