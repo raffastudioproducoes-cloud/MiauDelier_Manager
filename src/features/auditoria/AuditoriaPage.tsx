@@ -10,12 +10,8 @@ function formatarQuando(quando: string) {
 }
 
 function descricaoAcao(registro: RegistroAuditoria) {
-  if (registro.valorAnterior === undefined && registro.valorNovo === undefined) {
-    return 'Exclusão'
-  }
-  if (registro.valorAnterior === undefined) {
-    return `Preço de venda definido: R$ ${registro.valorNovo}`
-  }
+  if (registro.acao === 'exclusao') return 'Exclusão'
+  if (registro.acao === 'venda') return `Venda: R$ ${registro.valorNovo}`
   return `Preço alterado: R$ ${registro.valorAnterior} → R$ ${registro.valorNovo}`
 }
 

@@ -123,9 +123,7 @@ export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number
   await db.transaction('rw', db.pecas, db.auditoria, async () => {
     const pecaAnterior = await db.pecas.get(pecaId)
     await db.pecas.update(pecaId, { precoVenda })
-    await registrarAuditoria(
-      'peca',
-      pecaId,
+    await registrarAuditoria('peca', pecaId, 'alteracao_preco',
       pecaAnterior?.precoVenda !== undefined ? pecaAnterior.precoVenda.toString() : undefined,
       precoVenda.toString(),
     )
@@ -157,7 +155,7 @@ export async function registrarVendaPeca(
       descricao: descricaoTransacao,
       data: agora,
     })
-    await registrarAuditoria('peca', pecaId, undefined, precoVenda.toString())
+    await registrarAuditoria('peca', pecaId, 'venda', undefined, precoVenda.toString())
   })
 }
 
@@ -173,6 +171,6 @@ export async function excluirPeca(pecaId: number): Promise<void> {
     await db.consumosPeca.where('pecaId').equals(pecaId).delete()
     await db.eventosPeca.where('pecaId').equals(pecaId).delete()
     await db.pecas.delete(pecaId)
-    await registrarAuditoria('peca', pecaId)
+    await registrarAuditoria('peca', pecaId, 'exclusao')
   })
 }

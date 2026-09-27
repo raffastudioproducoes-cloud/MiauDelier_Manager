@@ -35,6 +35,6 @@ export async function atualizarMaterial(materialId: number, dados: Omit<NovoMate
 export async function excluirMaterial(materialId: number): Promise<void> {
   await db.transaction('rw', db.materiais, db.auditoria, async () => {
     await db.materiais.delete(materialId)
-    await registrarAuditoria('material', materialId)
+    await registrarAuditoria('material', materialId, 'exclusao')
   })
 }

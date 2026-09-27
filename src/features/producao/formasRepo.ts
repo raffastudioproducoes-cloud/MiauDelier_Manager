@@ -45,6 +45,6 @@ export async function atualizarForma(formaId: number, dados: NovaForma): Promise
 export async function excluirForma(formaId: number): Promise<void> {
   await db.transaction('rw', db.formas, db.auditoria, async () => {
     await db.formas.delete(formaId)
-    await registrarAuditoria('forma', formaId)
+    await registrarAuditoria('forma', formaId, 'exclusao')
   })
 }
