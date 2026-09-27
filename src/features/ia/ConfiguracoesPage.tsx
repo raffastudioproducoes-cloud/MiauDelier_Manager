@@ -137,8 +137,92 @@ export function ConfiguracoesPage() {
         </Card>
       </section>
 
+      <SeccaoTarifasConfig />
+
       <SeccaoPerfisAtelie />
     </div>
+  )
+}
+
+function SeccaoTarifasConfig() {
+  const { mostrarToast } = useToast()
+  const [valorHora, setValorHora] = useState('25.00')
+  const [tarifaKwh, setTarifaKwh] = useState('0.85')
+  const [tarifaAguaM3, setTarifaAguaM3] = useState('15.00')
+  const [salvando, setSalvando] = useState(false)
+
+  useEffect(() => {
+    import('../pricing/tarifasConfigRepo').then(({ obterTarifasConfig }) => {
+      obterTarifasConfig().then((t) => {
+        setValorHora(String(t.valorHoraMaoDeObra))
+        setTarifaKwh(String(t.tarifaKwh))
+        setTarifaAguaM3(String(t.tarifaAguaM3))
+      })
+    })
+  }, [])
+
+  async function handleSalvarTarifas(e: React.FormEvent) {
+    e.preventDefault()
+    setSalvando(true)
+    try {
+      const { salvarTarifasConfig } = await import('../pricing/tarifasConfigRepo')
+      await salvarTarifasConfig({
+        valorHoraMaoDeObra: Number(valorHora) || 0,
+        tarifaKwh: Number(tarifaKwh) || 0,
+        tarifaAguaM3: Number(tarifaAguaM3) || 0,
+      })
+      mostrarToast('Tarifas padrões do ateliê salvas com sucesso!', 'sucesso')
+    } catch (err) {
+      mostrarToast(err instanceof Error ? err.message : 'Erro ao salvar tarifas.', 'erro')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">
+        Tarifas de Custo Padrão do Ateliê (Mão de Obra, Luz & Água)
+      </h2>
+      <Card>
+        <form onSubmit={handleSalvarTarifas} className="flex flex-col gap-3">
+          <p className="text-xs text-on-surface-variant">
+            Estes valores são usados automaticamente no cálculo da página de Precificação.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <TextField
+              id="config-valor-hora"
+              rotulo="Valor da Mão de Obra (R$ / Hora)"
+              type="number"
+              step="0.01"
+              value={valorHora}
+              onChange={(e) => setValorHora(e.target.value)}
+            />
+            <TextField
+              id="config-tarifa-kwh"
+              rotulo="Tarifa de Luz (R$ / kWh)"
+              type="number"
+              step="0.01"
+              value={tarifaKwh}
+              onChange={(e) => setTarifaKwh(e.target.value)}
+            />
+            <TextField
+              id="config-tarifa-agua-m3"
+              rotulo="Tarifa de Água (R$ / m³)"
+              type="number"
+              step="0.01"
+              value={tarifaAguaM3}
+              onChange={(e) => setTarifaAguaM3(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end mt-1">
+            <Button type="submit" disabled={salvando}>
+              Salvar Tarifas
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </section>
   )
 }
 

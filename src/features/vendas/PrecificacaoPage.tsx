@@ -3,13 +3,22 @@ import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
-import { db, type Equipamento } from '../../db/schema'
+import { db, type Equipamento, type Material } from '../../db/schema'
 import { calcularPrecificacao, type UsoEnergiaItem } from '../pricing/pricing'
 import { listarPecas, listarConsumosDaPeca, atualizarPrecoVendaPeca, type PecaComForma } from '../producao/pecasRepo'
 import { listarMateriais } from '../producao/materiaisRepo'
+import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 
 function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+export interface InsumoGraficoEmbalagem {
+  id: string
+  materialId: number
+  nome: string
+  quantidade: number
+  custoUnitario: number
 }
 
 export function PrecificacaoPage() {
@@ -17,6 +26,7 @@ export function PrecificacaoPage() {
   const montado = useRef(true)
   const [pecas, setPecas] = useState<PecaComForma[]>([])
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([])
+  const [materiaisEstoque, setMateriaisEstoque] = useState<Material[]>([])
   const [pecaSelecionadaId, setPecaSelecionadaId] = useState('')
 
   // Custos Diretos
@@ -25,6 +35,11 @@ export function PrecificacaoPage() {
   const [custoEmbalagem, setCustoEmbalagem] = useState('')
   const [custoForma, setCustoForma] = useState('')
   const [percentualDesperdicio, setPercentualDesperdicio] = useState('0')
+
+  // Insumos de Estoque (Etiquetas, Embalagens, Papéis, Tintas)
+  const [insumosGraficos, setInsumosGraficos] = useState<InsumoGraficoEmbalagem[]>([])
+  const [materialInsumoId, setMaterialInsumoId] = useState('')
+  const [quantidadeInsumo, setQuantidadeInsumo] = useState('1')
 
   // Energia Elétrica (Luz)
   const [custoEnergiaDireto, setCustoEnergiaDireto] = useState('')
@@ -52,11 +67,22 @@ export function PrecificacaoPage() {
 
   useEffect(() => {
     montado.current = true
-    Promise.all([listarPecas(), db.equipamentos.toArray()])
-      .then(([listaPecas, listaEquipamentos]) => {
+    Promise.all([
+      listarPecas(),
+      db.equipamentos.toArray(),
+      listarMateriais(),
+      obterTarifasConfig(),
+    ])
+      .then(([listaPecas, listaEquipamentos, listaMateriais, tarifas]) => {
         if (!montado.current) return
         setPecas(listaPecas)
         setEquipamentos(listaEquipamentos)
+        setMateriaisEstoque(listaMateriais)
+
+        // Carrega tarifas padrões das Configurações
+        setValorHora(String(tarifas.valorHoraMaoDeObra))
+        setTarifaKwh(String(tarifas.tarifaKwh))
+        setTarifaAguaPorLitro(String(tarifas.tarifaAguaM3 / 1000))
         setCarregado(true)
       })
       .catch((falha) => {
@@ -73,6 +99,7 @@ export function PrecificacaoPage() {
     setPecaSelecionadaId(id)
     if (!id) {
       setCustoMaterial('')
+      setCustoAcessorios('')
       setCustoForma('')
       setUsosEnergia([])
       setHorasProducao('')
@@ -80,14 +107,36 @@ export function PrecificacaoPage() {
     }
     try {
       const pecaTarget = pecas.find((p) => String(p.id) === id)
-      const [consumos, materiais] = await Promise.all([listarConsumosDaPeca(Number(id)), listarMateriais()])
+      const [consumos, materiais, categorias] = await Promise.all([
+        listarConsumosDaPeca(Number(id)),
+        listarMateriais(),
+        db.categoriasMaterial.toArray(),
+      ])
       if (!montado.current) return
 
-      const somaMateriais = consumos.reduce((acumulado, consumo) => {
-        const material = materiais.find((m) => m.id === consumo.materialId)
-        return acumulado + consumo.quantidade * (material?.custoUnitario ?? 0)
-      }, 0)
-      setCustoMaterial(somaMateriais.toFixed(2))
+      let somaMaterial = 0
+      let somaAcessorios = 0
+
+      for (const consumo of consumos) {
+        const mat = materiais.find((m) => m.id === consumo.materialId)
+        const cat = mat ? categorias.find((c) => c.id === mat.categoriaId) : undefined
+        const valorItem = consumo.quantidade * (mat?.custoUnitario ?? 0)
+        const nomeCat = (cat?.nome || '').toLowerCase()
+
+        if (
+          nomeCat.includes('adorno') ||
+          nomeCat.includes('decoração') ||
+          nomeCat.includes('acessório') ||
+          nomeCat.includes('ferragem')
+        ) {
+          somaAcessorios += valorItem
+        } else {
+          somaMaterial += valorItem
+        }
+      }
+
+      setCustoMaterial(somaMaterial.toFixed(2))
+      setCustoAcessorios(somaAcessorios > 0 ? somaAcessorios.toFixed(2) : '')
 
       if (pecaTarget) {
         if (pecaTarget.horasMaoDeObra) {
@@ -115,6 +164,36 @@ export function PrecificacaoPage() {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar dados da peça.', 'erro')
     }
+  }
+
+  function handleAdicionarInsumoGrafico() {
+    if (!materialInsumoId) return
+    const mat = materiaisEstoque.find((m) => String(m.id) === materialInsumoId)
+    if (!mat) return
+
+    const qte = Number(quantidadeInsumo) || 1
+    const novoItem: InsumoGraficoEmbalagem = {
+      id: String(Date.now() + Math.random()),
+      materialId: mat.id!,
+      nome: mat.nome,
+      quantidade: qte,
+      custoUnitario: mat.custoUnitario,
+    }
+
+    const novaLista = [...insumosGraficos, novoItem]
+    setInsumosGraficos(novaLista)
+
+    const soma = novaLista.reduce((acc, item) => acc + item.quantidade * item.custoUnitario, 0)
+    setCustoEmbalagem(soma.toFixed(2))
+    setMaterialInsumoId('')
+    setQuantidadeInsumo('1')
+  }
+
+  function handleRemoverInsumoGrafico(idItem: string) {
+    const novaLista = insumosGraficos.filter((item) => item.id !== idItem)
+    setInsumosGraficos(novaLista)
+    const soma = novaLista.reduce((acc, item) => acc + item.quantidade * item.custoUnitario, 0)
+    setCustoEmbalagem(soma.toFixed(2))
   }
 
   function handleAdicionarUsoLuzEquipamento(eqIdStr: string) {
@@ -148,7 +227,6 @@ export function PrecificacaoPage() {
     custoAguaDireto,
     litrosAgua,
     horasProducao,
-    valorHora,
     rateioFixoPercent,
     margemLucroPercent,
   ].every((valor) => valor === '')
@@ -261,14 +339,76 @@ export function PrecificacaoPage() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface">2. Custos Diretos de Matéria-Prima & Insumos</h2>
-        <Card>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">2. Custos Diretos de Matéria-Prima, Moldes & Insumos</h2>
+        <Card className="flex flex-col gap-4">
+          {pecaSelecionadaId && (
+            <p className="text-xs text-primary font-medium bg-primary/10 p-2.5 rounded-lg border border-primary/20">
+              ℹ️ Os custos de resina, acessórios, mão de obra e amortização do molde foram preenchidos automaticamente a partir dos dados de produção da peça selecionada.
+            </p>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <TextField id="custo-material" rotulo="Custo do material (R$)" type="number" value={custoMaterial} onChange={(e) => setCustoMaterial(e.target.value)} />
+            <TextField id="custo-material" rotulo="Custo do material / Resina (R$)" type="number" value={custoMaterial} onChange={(e) => setCustoMaterial(e.target.value)} />
             <TextField id="custo-acessorios" rotulo="Acessórios (R$)" type="number" value={custoAcessorios} onChange={(e) => setCustoAcessorios(e.target.value)} />
-            <TextField id="custo-embalagem" rotulo="Embalagens & Mimos (R$)" type="number" value={custoEmbalagem} onChange={(e) => setCustoEmbalagem(e.target.value)} />
-            <TextField id="custo-forma" rotulo="Amortização do Molde de Silicone (R$ / uso)" type="number" value={custoForma} onChange={(e) => setCustoForma(e.target.value)} />
+            <TextField id="custo-embalagem" rotulo="Embalagens, Mimos & Gráfica (R$)" type="number" value={custoEmbalagem} onChange={(e) => setCustoEmbalagem(e.target.value)} />
+            <TextField id="custo-forma" rotulo="Amortização do Molde (+ R$ / uso)" type="number" value={custoForma} onChange={(e) => setCustoForma(e.target.value)} />
             <TextField id="percentual-desperdicio" rotulo="Desperdício / Sobras de Copo (%)" type="number" value={percentualDesperdicio} onChange={(e) => setPercentualDesperdicio(e.target.value)} />
+          </div>
+
+          {/* Adicionar Insumos de Estoque (Etiquetas, Embalagens, Tintas, Papel) */}
+          <div className="flex flex-col gap-3 pt-3 border-t border-outline-variant/50">
+            <h3 className="text-xs font-semibold uppercase text-on-surface-variant">
+              📦 Insumos do Estoque (Etiquetas, Embalagens, Papéis & Tintas de Impressão)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="select-insumo-estoque" className="text-sm font-medium text-on-surface">
+                  Item do Estoque
+                </label>
+                <select
+                  id="select-insumo-estoque"
+                  value={materialInsumoId}
+                  onChange={(e) => setMaterialInsumoId(e.target.value)}
+                  className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                >
+                  <option value="">Selecione um insumo...</option>
+                  {materiaisEstoque.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nome} ({formatarMoeda(m.custoUnitario)} / {m.unidade})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <TextField
+                id="qte-insumo-estoque"
+                rotulo="Quantidade Usada"
+                type="number"
+                step="0.1"
+                value={quantidadeInsumo}
+                onChange={(e) => setQuantidadeInsumo(e.target.value)}
+              />
+
+              <Button type="button" onClick={handleAdicionarInsumoGrafico} disabled={!materialInsumoId}>
+                + Adicionar ao Custo
+              </Button>
+            </div>
+
+            {insumosGraficos.length > 0 && (
+              <div className="flex flex-col gap-2 pt-2">
+                <p className="text-xs font-medium text-on-surface-variant">Itens de Gráfica/Embalagem adicionados:</p>
+                {insumosGraficos.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between bg-surface p-2 rounded border border-outline-variant/40 text-xs">
+                    <span>
+                      📌 <strong>{item.nome}</strong> ({item.quantidade}x a {formatarMoeda(item.custoUnitario)} = {formatarMoeda(item.quantidade * item.custoUnitario)})
+                    </span>
+                    <Button type="button" variante="ghost" className="px-2 py-0.5 text-xs text-error" onClick={() => handleRemoverInsumoGrafico(item.id)}>
+                      Remover
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
       </section>
