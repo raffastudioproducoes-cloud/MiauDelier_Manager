@@ -78,6 +78,7 @@ export interface ConsumoPeca {
   pecaId: number
   materialId: number
   quantidade: number
+  unidade?: string
 }
 
 export interface EventoPeca {
