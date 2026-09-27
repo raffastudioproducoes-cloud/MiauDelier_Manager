@@ -10,7 +10,7 @@ describe('Card', () => {
   })
 
   it('aplica classes de layout e tipo para variante kpi', () => {
-    render(
+    const { container } = render(
       <Card
         variant="kpi"
         label="Saldo total"
@@ -22,8 +22,8 @@ describe('Card', () => {
     expect(screen.getByText('Saldo total')).toHaveClass('text-label-sm', 'text-on-surface-variant')
     expect(screen.getByText('R$ 1.234,00')).toHaveClass('text-headline-sm', 'font-semibold', 'text-primary')
     expect(screen.getByText('💰')).toBeInTheDocument()
-    const container = screen.getByRole('generic', { name: /saldo total/i })
-    expect(container).toHaveClass('kpi-card', 'glass-card', 'rounded-xl', 'text-on-surface', 'p-4')
+    const kpi = container.firstChild as HTMLElement
+    expect(kpi).toHaveClass('kpi-card', 'glass-card', 'rounded-xl', 'text-on-surface', 'p-4')
   })
 
   it('oculta label quando omitido na variante kpi', () => {
