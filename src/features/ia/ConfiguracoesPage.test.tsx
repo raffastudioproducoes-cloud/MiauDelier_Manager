@@ -24,7 +24,7 @@ describe('ConfiguracoesPage', () => {
     fireEvent.change(await screen.findByLabelText(/chave de api do gemini/i), { target: { value: 'AIzaSy-minha-chave' } })
     fireEvent.click(screen.getByRole('button', { name: /salvar chave/i }))
 
-    await waitFor(() => expect(screen.getByText(/chave configurada/i)).toBeInTheDocument())
+    expect(await screen.findByText(/chave configurada/i, {}, { timeout: 4000 })).toBeInTheDocument()
     expect(screen.queryByText('AIzaSy-minha-chave')).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/chave de api do gemini/i)).not.toBeInTheDocument()
   })

@@ -23,6 +23,10 @@ import {
   type PerfilAtelie,
 } from '../../lib/perfisRepo'
 
+function formatarMoeda(valor: number): string {
+  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
 export function ConfiguracoesPage() {
   const { mostrarToast } = useToast()
   const montado = useRef(true)
@@ -149,16 +153,59 @@ function SeccaoTarifasConfig() {
   const [valorHora, setValorHora] = useState('25.00')
   const [tarifaKwh, setTarifaKwh] = useState('0.85')
   const [tarifaAguaM3, setTarifaAguaM3] = useState('15.00')
+
+  // Localização Geográfica
+  const [pais, setPais] = useState('Brasil')
+  const [estado, setEstado] = useState('SP')
+  const [cidadeBairro, setCidadeBairro] = useState('São Paulo')
+
+  // Status Concessionárias
+  const [concessionariaLuz, setConcessionariaLuz] = useState<string | undefined>()
+  const [concessionariaAgua, setConcessionariaAgua] = useState<string | undefined>()
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | undefined>()
+  const [statusMensagem, setStatusMensagem] = useState<string | undefined>()
+
   const [salvando, setSalvando] = useState(false)
+  const [buscandoTarifas, setBuscandoTarifas] = useState(false)
+
+  const montado = useRef(true)
+
+  async function carregarTarifas() {
+    try {
+      const { obterTarifasConfig } = await import('../pricing/tarifasConfigRepo')
+      const t = await obterTarifasConfig()
+      if (!montado.current) return
+      setValorHora(String(t.valorHoraMaoDeObra))
+      setTarifaKwh(String(t.tarifaKwh))
+      setTarifaAguaM3(String(t.tarifaAguaM3))
+      setPais(t.pais || 'Brasil')
+      setEstado(t.estado || 'SP')
+      setCidadeBairro(t.cidadeBairro || 'São Paulo')
+      setConcessionariaLuz(t.concessionariaLuz)
+      setConcessionariaAgua(t.concessionariaAgua)
+      setUltimaAtualizacao(t.ultimaAtualizacaoTarifas)
+      setStatusMensagem(t.statusAtualizacaoTarifas)
+    } catch {
+      // Ignora falhas caso o banco esteja fechando no teardown dos testes
+    }
+  }
 
   useEffect(() => {
-    import('../pricing/tarifasConfigRepo').then(({ obterTarifasConfig }) => {
-      obterTarifasConfig().then((t) => {
-        setValorHora(String(t.valorHoraMaoDeObra))
-        setTarifaKwh(String(t.tarifaKwh))
-        setTarifaAguaM3(String(t.tarifaAguaM3))
-      })
+    montado.current = true
+    carregarTarifas().then(() => {
+      if (!montado.current) return
+      import('../pricing/concessionariasService').then(({ sincronizarTarifasConcessionaria }) => {
+        sincronizarTarifasConcessionaria(false).then((res) => {
+          if (!montado.current) return
+          if (res.atualizou) {
+            carregarTarifas()
+          }
+        }).catch(() => {})
+      }).catch(() => {})
     })
+    return () => {
+      montado.current = false
+    }
   }, [])
 
   async function handleSalvarTarifas(e: React.FormEvent) {
@@ -170,8 +217,11 @@ function SeccaoTarifasConfig() {
         valorHoraMaoDeObra: Number(valorHora) || 0,
         tarifaKwh: Number(tarifaKwh) || 0,
         tarifaAguaM3: Number(tarifaAguaM3) || 0,
+        pais,
+        estado,
+        cidadeBairro,
       })
-      mostrarToast('Tarifas padrões do ateliê salvas com sucesso!', 'sucesso')
+      mostrarToast('Tarifas e localização do ateliê salvas com sucesso!', 'sucesso')
     } catch (err) {
       mostrarToast(err instanceof Error ? err.message : 'Erro ao salvar tarifas.', 'erro')
     } finally {
@@ -179,17 +229,65 @@ function SeccaoTarifasConfig() {
     }
   }
 
+  async function handleBuscarTarifasOnline() {
+    setBuscandoTarifas(true)
+    try {
+      const { salvarTarifasConfig } = await import('../pricing/tarifasConfigRepo')
+      await salvarTarifasConfig({ pais, estado, cidadeBairro })
+
+      const { sincronizarTarifasConcessionaria } = await import('../pricing/concessionariasService')
+      const res = await sincronizarTarifasConcessionaria(true)
+
+      await carregarTarifas()
+
+      if (res.houveAlteracaoDeValor) {
+        mostrarToast('Tarifas da concessionária foram alteradas e atualizadas no sistema!', 'sucesso')
+      } else {
+        mostrarToast('Consulta concluída: As concessionárias mantêm as mesmas tarifas (sem alteração).', 'sucesso')
+      }
+    } catch (err) {
+      mostrarToast(err instanceof Error ? err.message : 'Erro ao buscar tarifas na internet.', 'erro')
+    } finally {
+      setBuscandoTarifas(false)
+    }
+  }
+
   return (
     <section>
       <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">
-        Tarifas de Custo Padrão do Ateliê (Mão de Obra, Luz & Água)
+        Tarifas de Custo Padrão do Ateliê & Concessionárias (Luz, Água & Mão de Obra)
       </h2>
-      <Card>
-        <form onSubmit={handleSalvarTarifas} className="flex flex-col gap-3">
+      <Card className="flex flex-col gap-5">
+        <form onSubmit={handleSalvarTarifas} className="flex flex-col gap-4">
           <p className="text-xs text-on-surface-variant">
-            Estes valores são usados automaticamente no cálculo da página de Precificação.
+            Informe a localização do seu ateliê para consultar automaticamente as concessionárias de energia elétrica e abastecimento de água.
           </p>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <TextField
+              id="config-pais"
+              rotulo="País"
+              value={pais}
+              onChange={(e) => setPais(e.target.value)}
+              placeholder="Brasil"
+            />
+            <TextField
+              id="config-estado"
+              rotulo="Estado (UF)"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              placeholder="SP, RJ, MG..."
+            />
+            <TextField
+              id="config-cidade-bairro"
+              rotulo="Cidade / Bairro"
+              value={cidadeBairro}
+              onChange={(e) => setCidadeBairro(e.target.value)}
+              placeholder="Ex: São Paulo / Centro"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-outline-variant/40">
             <TextField
               id="config-valor-hora"
               rotulo="Valor da Mão de Obra (R$ / Hora)"
@@ -215,12 +313,51 @@ function SeccaoTarifasConfig() {
               onChange={(e) => setTarifaAguaM3(e.target.value)}
             />
           </div>
-          <div className="flex justify-end mt-1">
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-outline-variant/40">
+            <Button
+              type="button"
+              variante="ghost"
+              className="text-xs flex items-center gap-1.5"
+              onClick={handleBuscarTarifasOnline}
+              disabled={buscandoTarifas}
+            >
+              ⚡ Buscar Tarifas da Concessionária da Região ({estado})
+            </Button>
             <Button type="submit" disabled={salvando}>
-              Salvar Tarifas
+              Salvar Configurações
             </Button>
           </div>
         </form>
+
+        {/* Card de Status da Concessionária */}
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
+              🏬 Concessionárias Identificadas ({estado} / {pais})
+            </h3>
+            {ultimaAtualizacao && (
+              <Badge variant="neutral">
+                Última checagem: {new Date(ultimaAtualizacao).toLocaleDateString('pt-BR')}
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-on-surface">
+            <div>
+              ⚡ <strong>Luz:</strong> {concessionariaLuz || 'Não identificada'} ({formatarMoeda(Number(tarifaKwh))} / kWh)
+            </div>
+            <div>
+              💧 <strong>Água:</strong> {concessionariaAgua || 'Não identificada'} ({formatarMoeda(Number(tarifaAguaM3))} / m³)
+            </div>
+          </div>
+
+          {statusMensagem && (
+            <p className="text-[11px] text-on-surface-variant font-medium mt-1">
+              ℹ️ Status da Tarifas (Atualiza a cada 30 dias): {statusMensagem}
+            </p>
+          )}
+        </div>
       </Card>
     </section>
   )

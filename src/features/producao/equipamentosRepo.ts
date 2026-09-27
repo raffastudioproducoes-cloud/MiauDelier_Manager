@@ -4,6 +4,9 @@ import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 export interface NovoEquipamento {
   nome: string
   potenciaWatts: number
+  valorCompra?: number
+  descricao?: string
+  vidaUtilHoras?: number
 }
 
 export async function criarEquipamento(novo: NovoEquipamento): Promise<number> {
@@ -11,6 +14,9 @@ export async function criarEquipamento(novo: NovoEquipamento): Promise<number> {
   const id = await db.equipamentos.add({
     nome: novo.nome,
     potenciaWatts: novo.potenciaWatts,
+    valorCompra: novo.valorCompra,
+    descricao: novo.descricao,
+    vidaUtilHoras: novo.vidaUtilHoras,
     criadoEm: agora,
   })
   return id as number
@@ -24,6 +30,9 @@ export async function atualizarEquipamento(id: number, dados: NovoEquipamento): 
   await db.equipamentos.update(id, {
     nome: dados.nome,
     potenciaWatts: dados.potenciaWatts,
+    valorCompra: dados.valorCompra,
+    descricao: dados.descricao,
+    vidaUtilHoras: dados.vidaUtilHoras,
   })
 }
 

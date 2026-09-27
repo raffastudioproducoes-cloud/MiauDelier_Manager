@@ -196,6 +196,9 @@ export interface Equipamento {
   id?: number
   nome: string
   potenciaWatts: number
+  valorCompra?: number
+  descricao?: string
+  vidaUtilHoras?: number
   criadoEm: string
 }
 

@@ -42,14 +42,16 @@ export function PrecificacaoPage() {
   const [quantidadeInsumo, setQuantidadeInsumo] = useState('1')
 
   // Energia Elétrica (Luz)
-  const [custoEnergiaDireto, setCustoEnergiaDireto] = useState('')
   const [minutosLuz, setMinutosLuz] = useState('')
-  const [potenciaEquipamentoWatts, setPotenciaEquipamentoWatts] = useState('1500')
   const [tarifaKwh, setTarifaKwh] = useState('0.85')
   const [usosEnergia, setUsosEnergia] = useState<UsoEnergiaItem[]>([])
 
+  // Concessionárias
+  const [concessionariaLuz, setConcessionariaLuz] = useState('')
+  const [concessionariaAgua, setConcessionariaAgua] = useState('')
+  const [statusTarifas, setStatusTarifas] = useState('')
+
   // Água
-  const [custoAguaDireto, setCustoAguaDireto] = useState('')
   const [litrosAgua, setLitrosAgua] = useState('')
   const [tarifaAguaPorLitro, setTarifaAguaPorLitro] = useState('0.015')
 
@@ -79,10 +81,13 @@ export function PrecificacaoPage() {
         setEquipamentos(listaEquipamentos)
         setMateriaisEstoque(listaMateriais)
 
-        // Carrega tarifas padrões das Configurações
+        // Carrega tarifas padrões e concessionárias
         setValorHora(String(tarifas.valorHoraMaoDeObra))
         setTarifaKwh(String(tarifas.tarifaKwh))
         setTarifaAguaPorLitro(String(tarifas.tarifaAguaM3 / 1000))
+        setConcessionariaLuz(tarifas.concessionariaLuz || '')
+        setConcessionariaAgua(tarifas.concessionariaAgua || '')
+        setStatusTarifas(tarifas.statusAtualizacaoTarifas || '')
         setCarregado(true)
       })
       .catch((falha) => {
@@ -199,7 +204,7 @@ export function PrecificacaoPage() {
   function handleAdicionarUsoLuzEquipamento(eqIdStr: string) {
     const eq = equipamentos.find((e) => String(e.id) === eqIdStr)
     const mins = Number(minutosLuz) || 30
-    const watts = eq ? eq.potenciaWatts : Number(potenciaEquipamentoWatts) || 1000
+    const watts = eq ? eq.potenciaWatts : 1000
     const nome = eq ? eq.nome : `Equipamento (${watts}W)`
 
     setUsosEnergia((prev) => [
@@ -221,10 +226,8 @@ export function PrecificacaoPage() {
     custoAcessorios,
     custoEmbalagem,
     custoForma,
-    custoEnergiaDireto,
     minutosLuz,
     usosEnergia.length > 0 ? 'sim' : '',
-    custoAguaDireto,
     litrosAgua,
     horasProducao,
     rateioFixoPercent,
@@ -241,12 +244,12 @@ export function PrecificacaoPage() {
         percentualDesperdicio: Number(percentualDesperdicio) || 0,
 
         // Energia
-        custoEnergia: Number(custoEnergiaDireto) || 0,
-        usosEnergia: usosEnergia.length > 0 ? usosEnergia : (Number(minutosLuz) > 0 ? [{ potenciaWatts: Number(potenciaEquipamentoWatts) || 1000, minutosUso: Number(minutosLuz) }] : undefined),
+        custoEnergia: 0,
+        usosEnergia: usosEnergia.length > 0 ? usosEnergia : (Number(minutosLuz) > 0 ? [{ potenciaWatts: 1000, minutosUso: Number(minutosLuz) }] : undefined),
         tarifaKwh: Number(tarifaKwh) || 0.85,
 
         // Água
-        custoAgua: Number(custoAguaDireto) || 0,
+        custoAgua: 0,
         litrosAgua: Number(litrosAgua) || 0,
         tarifaAguaPorLitro: Number(tarifaAguaPorLitro) || 0.015,
 
@@ -270,12 +273,9 @@ export function PrecificacaoPage() {
     custoEmbalagem,
     custoForma,
     percentualDesperdicio,
-    custoEnergiaDireto,
     usosEnergia,
     minutosLuz,
-    potenciaEquipamentoWatts,
     tarifaKwh,
-    custoAguaDireto,
     litrosAgua,
     tarifaAguaPorLitro,
     horasProducao,
@@ -343,27 +343,60 @@ export function PrecificacaoPage() {
         <Card className="flex flex-col gap-4">
           {pecaSelecionadaId && (
             <p className="text-xs text-primary font-medium bg-primary/10 p-2.5 rounded-lg border border-primary/20">
-              ℹ️ Os custos de resina, acessórios, mão de obra e amortização do molde foram preenchidos automaticamente a partir dos dados de produção da peça selecionada.
+              ℹ️ Os custos de resina, acessórios, mão de obra e molde/forma foram preenchidos automaticamente a partir dos dados de produção da peça selecionada.
             </p>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <TextField id="custo-material" rotulo="Custo do material / Resina (R$)" type="number" value={custoMaterial} onChange={(e) => setCustoMaterial(e.target.value)} />
-            <TextField id="custo-acessorios" rotulo="Acessórios (R$)" type="number" value={custoAcessorios} onChange={(e) => setCustoAcessorios(e.target.value)} />
-            <TextField id="custo-embalagem" rotulo="Embalagens, Mimos & Gráfica (R$)" type="number" value={custoEmbalagem} onChange={(e) => setCustoEmbalagem(e.target.value)} />
-            <TextField id="custo-forma" rotulo="Amortização do Molde (+ R$ / uso)" type="number" value={custoForma} onChange={(e) => setCustoForma(e.target.value)} />
-            <TextField id="percentual-desperdicio" rotulo="Desperdício / Sobras de Copo (%)" type="number" value={percentualDesperdicio} onChange={(e) => setPercentualDesperdicio(e.target.value)} />
+            <TextField
+              id="custo-material"
+              rotulo="Custo do material / Resina (R$)"
+              type="number"
+              value={custoMaterial}
+              onChange={(e) => setCustoMaterial(e.target.value)}
+              readOnly={!!pecaSelecionadaId}
+            />
+            <TextField
+              id="custo-acessorios"
+              rotulo="Acessórios (R$)"
+              type="number"
+              value={custoAcessorios}
+              onChange={(e) => setCustoAcessorios(e.target.value)}
+              readOnly={!!pecaSelecionadaId}
+            />
+            <TextField
+              id="custo-forma"
+              rotulo="Molde / Forma (+ R$ / uso)"
+              type="number"
+              value={custoForma}
+              onChange={(e) => setCustoForma(e.target.value)}
+              readOnly={!!pecaSelecionadaId}
+            />
+            <TextField
+              id="custo-embalagem"
+              rotulo="Embalagens, Mimos & Gráfica (R$)"
+              type="number"
+              value={custoEmbalagem}
+              onChange={(e) => setCustoEmbalagem(e.target.value)}
+            />
+            <TextField
+              id="percentual-desperdicio"
+              rotulo="Desperdício / Sobras de Copo (%)"
+              type="number"
+              value={percentualDesperdicio}
+              onChange={(e) => setPercentualDesperdicio(e.target.value)}
+            />
           </div>
 
-          {/* Adicionar Insumos de Estoque (Etiquetas, Embalagens, Tintas, Papel) */}
+          {/* Escolher Caixas e Insumos do Estoque */}
           <div className="flex flex-col gap-3 pt-3 border-t border-outline-variant/50">
             <h3 className="text-xs font-semibold uppercase text-on-surface-variant">
-              📦 Insumos do Estoque (Etiquetas, Embalagens, Papéis & Tintas de Impressão)
+              📦 Caixas & Insumos Cadastrados no Estoque
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="flex flex-col gap-1">
                 <label htmlFor="select-insumo-estoque" className="text-sm font-medium text-on-surface">
-                  Item do Estoque
+                  Caixa / Embalagem / Insumo
                 </label>
                 <select
                   id="select-insumo-estoque"
@@ -371,7 +404,7 @@ export function PrecificacaoPage() {
                   onChange={(e) => setMaterialInsumoId(e.target.value)}
                   className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 >
-                  <option value="">Selecione um insumo...</option>
+                  <option value="">Selecione uma caixa/insumo do estoque...</option>
                   {materiaisEstoque.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nome} ({formatarMoeda(m.custoUnitario)} / {m.unidade})
@@ -396,7 +429,7 @@ export function PrecificacaoPage() {
 
             {insumosGraficos.length > 0 && (
               <div className="flex flex-col gap-2 pt-2">
-                <p className="text-xs font-medium text-on-surface-variant">Itens de Gráfica/Embalagem adicionados:</p>
+                <p className="text-xs font-medium text-on-surface-variant">Caixas/Embalagens adicionadas ao produto:</p>
                 {insumosGraficos.map((item) => (
                   <div key={item.id} className="flex items-center justify-between bg-surface p-2 rounded border border-outline-variant/40 text-xs">
                     <span>
@@ -416,48 +449,28 @@ export function PrecificacaoPage() {
       <section>
         <h2 className="mb-2 text-sm font-semibold text-on-surface">3. Consumo de Utilidades (Energia Elétrica / Luz & Água)</h2>
         <Card className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg border border-primary/20 bg-primary/5 text-xs text-on-surface">
+            <div>
+              <p className="font-semibold text-primary">
+                ⚙️ Tarifas das Configurações: Luz R$ {tarifaKwh}/kWh | Água R$ {(Number(tarifaAguaPorLitro) * 1000).toFixed(2)}/m³ (R$ {tarifaAguaPorLitro}/L)
+              </p>
+              {(concessionariaLuz || concessionariaAgua) && (
+                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                  🏬 Concessionárias: {concessionariaLuz || 'Energia'} | {concessionariaAgua || 'Saneamento'} {statusTarifas ? `(${statusTarifas})` : ''}
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Energia Elétrica (Luz) */}
           <div className="flex flex-col gap-3 rounded-lg border border-outline-variant/60 bg-surface-variant/20 p-3">
             <h3 className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
-              ⚡ Energia Elétrica (Tempo de Luz / Maquinário)
+              ⚡ Energia Elétrica (Ferramentas & Maquinários)
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <TextField
-                id="tarifa-kwh"
-                rotulo="Tarifa de Luz (R$ / kWh)"
-                type="number"
-                step="0.01"
-                placeholder="0.85"
-                value={tarifaKwh}
-                onChange={(e) => setTarifaKwh(e.target.value)}
-              />
-              <TextField
-                id="minutos-luz"
-                rotulo="Tempo de Uso (Minutos)"
-                type="number"
-                placeholder="Ex: 30"
-                value={minutosLuz}
-                onChange={(e) => setMinutosLuz(e.target.value)}
-              />
-              <TextField
-                id="potencia-watts"
-                rotulo="Potência (Watts)"
-                type="number"
-                placeholder="Ex: 1500"
-                value={potenciaEquipamentoWatts}
-                onChange={(e) => setPotenciaEquipamentoWatts(e.target.value)}
-              />
-              <TextField
-                id="custo-energia-direto"
-                rotulo="Ou Custo Direto (R$)"
-                type="number"
-                step="0.01"
-                value={custoEnergiaDireto}
-                onChange={(e) => setCustoEnergiaDireto(e.target.value)}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="flex flex-col gap-1">
                 <label htmlFor="equipamento-select" className="text-sm font-medium text-on-surface">
-                  + Máquina do Ateliê
+                  Ferramenta / Equipamento da Caixa
                 </label>
                 <select
                   id="equipamento-select"
@@ -470,27 +483,50 @@ export function PrecificacaoPage() {
                   }}
                   className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 >
-                  <option value="">+ Selecionar máquina...</option>
+                  <option value="">+ Selecionar ferramenta (Lâmpada, Secador, Soprador, Furadeira, Politriz...)</option>
                   {equipamentos.map((eq) => (
                     <option key={eq.id} value={eq.id}>
-                      {eq.nome} ({eq.potenciaWatts}W)
+                      {eq.nome} ({eq.potenciaWatts}W) {eq.descricao ? `- ${eq.descricao}` : ''}
                     </option>
                   ))}
                 </select>
               </div>
+
+              <TextField
+                id="minutos-luz"
+                rotulo="Tempo de Uso (Minutos)"
+                type="number"
+                placeholder="Ex: 30"
+                value={minutosLuz}
+                onChange={(e) => setMinutosLuz(e.target.value)}
+              />
+
+              <Button
+                type="button"
+                onClick={() => {
+                  if (minutosLuz) {
+                    handleAdicionarUsoLuzEquipamento('')
+                  }
+                }}
+              >
+                + Adicionar Tempo de Uso
+              </Button>
             </div>
 
             {usosEnergia.length > 0 && (
               <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/40">
-                <p className="text-xs font-medium text-on-surface-variant">Maquinários em Uso na Peça:</p>
-                {usosEnergia.map((u, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-surface p-2 rounded border border-outline-variant/40 text-xs">
-                    <span>⚡ <strong>{u.nomeEquipamento || 'Equipamento'}</strong> ({u.potenciaWatts}W por {u.minutosUso} min)</span>
-                    <Button type="button" variante="ghost" className="px-2 py-0.5 text-xs text-error" onClick={() => handleRemoverUsoLuz(idx)}>
-                      Remover
-                    </Button>
-                  </div>
-                ))}
+                <p className="text-xs font-medium text-on-surface-variant">Equipamentos e Ferramentas Utilizados:</p>
+                {usosEnergia.map((u, idx) => {
+                  const custoEst = ((u.potenciaWatts * u.minutosUso) / (1000 * 60)) * (Number(tarifaKwh) || 0.85)
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-surface p-2 rounded border border-outline-variant/40 text-xs">
+                      <span>⚡ <strong>{u.nomeEquipamento || 'Equipamento'}</strong> ({u.potenciaWatts}W por {u.minutosUso} min) = {formatarMoeda(custoEst)}</span>
+                      <Button type="button" variante="ghost" className="px-2 py-0.5 text-xs text-error" onClick={() => handleRemoverUsoLuz(idx)}>
+                        Remover
+                      </Button>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -500,7 +536,7 @@ export function PrecificacaoPage() {
             <h3 className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
               💧 Consumo de Água (Lixamento d'água / Lavagem)
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TextField
                 id="litros-agua"
                 rotulo="Volume de Água Usada (Litros)"
@@ -509,23 +545,14 @@ export function PrecificacaoPage() {
                 value={litrosAgua}
                 onChange={(e) => setLitrosAgua(e.target.value)}
               />
-              <TextField
-                id="tarifa-agua"
-                rotulo="Tarifa da Água (R$ / Litro)"
-                type="number"
-                step="0.001"
-                placeholder="0.015"
-                value={tarifaAguaPorLitro}
-                onChange={(e) => setTarifaAguaPorLitro(e.target.value)}
-              />
-              <TextField
-                id="custo-agua-direto"
-                rotulo="Ou Custo Direto de Água (R$)"
-                type="number"
-                step="0.01"
-                value={custoAguaDireto}
-                onChange={(e) => setCustoAguaDireto(e.target.value)}
-              />
+              <div className="flex flex-col justify-center text-xs text-on-surface-variant">
+                <p>Calculado automaticamente usando a tarifa das configurações (R$ {tarifaAguaPorLitro}/Litro).</p>
+                {Number(litrosAgua) > 0 && (
+                  <p className="font-semibold text-primary mt-1">
+                    Custo de água estimado: {formatarMoeda((Number(litrosAgua) || 0) * (Number(tarifaAguaPorLitro) || 0.015))}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </Card>
@@ -536,7 +563,7 @@ export function PrecificacaoPage() {
         <Card>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <TextField id="horas-producao" rotulo="Horas de produção" type="number" step="0.1" value={horasProducao} onChange={(e) => setHorasProducao(e.target.value)} />
-            <TextField id="valor-hora" rotulo="Valor da hora (R$)" type="number" value={valorHora} onChange={(e) => setValorHora(e.target.value)} />
+            <TextField id="valor-hora" rotulo="Valor da hora (R$)" type="number" value={valorHora} onChange={(e) => setValorHora(e.target.value)} readOnly={true} />
             <TextField id="rateio-fixo" rotulo="Rateio de custo fixo (%)" type="number" value={rateioFixoPercent} onChange={(e) => setRateioFixoPercent(e.target.value)} />
             <TextField id="margem-lucro" rotulo="Margem de lucro (%)" type="number" value={margemLucroPercent} onChange={(e) => setMargemLucroPercent(e.target.value)} />
             <TextField id="percentual-taxas" rotulo="Taxas de Venda / Marketplace (%)" type="number" value={percentualTaxas} onChange={(e) => setPercentualTaxas(e.target.value)} />
@@ -597,7 +624,7 @@ export function PrecificacaoPage() {
                 </div>
 
                 <div className="bg-surface p-2.5 rounded border border-outline-variant/40">
-                  <span className="text-on-surface-variant">🧱 Amortização do Molde:</span>
+                  <span className="text-on-surface-variant">🧱 Molde / Forma:</span>
                   <p className="font-bold text-sm text-on-surface">{formatarMoeda(resultado.custoForma)}</p>
                 </div>
 
