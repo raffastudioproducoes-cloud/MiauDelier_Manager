@@ -169,6 +169,7 @@ function SeccaoTarifasConfig() {
   const [buscandoTarifas, setBuscandoTarifas] = useState(false)
 
   const montado = useRef(true)
+  const editadoManualmente = useRef(false)
 
   async function carregarTarifas() {
     try {
@@ -178,9 +179,11 @@ function SeccaoTarifasConfig() {
       setValorHora(String(t.valorHoraMaoDeObra))
       setTarifaKwh(String(t.tarifaKwh))
       setTarifaAguaM3(String(t.tarifaAguaM3))
-      setPais(t.pais || 'Brasil')
-      setEstado(t.estado || 'SP')
-      setCidadeBairro(t.cidadeBairro || 'São Paulo')
+      if (!editadoManualmente.current) {
+        setPais(t.pais || 'Brasil')
+        setEstado(t.estado || 'SP')
+        setCidadeBairro(t.cidadeBairro || 'São Paulo')
+      }
       setConcessionariaLuz(t.concessionariaLuz)
       setConcessionariaAgua(t.concessionariaAgua)
       setUltimaAtualizacao(t.ultimaAtualizacaoTarifas)
@@ -281,21 +284,30 @@ function SeccaoTarifasConfig() {
                 id="config-pais"
                 rotulo="País"
                 value={pais}
-                onChange={(e) => setPais(e.target.value)}
+                onChange={(e) => {
+                  editadoManualmente.current = true
+                  setPais(e.target.value)
+                }}
                 placeholder="Brasil"
               />
               <TextField
                 id="config-estado"
                 rotulo="Estado (UF)"
                 value={estado}
-                onChange={(e) => setEstado(e.target.value)}
+                onChange={(e) => {
+                  editadoManualmente.current = true
+                  setEstado(e.target.value)
+                }}
                 placeholder="SP, RJ, MG..."
               />
               <TextField
                 id="config-cidade-bairro"
                 rotulo="Cidade / Bairro"
                 value={cidadeBairro}
-                onChange={(e) => setCidadeBairro(e.target.value)}
+                onChange={(e) => {
+                  editadoManualmente.current = true
+                  setCidadeBairro(e.target.value)
+                }}
                 placeholder="Ex: São Paulo / Centro"
               />
             </div>

@@ -76,8 +76,8 @@ describe('ConfiguracoesPage', () => {
     const botaoAtualizar = screen.getByRole('button', { name: /atualizar concessionária de rj/i })
     fireEvent.click(botaoAtualizar)
 
-    await waitFor(() => expect(screen.getByText(/Light/i)).toBeInTheDocument(), { timeout: 4000 })
-    expect(screen.getByText(/Águas do Rio/i)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText(/Light/i).length).toBeGreaterThan(0), { timeout: 4000 })
+    expect(screen.getAllByText(/Águas do Rio/i).length).toBeGreaterThan(0)
 
     const { obterTarifasConfig } = await import('../pricing/tarifasConfigRepo')
     const config = await obterTarifasConfig()
