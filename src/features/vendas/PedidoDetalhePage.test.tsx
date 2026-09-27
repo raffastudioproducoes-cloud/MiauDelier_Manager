@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { db } from '../../db/schema'
 import { criarCliente } from './clientesRepo'
 import { criarPedido } from './pedidosRepo'
@@ -43,7 +43,7 @@ describe('PedidoDetalhePage', () => {
     const formaId = await criarForma({ nome: 'Chaveiro', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
     const pecaId = await criarPeca({ nome: 'Chaveiro gato', formaId, consumos: [] })
     await atualizarPrecoVendaPeca(pecaId, 42)
-    const pedidoId = await criarPedido({ clienteId, pecaIds: [pecaId] })
+    await criarPedido({ clienteId, pecaIds: [pecaId] })
 
     render(<ToastProvider><PedidoDetalhePage /></ToastProvider>)
 
@@ -54,7 +54,7 @@ describe('PedidoDetalhePage', () => {
 
   it('permite alterar o status do pedido', async () => {
     const clienteId = await criarCliente({ nome: 'Joana Silva' })
-    const pedidoId = await criarPedido({ clienteId, pecaIds: [] })
+    await criarPedido({ clienteId, pecaIds: [] })
 
     render(<ToastProvider><PedidoDetalhePage /></ToastProvider>)
 
@@ -66,7 +66,8 @@ describe('PedidoDetalhePage', () => {
 
   it('salva prazo, etapa e progresso da agenda do pedido', async () => {
     const clienteId = await criarCliente({ nome: 'Joana Silva' })
-    const pedidoId = await criarPedido({ clienteId, pecaIds: [] })
+    await criarPedido({ clienteId, pecaIds: [] })
+
 
     render(<ToastProvider><PedidoDetalhePage /></ToastProvider>)
 

@@ -30,9 +30,10 @@ export async function atualizarEquipamento(id: number, dados: NovoEquipamento): 
 export async function excluirEquipamento(id: number): Promise<void> {
   await db.transaction('rw', db.equipamentos, db.auditoria, async () => {
     await db.equipamentos.delete(id)
-    await registrarAuditoria('equipamento', id)
+    await registrarAuditoria('equipamento', id, 'exclusao')
   })
 }
+
 
 export function calcularConsumoKwh(usosEnergia: UsoEnergiaPeca[]): number {
   if (!usosEnergia || usosEnergia.length === 0) return 0

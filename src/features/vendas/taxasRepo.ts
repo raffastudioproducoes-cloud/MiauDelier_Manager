@@ -33,6 +33,7 @@ export async function atualizarTaxa(id: number, dados: NovaTaxa): Promise<void> 
 export async function excluirTaxa(id: number): Promise<void> {
   await db.transaction('rw', db.taxas, db.auditoria, async () => {
     await db.taxas.delete(id)
-    await registrarAuditoria('taxa', id)
+    await registrarAuditoria('taxa', id, 'exclusao')
   })
 }
+

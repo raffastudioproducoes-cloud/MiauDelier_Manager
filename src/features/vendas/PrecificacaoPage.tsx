@@ -3,9 +3,11 @@ import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
+import { db } from '../../db/schema'
 import { calcularPrecificacao } from '../pricing/pricing'
 import { listarPecas, listarConsumosDaPeca, atualizarPrecoVendaPeca, type PecaComForma } from '../producao/pecasRepo'
 import { listarMateriais } from '../producao/materiaisRepo'
+
 
 function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
