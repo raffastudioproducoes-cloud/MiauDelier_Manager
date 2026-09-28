@@ -8,6 +8,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     testTimeout: 15000,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json'],
+      reportsDirectory: 'coverage',
+    },
     exclude: [...configDefaults.exclude, '**/.worktrees/**'],
   },
   resolve: {
