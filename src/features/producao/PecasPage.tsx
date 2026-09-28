@@ -213,7 +213,7 @@ export function PecasPage() {
             >
               <option value="">Selecione o molde...</option>
               {formasProntas.map((forma) => (
-                <option key={forma.id} value={forma.id}>
+                <option key={forma.id} value={String(forma.id)}>
                   {forma.nome} {forma.custoFabricacao && forma.vidaUtilUsos ? `(Amortização: R$ ${(forma.custoFabricacao / forma.vidaUtilUsos).toFixed(2)}/uso)` : ''}
                 </option>
               ))}
@@ -247,7 +247,7 @@ export function PecasPage() {
                     >
                       <option value="">Selecione o insumo...</option>
                       {materiaisConsumiveisPeca.map((material) => (
-                        <option key={material.id} value={material.id}>
+                        <option key={material.id} value={String(material.id)}>
                           {material.nome} ({material.quantidadeEstoque} {material.unidade} em estoque)
                         </option>
                       ))}
@@ -307,11 +307,11 @@ export function PecasPage() {
       </Card>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface">Todas as Peças</h2>
+        <h2 className="mb-4 text-sm font-semibold text-on-surface">Todas as Peças</h2>
         {pecas.length === 0 ? (
           <EmptyState titulo="Nenhuma peça cadastrada" descricao="Cadastre a primeira peça em produção." />
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="relative pl-6 sm:pl-32 flex flex-col gap-5 before:absolute before:left-2.5 sm:before:left-[108px] before:top-3 before:bottom-3 before:w-[2px] before:bg-outline-variant/40 before:border-r before:border-dashed before:border-outline-variant/60">
             {pecas.map((peca) => {
               const statusStr = peca.status || 'pronta'
               const statusFormatado = statusStr.toUpperCase().replace('_', ' ')
@@ -325,41 +325,74 @@ export function PecasPage() {
                   : 'neutral'
 
               return (
-                <Card key={peca.id} className="glow-hover flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-semibold">
-                      🧩
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} className="hover:underline font-semibold text-on-surface text-base truncate">
-                        {peca.nome}
-                      </Link>
-                      {peca.nomeForma && (
-                        <p className="text-xs text-on-surface-variant flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] font-medium bg-surface-container px-2 py-0.5 rounded border border-outline-variant/40">
-                            Molde: {peca.nomeForma}
-                          </span>
-                        </p>
-                      )}
+                <div key={peca.id} className="relative flex flex-col sm:flex-row items-start gap-4">
+                  {/* Rótulo Esquerda (Desktop) */}
+                  <div className="hidden sm:flex flex-col items-end w-24 shrink-0 pt-1 text-right">
+                    <span className="text-xs font-semibold text-on-surface uppercase tracking-wider">
+                      PEÇA
+                    </span>
+                    <span className="text-[11px] text-on-surface-variant font-mono">
+                      #{peca.id}
+                    </span>
+                  </div>
+
+                  {/* Marcador Central (Node Dot) */}
+                  <div className="absolute -left-6 sm:static sm:left-auto pt-1 shrink-0 z-10">
+                    <div className="h-5 w-5 rounded-full border-2 border-primary bg-primary/20 text-primary flex items-center justify-center shadow-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-outline-variant/30">
-                    <Badge variant={statusVariant} className="uppercase font-bold tracking-wider text-[10px] px-2.5 py-1">
-                      {statusFormatado}
-                    </Badge>
-                    <div className="flex items-center gap-2">
-                      <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }}>
-                        <Button variante="ghost" className="text-xs">
-                          Detalhes →
-                        </Button>
-                      </Link>
-                      <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setPecaExcluindoId(peca.id ?? null)}>
-                        Excluir
-                      </Button>
+                  {/* Card de Conteúdo à Direita */}
+                  <Card className="flex-1 w-full glow-hover flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="sm:hidden text-xs font-semibold uppercase text-on-surface">
+                          PEÇA #{peca.id}
+                        </span>
+                        <Badge variant={statusVariant} className="uppercase font-bold tracking-wider text-[10px] px-2.5 py-0.5">
+                          {statusFormatado}
+                        </Badge>
+                      </div>
+                      {peca.precoVenda !== undefined && peca.precoVenda > 0 && (
+                        <span className="text-xs font-mono font-semibold text-primary">
+                          Preço: R$ {peca.precoVenda.toFixed(2)}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                </Card>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-semibold">
+                          🧩
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} className="hover:underline font-semibold text-on-surface text-base truncate">
+                            {peca.nome}
+                          </Link>
+                          {peca.nomeForma && (
+                            <p className="text-xs text-on-surface-variant flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[10px] font-medium bg-surface-container-high/40 px-2 py-0.5 rounded border border-outline-variant/40">
+                                Molde: {peca.nomeForma}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }}>
+                          <Button variante="ghost" className="text-xs">
+                            Detalhes →
+                          </Button>
+                        </Link>
+                        <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setPecaExcluindoId(peca.id ?? null)}>
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
               )
             })}
           </div>

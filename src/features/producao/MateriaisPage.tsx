@@ -626,7 +626,7 @@ export function MateriaisPage() {
                 </Card>
 
                 <section>
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-sm font-semibold text-on-surface">Todos os Materiais em Estoque</h2>
                     <Button variante="primary" onClick={() => setAbaAtiva('compra')}>
                       🛒 Registrar Nova Compra
@@ -638,37 +638,86 @@ export function MateriaisPage() {
                       descricao="Cadastre o primeiro insumo ou registre uma compra."
                     />
                   ) : (
-                    <ul className="flex flex-col gap-3">
+                    <div className="relative pl-6 sm:pl-32 flex flex-col gap-5 before:absolute before:left-2.5 sm:before:left-[108px] before:top-3 before:bottom-3 before:w-[2px] before:bg-outline-variant/40 before:border-r before:border-dashed before:border-outline-variant/60">
                       {materiais.map((material) => {
                         const totalItem = material.quantidadeEstoque * material.custoUnitario
+                        const ehZerado = material.quantidadeEstoque <= 0
+
                         return (
-                          <Card key={material.id} className="glow-hover">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div>
-                                <h3 className="font-medium text-on-surface">{material.nome}</h3>
-                                <p className="mt-0.5 text-label-sm text-on-surface-variant">
-                                  {material.quantidadeEstoque} {material.unidade} em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade} {material.valorFrete !== undefined && material.valorFrete > 0 ? `(Frete: ${formatarMoeda(material.valorFrete)})` : ''} · Total: {formatarMoeda(totalItem)} · Categoria: {nomeCategoria(material.categoriaId, material.subcategoriaId)}
-                                </p>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Button
-                                  variante="ghost"
-                                  onClick={() => material.id !== undefined && iniciarCompraParaMaterial(material.id)}
-                                >
-                                  🛒 Repor Estoque
-                                </Button>
-                                <Button variante="ghost" onClick={() => iniciarEdicao(material)}>
-                                  Editar
-                                </Button>
-                                <Button variante="ghost" onClick={() => setMaterialExcluindoId(material.id ?? null)}>
-                                  Excluir
-                                </Button>
-                               </div>
+                          <div key={material.id} className="relative flex flex-col sm:flex-row items-start gap-4">
+                            {/* Rótulo Esquerda (Desktop) */}
+                            <div className="hidden sm:flex flex-col items-end w-24 shrink-0 pt-1 text-right">
+                              <span className="text-xs font-semibold text-on-surface uppercase tracking-wider">
+                                MATERIAL
+                              </span>
+                              <span className="text-[11px] text-on-surface-variant font-mono">
+                                #{material.id}
+                              </span>
                             </div>
-                          </Card>
+
+                            {/* Marcador Central (Node Dot) */}
+                            <div className="absolute -left-6 sm:static sm:left-auto pt-1 shrink-0 z-10">
+                              <div
+                                className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shadow-sm ${
+                                  ehZerado
+                                    ? 'border-error bg-error/20 text-error'
+                                    : 'border-primary bg-primary/20 text-primary'
+                                }`}
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                              </div>
+                            </div>
+
+                            {/* Card de Conteúdo à Direita */}
+                            <Card className="flex-1 w-full glow-hover flex flex-col gap-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="sm:hidden text-xs font-semibold uppercase text-on-surface">
+                                    MATERIAL #{material.id}
+                                  </span>
+                                  <span className="text-[11px] font-bold uppercase text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                                    🏷️ {nomeCategoria(material.categoriaId, material.subcategoriaId)}
+                                  </span>
+                                  {ehZerado && (
+                                    <span className="text-[11px] font-bold uppercase text-error bg-error/10 px-2 py-0.5 rounded border border-error/20">
+                                      ⚠️ Sem Estoque
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs font-mono font-semibold text-primary">
+                                  Total: {formatarMoeda(totalItem)}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                                <div>
+                                  <h3 className="font-semibold text-base text-on-surface">{material.nome}</h3>
+                                  <p className="text-xs text-on-surface-variant mt-0.5">
+                                    <strong>{material.quantidadeEstoque} {material.unidade}</strong> em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade} {material.valorFrete !== undefined && material.valorFrete > 0 ? `(Frete: ${formatarMoeda(material.valorFrete)})` : ''}
+                                  </p>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Button
+                                    variante="ghost"
+                                    className="text-xs"
+                                    onClick={() => material.id !== undefined && iniciarCompraParaMaterial(material.id)}
+                                  >
+                                    🛒 Repor Estoque
+                                  </Button>
+                                  <Button variante="ghost" className="text-xs" onClick={() => iniciarEdicao(material)}>
+                                    Editar
+                                  </Button>
+                                  <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setMaterialExcluindoId(material.id ?? null)}>
+                                    Excluir
+                                  </Button>
+                                </div>
+                              </div>
+                            </Card>
+                          </div>
                         )
                       })}
-                    </ul>
+                    </div>
                   )}
                 </section>
               </div>

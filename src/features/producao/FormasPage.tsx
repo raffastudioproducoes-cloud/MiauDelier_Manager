@@ -735,11 +735,11 @@ export function FormasPage() {
       </Card>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface">Moldes Cadastrados</h2>
+        <h2 className="mb-4 text-sm font-semibold text-on-surface">Moldes Cadastrados</h2>
         {formas.length === 0 ? (
           <EmptyState titulo="Nenhuma forma cadastrada" descricao="Cadastre o primeiro molde do seu ateliê." />
         ) : (
-          <ul className="flex flex-col gap-3">
+          <div className="relative pl-6 sm:pl-32 flex flex-col gap-5 before:absolute before:left-2.5 sm:before:left-[108px] before:top-3 before:bottom-3 before:w-[2px] before:bg-outline-variant/40 before:border-r before:border-dashed before:border-outline-variant/60">
             {formas.map((forma) => {
               const custoPorUso = forma.custoFabricacao && forma.vidaUtilUsos && forma.vidaUtilUsos > 0
                 ? (forma.custoFabricacao / forma.vidaUtilUsos).toFixed(2)
@@ -750,50 +750,87 @@ export function FormasPage() {
               const ehCurando = forma.status === 'curando'
 
               return (
-                <Card key={forma.id} className="glow-hover">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
+                <div key={forma.id} className="relative flex flex-col sm:flex-row items-start gap-4">
+                  {/* Rótulo Esquerda (Desktop) */}
+                  <div className="hidden sm:flex flex-col items-end w-24 shrink-0 pt-1 text-right">
+                    <span className="text-xs font-semibold text-on-surface uppercase tracking-wider">
+                      MOLDE
+                    </span>
+                    <span className="text-[11px] text-on-surface-variant font-mono">
+                      #{forma.id}
+                    </span>
+                  </div>
+
+                  {/* Marcador Central (Node Dot) */}
+                  <div className="absolute -left-6 sm:static sm:left-auto pt-1 shrink-0 z-10">
+                    <div
+                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shadow-sm ${
+                        ehCurando
+                          ? 'border-warning bg-warning/20 text-warning'
+                          : 'border-primary bg-primary/20 text-primary'
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    </div>
+                  </div>
+
+                  {/* Card de Conteúdo à Direita */}
+                  <Card className="flex-1 w-full glow-hover flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-on-surface">{forma.nome}</h3>
+                        <span className="sm:hidden text-xs font-semibold uppercase text-on-surface">
+                          MOLDE #{forma.id}
+                        </span>
                         {ehCurando ? (
                           <Badge variant="warning">🧪 Em Cura ({forma.curaMinutos ? `${forma.curaMinutos / 60}h` : 'aguardando'})</Badge>
                         ) : (
                           <Badge variant="success">✓ Pronto / Em Uso</Badge>
                         )}
                         {custoPorUso && (
-                          <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                             R$ {custoPorUso} / uso
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-label-sm text-on-surface-variant">
-                        {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
-                        {forma.litrosResina ? ` (${forma.litrosResina.toFixed(2)} L / ${forma.massaResinaKg?.toFixed(2)} kg)` : ''}
-                      </p>
-                      {forma.custoFabricacao !== undefined && (
-                        <p className="mt-1 text-xs text-on-surface-variant">
-                          Fabricação: R$ {forma.custoFabricacao.toFixed(2)}
-                          {forma.materialCaixaEstrutura ? ` (Estrutura: ${forma.materialCaixaEstrutura}${forma.custoCaixaEstrutura !== undefined ? ` - R$ ${forma.custoCaixaEstrutura.toFixed(2)}` : ''})` : ''} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
+                      <span className="text-xs text-on-surface-variant font-mono">
+                        {ROTULOS_GEOMETRIA[forma.geometria]}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                      <div>
+                        <h3 className="font-semibold text-base text-on-surface">{forma.nome}</h3>
+                        <p className="mt-0.5 text-xs text-on-surface-variant">
+                          {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
+                          {forma.litrosResina ? ` (${forma.litrosResina.toFixed(2)} L / ${forma.massaResinaKg?.toFixed(2)} kg)` : ''}
                         </p>
-                      )}
+                        {forma.custoFabricacao !== undefined && (
+                          <p className="mt-1 text-xs text-on-surface-variant">
+                            Fabricação: R$ {forma.custoFabricacao.toFixed(2)}
+                            {forma.materialCaixaEstrutura ? ` (Estrutura: ${forma.materialCaixaEstrutura}${forma.custoCaixaEstrutura !== undefined ? ` - R$ ${forma.custoCaixaEstrutura.toFixed(2)}` : ''})` : ''} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {ehCurando && (
+                          <Button
+                            variante="primary"
+                            className="text-xs"
+                            onClick={() => forma.id !== undefined && handleFinalizarCura(forma.id)}
+                          >
+                            ✓ Confirmar Cura Concluída
+                          </Button>
+                        )}
+                        <Button variante="ghost" className="text-xs" onClick={() => iniciarEdicao(forma)}>Editar</Button>
+                        <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setFormaExcluindoId(forma.id ?? null)}>Excluir</Button>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {ehCurando && (
-                        <Button
-                          variante="primary"
-                          onClick={() => forma.id !== undefined && handleFinalizarCura(forma.id)}
-                        >
-                          ✓ Confirmar Cura Concluída
-                        </Button>
-                      )}
-                      <Button variante="ghost" onClick={() => iniciarEdicao(forma)}>Editar</Button>
-                      <Button variante="ghost" onClick={() => setFormaExcluindoId(forma.id ?? null)}>Excluir</Button>
-                    </div>
-                  </div>
-                </Card>
+                  </Card>
+                </div>
               )
             })}
-          </ul>
+          </div>
         )}
       </section>
 

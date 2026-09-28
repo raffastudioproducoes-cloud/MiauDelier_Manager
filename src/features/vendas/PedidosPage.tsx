@@ -176,11 +176,11 @@ export function PedidosPage() {
       </Card>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface">Todos os Pedidos</h2>
+        <h2 className="mb-4 text-sm font-semibold text-on-surface">Todos os Pedidos</h2>
         {pedidos.length === 0 ? (
           <EmptyState titulo="Nenhum pedido cadastrado" descricao="Crie o primeiro pedido do seu ateliê." />
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="relative pl-6 sm:pl-32 flex flex-col gap-5 before:absolute before:left-2.5 sm:before:left-[108px] before:top-3 before:bottom-3 before:w-[2px] before:bg-outline-variant/40 before:border-r before:border-dashed before:border-outline-variant/60">
             {pedidos.map((pedido) => {
               const statusStr = pedido.status || 'orçamento'
               const statusFormatado = statusStr.toUpperCase().replace('_', ' ')
@@ -194,39 +194,78 @@ export function PedidosPage() {
                   : 'neutral'
 
               return (
-                <Card key={pedido.id} className="glow-hover flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-bold">
-                      🛍️
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }} className="hover:underline font-semibold text-on-surface text-base truncate">
-                        Pedido #{pedido.id} · {pedido.nomeCliente}
-                      </Link>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
-                          R$ {pedido.valorTotal.toFixed(2)}
-                        </span>
-                      </div>
+                <div key={pedido.id} className="relative flex flex-col sm:flex-row items-start gap-4">
+                  {/* Rótulo Esquerda (Desktop) */}
+                  <div className="hidden sm:flex flex-col items-end w-24 shrink-0 pt-1 text-right">
+                    <span className="text-xs font-semibold text-on-surface uppercase tracking-wider">
+                      PEDIDO
+                    </span>
+                    <span className="text-[11px] text-on-surface-variant font-mono">
+                      #{pedido.id}
+                    </span>
+                  </div>
+
+                  {/* Marcador Central (Node Dot) */}
+                  <div className="absolute -left-6 sm:static sm:left-auto pt-1 shrink-0 z-10">
+                    <div
+                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shadow-sm ${
+                        statusVariant === 'success'
+                          ? 'border-success bg-success/20 text-success'
+                          : statusVariant === 'danger'
+                          ? 'border-error bg-error/20 text-error'
+                          : statusVariant === 'warning'
+                          ? 'border-warning bg-warning/20 text-warning'
+                          : 'border-primary bg-primary/20 text-primary'
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-outline-variant/30">
-                    <Badge variant={statusVariant} className="uppercase font-bold tracking-wider text-[10px] px-2.5 py-1">
-                      {statusFormatado}
-                    </Badge>
-                    <div className="flex items-center gap-2">
-                      <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }}>
-                        <Button variante="ghost" className="text-xs">
-                          Ver pedido →
-                        </Button>
-                      </Link>
-                      <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setPedidoExcluindoId(pedido.id ?? null)}>
-                        Excluir
-                      </Button>
+                  {/* Card de Conteúdo à Direita */}
+                  <Card className="flex-1 w-full glow-hover flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="sm:hidden text-xs font-semibold uppercase text-on-surface">
+                          PEDIDO #{pedido.id}
+                        </span>
+                        <Badge variant={statusVariant} className="uppercase font-bold tracking-wider text-[10px] px-2.5 py-0.5">
+                          {statusFormatado}
+                        </Badge>
+                      </div>
+                      <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
+                        R$ {pedido.valorTotal.toFixed(2)}
+                      </span>
                     </div>
-                  </div>
-                </Card>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-bold">
+                          🛍️
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }} className="hover:underline font-semibold text-on-surface text-base truncate">
+                            Cliente: {pedido.nomeCliente}
+                          </Link>
+                          <p className="text-xs text-on-surface-variant mt-0.5 font-mono">
+                            {pedido.pecaIds.length} peça(s) no pedido · Data: {new Date(pedido.criadoEm).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }}>
+                          <Button variante="ghost" className="text-xs">
+                            Ver pedido →
+                          </Button>
+                        </Link>
+                        <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setPedidoExcluindoId(pedido.id ?? null)}>
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
               )
             })}
           </div>

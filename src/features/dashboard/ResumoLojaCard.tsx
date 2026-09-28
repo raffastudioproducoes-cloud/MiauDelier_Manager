@@ -4,6 +4,44 @@ import { Button } from '../../components/ui/Button'
 import { pedirDicaIA } from '../ia/geminiClient'
 import type { ResumoDashboard } from './dashboardRepo'
 
+const CACHE_KEY = 'miaudelier_resumo_ia_cache_v1'
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000 // 24 horas
+
+interface CacheResumoIa {
+  resposta: string
+  origem: 'gemini' | 'local'
+  timestamp: number
+}
+
+function obterCacheValido(): CacheResumoIa | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const parsed: CacheResumoIa = JSON.parse(raw)
+    if (!parsed || typeof parsed.timestamp !== 'number' || !parsed.resposta) return null
+    const idade = Date.now() - parsed.timestamp
+    if (idade < CACHE_DURATION_MS) {
+      return parsed
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function salvarCache(resposta: string, origem: 'gemini' | 'local') {
+  try {
+    const item: CacheResumoIa = {
+      resposta,
+      origem,
+      timestamp: Date.now(),
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(item))
+  } catch {
+    // Falha silenciosa de gravação
+  }
+}
+
 function montarPergunta(resumo: ResumoDashboard): string {
   return `Você é consultora sênior de negócios para ateliês de resina epóxi e artesanato. Com base nestes números atuais do ateliê, escreva uma análise executiva direta e prática (de 3 a 5 frases):
 - Saldo total em caixa: R$ ${resumo.saldoTotal.toFixed(2)}
@@ -52,7 +90,7 @@ function gerarDiagnosticoLocal(resumo: ResumoDashboard): string {
       `🛍️ Comercial: ${resumo.pedidosAbertos} pedido(s) em aberto aguardando envio aos clientes — mantenha a atenção aos prazos de postagem.`
     )
   } else {
-    frases.push(`🛍️ Nenhum pedido pendente de entrega momento.`)
+    frases.push(`🛍️ Nenhum pedido pendente de entrega no momento.`)
   }
 
   return frases.join(' ')
@@ -64,17 +102,29 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
   const [carregando, setCarregando] = useState(false)
   const [origem, setOrigem] = useState<'gemini' | 'local'>('local')
 
-  async function gerarResumo() {
+  async function gerarResumo(forcarAtualizacao = false) {
+    if (!forcarAtualizacao) {
+      const cacheValido = obterCacheValido()
+      if (cacheValido) {
+        setResposta(cacheValido.resposta)
+        setOrigem(cacheValido.origem)
+        return
+      }
+    }
+
     setCarregando(true)
     try {
       const textoGemini = await pedirDicaIA(montarPergunta(resumo))
       if (!montado.current) return
       setResposta(textoGemini)
       setOrigem('gemini')
+      salvarCache(textoGemini, 'gemini')
     } catch {
       if (!montado.current) return
-      setResposta(gerarDiagnosticoLocal(resumo))
+      const textoLocal = gerarDiagnosticoLocal(resumo)
+      setResposta(textoLocal)
       setOrigem('local')
+      salvarCache(textoLocal, 'local')
     } finally {
       if (montado.current) setCarregando(false)
     }
@@ -82,7 +132,7 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
 
   useEffect(() => {
     montado.current = true
-    gerarResumo()
+    gerarResumo(false)
     return () => {
       montado.current = false
     }
@@ -103,7 +153,7 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
             <p className="text-xs text-on-surface-variant">Análise inteligente de caixa, insumos e produção do ateliê</p>
           </div>
         </div>
-        <Button variante="ghost" onClick={gerarResumo} disabled={carregando} className="text-xs py-1.5 px-3">
+        <Button variante="ghost" onClick={() => gerarResumo(true)} disabled={carregando} className="text-xs py-1.5 px-3">
           {carregando ? 'Analisando...' : '🔄 Atualizar'}
         </Button>
       </div>
@@ -123,3 +173,4 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
     </Card>
   )
 }
+
