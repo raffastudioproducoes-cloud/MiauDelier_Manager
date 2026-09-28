@@ -22,14 +22,16 @@ describe('LoginForm', () => {
 
   it('mostra formulário de criação de conta quando não há conta configurada', async () => {
     render(<LoginForm />)
-    expect(await screen.findByRole('heading', { name: /criar senha/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /criar conta/i })).toBeInTheDocument()
   })
 
   it('cria conta e navega para a rota inicial', async () => {
     render(<LoginForm />)
-    const input = await screen.findByLabelText(/senha/i)
-    fireEvent.change(input, { target: { value: 'senha-forte-123' } })
-    fireEvent.click(screen.getByRole('button', { name: /criar senha/i }))
+    const inputSenha = await screen.findByLabelText(/^senha$/i)
+    const inputConfirmar = await screen.findByLabelText(/confirmar senha/i)
+    fireEvent.change(inputSenha, { target: { value: 'senha-forte-123' } })
+    fireEvent.change(inputConfirmar, { target: { value: 'senha-forte-123' } })
+    fireEvent.click(screen.getByRole('button', { name: /^cadastrar$/i }))
 
     await waitFor(() => expect(navegarMock).toHaveBeenCalledWith({ to: '/' }))
   })
@@ -40,7 +42,7 @@ describe('LoginForm', () => {
     useAuthStore.setState({ autenticado: false, contaConfigurada: true })
 
     render(<LoginForm />)
-    const input = await screen.findByLabelText(/senha/i)
+    const input = await screen.findByLabelText(/^senha$/i)
     fireEvent.change(input, { target: { value: 'senha-errada' } })
     fireEvent.click(screen.getAllByRole('button', { name: /^entrar$/i }).find(b => b.getAttribute('type') === 'submit')!)
 
@@ -61,7 +63,7 @@ describe('LoginForm', () => {
     })
 
     render(<LoginForm />)
-    const input = await screen.findByLabelText(/senha/i)
+    const input = await screen.findByLabelText(/^senha$/i)
     fireEvent.change(input, { target: { value: 'qualquer-senha' } })
     fireEvent.click(screen.getAllByRole('button', { name: /^entrar$/i }).find(b => b.getAttribute('type') === 'submit')!)
 
