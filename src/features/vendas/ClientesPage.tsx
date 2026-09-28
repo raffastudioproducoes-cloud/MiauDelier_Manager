@@ -7,7 +7,7 @@ import { TextField } from '../../components/ui/TextField'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { iniciais } from '../../lib/texto'
+import { iniciais } from '@/utils/clientInitials'
 import {
   criarCliente,
   listarClientes,
