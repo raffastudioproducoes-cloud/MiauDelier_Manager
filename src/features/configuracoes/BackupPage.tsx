@@ -151,31 +151,40 @@ export function BackupPage() {
       </div>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Exportar</h2>
-        <Card>
-          <p className="mb-3 text-sm text-on-surface-variant">
-            Exporte seus dados para um arquivo local. Guarde esse arquivo em local seguro — é a única forma de recuperar seus dados se limpar o navegador.
-          </p>
-          <Button onClick={handleExportar}>Exportar backup</Button>
-        </Card>
-      </section>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Gerenciar Dados</h2>
+        <Card className="flex flex-col gap-6">
+          
+          <div className="flex flex-col gap-2 border-b border-outline-variant pb-6">
+            <h3 className="text-sm font-medium text-on-surface">Exportar Backup</h3>
+            <p className="text-sm text-on-surface-variant">
+              Gera um arquivo JSON com todos os dados do seu ateliê. Guarde esse arquivo em um local seguro — ele é essencial para recuperar suas informações caso você limpe os dados do navegador ou deseje acessá-las em outro dispositivo.
+            </p>
+            <div className="mt-2">
+              <Button onClick={handleExportar}>⬇️ Exportar backup</Button>
+            </div>
+          </div>
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface-variant">Importar</h2>
-        <Card>
-          <p className="mb-3 text-sm text-on-surface-variant">
-            Importar um backup do MiauDelier substitui todos os dados atuais e encerra sua sessão. Um backup exportado do GestoraX é reconhecido automaticamente e, nesse caso, os dados são mesclados aos atuais sem apagar nada.
-          </p>
-          <label htmlFor="input-backup" className="text-sm font-medium text-on-surface">Importar backup</label>
-          <input
-            id="input-backup"
-            ref={inputArquivoRef}
-            type="file"
-            accept="application/json"
-            onChange={handleSelecionarArquivo}
-            className="mt-1 block w-full text-sm text-on-surface-variant file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-primary file:cursor-pointer"
-          />
-          {erro && <p role="alert" className="mt-2 text-sm text-error">{erro}</p>}
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium text-on-surface">Importar Backup</h3>
+            <p className="text-sm text-on-surface-variant">
+              Carrega os dados de um backup salvo anteriormente. Você poderá escolher entre substituir os dados do seu perfil atual ou criar um novo perfil para abrir o backup de forma segura. Também aceitamos arquivos exportados do GestoraX.
+            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                id="input-backup"
+                ref={inputArquivoRef}
+                type="file"
+                accept="application/json"
+                onChange={handleSelecionarArquivo}
+                className="hidden"
+              />
+              <Button type="button" onClick={() => inputArquivoRef.current?.click()}>
+                📁 Selecionar Arquivo
+              </Button>
+            </div>
+            {erro && <p role="alert" className="mt-2 text-sm text-error">{erro}</p>}
+          </div>
+
         </Card>
       </section>
 
