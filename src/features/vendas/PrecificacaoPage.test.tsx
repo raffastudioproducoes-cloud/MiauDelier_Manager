@@ -123,7 +123,7 @@ describe('PrecificacaoPage', () => {
       expect(screen.getAllByText(/Light/i).length).toBeGreaterThan(0)
     }, { timeout: 4000 })
     
-    const elementosAguasDoRio = screen.getAllByText((content, element) => {
+    const elementosAguasDoRio = screen.getAllByText((_, element) => {
       return element?.textContent?.includes('guas do Rio') || false;
     });
     expect(elementosAguasDoRio.length).toBeGreaterThan(0);

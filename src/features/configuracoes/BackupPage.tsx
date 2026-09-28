@@ -251,7 +251,7 @@ export function BackupPage() {
               <Button onClick={handleImportarNovoPerfil} className="w-full flex justify-center">
                 ✨ Carregar em NOVO Perfil
               </Button>
-              <Button onClick={handleImportarPerfilAtual} variante="outline" className="w-full flex justify-center border-error/50 text-error hover:bg-error/10">
+              <Button onClick={handleImportarPerfilAtual} variante="ghost" className="w-full flex justify-center border border-error/50 text-error hover:bg-error/10">
                 ⚠️ Substituir Perfil Atual
               </Button>
               <Button onClick={limparSelecao} variante="ghost" className="w-full flex justify-center mt-2">

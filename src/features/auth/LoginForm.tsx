@@ -63,7 +63,9 @@ export function LoginForm() {
     try {
       if (contaConfigurada) {
         if (modoCadastro) {
-          await criarConta(senha)
+          setErro('Já existe uma conta neste dispositivo. Acesse a aba "Entrar" para fazer login.')
+          setEnviando(false)
+          return
         } else {
           const sucesso = await entrar(senha)
           if (!sucesso) {
