@@ -7,6 +7,8 @@ import { NavItem } from './NavItem'
 import { Button } from '../ui/Button'
 import logoMiauDelier from '../../assets/logo-miaudelier.png'
 
+import { BannerConsentimentoLGPD } from '../ui/BannerConsentimentoLGPD'
+
 interface ItemMenu {
   rotulo: string
   rota: string
@@ -71,8 +73,20 @@ const SECOES_MENU: SecaoMenu[] = [
           </svg>
         ),
       },
+      {
+        rotulo: 'Ajuda & FAQ',
+        rota: '/ajuda',
+        icone: (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        ),
+      },
     ],
   },
+
   {
     titulo: 'Produção',
     itens: [
@@ -472,9 +486,41 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 p-4 md:p-6 overflow-x-hidden">{children}</main>
+      <main className="flex-1 p-4 md:p-6 overflow-x-hidden flex flex-col justify-between min-h-[calc(100vh-2rem)]">
+        <div>{children}</div>
+
+        {/* Rodapé Global com Informações de Conformidade, Direitos e Empresa */}
+        <footer className="mt-12 pt-6 border-t border-outline-variant/15 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-on-surface-variant">
+          <div className="flex flex-col items-center md:items-start gap-1">
+            <span className="font-semibold text-on-surface">
+              © 2026 Raffa Studio Produções. Empresa registrada desde 2026.
+            </span>
+            <span className="text-[11px] text-on-surface-variant/80">
+              Todos os direitos reservados · Suporte Técnico: <a href="mailto:contato.raffasp@gmail.com" className="text-primary hover:underline font-medium">contato.raffasp@gmail.com</a>
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+            <button type="button" onClick={() => irPara('/ajuda')} className="hover:text-primary transition-colors cursor-pointer">
+              💡 Ajuda & FAQ
+            </button>
+            <span className="text-outline-variant/40">•</span>
+            <button type="button" onClick={() => irPara('/privacidade')} className="hover:text-primary transition-colors cursor-pointer">
+              🔒 Política de Privacidade & LGPD
+            </button>
+            <span className="text-outline-variant/40">•</span>
+            <button type="button" onClick={() => irPara('/termos')} className="hover:text-primary transition-colors cursor-pointer">
+              📜 Termos de Uso
+            </button>
+          </div>
+        </footer>
+      </main>
+
+      {/* Banner de Transparência e Consentimento LGPD */}
+      <BannerConsentimentoLGPD />
     </div>
   )
 }
+
 
 

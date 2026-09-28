@@ -105,6 +105,36 @@ describe('PrecificacaoPage', () => {
       expect(peca?.precoVenda).toBeCloseTo(35)
     })
   })
+
+  it('permite buscar e atualizar concessionárias de luz e água diretamente na precificação', async () => {
+    await renderPagina()
+
+    // Aguarda o carregamento inicial da concessionária Padrão (Enel SP)
+    await waitFor(() => expect(screen.getAllByText(/Enel/i).length).toBeGreaterThan(0))
+
+    const estadoInput = screen.getByLabelText(/estado \(uf\)/i)
+    fireEvent.change(estadoInput, { target: { value: 'RJ' } })
+
+    const botaoBuscar = screen.getByRole('button', { name: /buscar tarifas da concessionária/i })
+    fireEvent.click(botaoBuscar)
+
+    await waitFor(() => expect(screen.getAllByText(/Light/i).length).toBeGreaterThan(0), { timeout: 4000 })
+    expect(screen.getAllByText(/Águas do Rio/i).length).toBeGreaterThan(0)
+  })
+
+  it('calcula o valor da hora de mão de obra a partir do valor por dia e jornada diária', async () => {
+    await renderPagina()
+
+    const inputDia = screen.getByLabelText(/mão de obra por dia/i)
+    const inputJornada = screen.getByLabelText(/jornada diária/i)
+    const inputHora = screen.getByLabelText(/valor da hora \(r\$\)/i) as HTMLInputElement
+
+    fireEvent.change(inputDia, { target: { value: '320' } })
+    fireEvent.change(inputJornada, { target: { value: '8' } })
+
+    expect(inputHora.value).toBe('40.00')
+  })
 })
+
 
 

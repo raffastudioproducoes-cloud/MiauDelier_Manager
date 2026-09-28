@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgendaRouteImport } from './routes/agenda'
+import { Route as AjudaRouteImport } from './routes/ajuda'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AssistenteRouteImport } from './routes/assistente'
 import { Route as AuditoriaRouteImport } from './routes/auditoria'
@@ -30,7 +31,9 @@ import { Route as PecasRouteImport } from './routes/pecas'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PrecificacaoRouteImport } from './routes/precificacao'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TaxasRouteImport } from './routes/taxas'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
 import { Route as ClientesClienteIdRouteImport } from './routes/clientes.$clienteId'
 import { Route as PecasPecaIdRouteImport } from './routes/pecas.$pecaId'
@@ -44,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
 const AgendaRoute = AgendaRouteImport.update({
   id: '/agenda',
   path: '/agenda',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AjudaRoute = AjudaRouteImport.update({
+  id: '/ajuda',
+  path: '/ajuda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
@@ -141,9 +149,19 @@ const PrecificacaoRoute = PrecificacaoRouteImport.update({
   path: '/precificacao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TaxasRoute = TaxasRouteImport.update({
   id: '/taxas',
   path: '/taxas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TransacoesRoute = TransacoesRouteImport.update({
@@ -170,6 +188,7 @@ const PedidosPedidoIdRoute = PedidosPedidoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/ajuda': typeof AjudaRoute
   '/analytics': typeof AnalyticsRoute
   '/assistente': typeof AssistenteRoute
   '/auditoria': typeof AuditoriaRoute
@@ -189,7 +208,9 @@ export interface FileRoutesByFullPath {
   '/pedidos': typeof PedidosRouteWithChildren
   '/perfil': typeof PerfilRoute
   '/precificacao': typeof PrecificacaoRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/taxas': typeof TaxasRoute
+  '/termos': typeof TermosRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
@@ -198,6 +219,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/ajuda': typeof AjudaRoute
   '/analytics': typeof AnalyticsRoute
   '/assistente': typeof AssistenteRoute
   '/auditoria': typeof AuditoriaRoute
@@ -217,7 +239,9 @@ export interface FileRoutesByTo {
   '/pedidos': typeof PedidosRouteWithChildren
   '/perfil': typeof PerfilRoute
   '/precificacao': typeof PrecificacaoRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/taxas': typeof TaxasRoute
+  '/termos': typeof TermosRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
@@ -227,6 +251,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/ajuda': typeof AjudaRoute
   '/analytics': typeof AnalyticsRoute
   '/assistente': typeof AssistenteRoute
   '/auditoria': typeof AuditoriaRoute
@@ -246,7 +271,9 @@ export interface FileRoutesById {
   '/pedidos': typeof PedidosRouteWithChildren
   '/perfil': typeof PerfilRoute
   '/precificacao': typeof PrecificacaoRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/taxas': typeof TaxasRoute
+  '/termos': typeof TermosRoute
   '/transacoes': typeof TransacoesRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pecas/$pecaId': typeof PecasPecaIdRoute
@@ -257,6 +284,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agenda'
+    | '/ajuda'
     | '/analytics'
     | '/assistente'
     | '/auditoria'
@@ -276,7 +304,9 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/perfil'
     | '/precificacao'
+    | '/privacidade'
     | '/taxas'
+    | '/termos'
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
@@ -285,6 +315,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/agenda'
+    | '/ajuda'
     | '/analytics'
     | '/assistente'
     | '/auditoria'
@@ -304,7 +335,9 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/perfil'
     | '/precificacao'
+    | '/privacidade'
     | '/taxas'
+    | '/termos'
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
@@ -313,6 +346,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/agenda'
+    | '/ajuda'
     | '/analytics'
     | '/assistente'
     | '/auditoria'
@@ -332,7 +366,9 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/perfil'
     | '/precificacao'
+    | '/privacidade'
     | '/taxas'
+    | '/termos'
     | '/transacoes'
     | '/clientes/$clienteId'
     | '/pecas/$pecaId'
@@ -342,6 +378,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
+  AjudaRoute: typeof AjudaRoute
   AnalyticsRoute: typeof AnalyticsRoute
   AssistenteRoute: typeof AssistenteRoute
   AuditoriaRoute: typeof AuditoriaRoute
@@ -361,7 +398,9 @@ export interface RootRouteChildren {
   PedidosRoute: typeof PedidosRouteWithChildren
   PerfilRoute: typeof PerfilRoute
   PrecificacaoRoute: typeof PrecificacaoRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   TaxasRoute: typeof TaxasRoute
+  TermosRoute: typeof TermosRoute
   TransacoesRoute: typeof TransacoesRoute
 }
 
@@ -379,6 +418,13 @@ declare module '@tanstack/react-router' {
       path: '/agenda'
       fullPath: '/agenda'
       preLoaderRoute: typeof AgendaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ajuda': {
+      id: '/ajuda'
+      path: '/ajuda'
+      fullPath: '/ajuda'
+      preLoaderRoute: typeof AjudaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics': {
@@ -514,11 +560,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrecificacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/taxas': {
       id: '/taxas'
       path: '/taxas'
       fullPath: '/taxas'
       preLoaderRoute: typeof TaxasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transacoes': {
@@ -588,6 +648,7 @@ const PedidosRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
+  AjudaRoute: AjudaRoute,
   AnalyticsRoute: AnalyticsRoute,
   AssistenteRoute: AssistenteRoute,
   AuditoriaRoute: AuditoriaRoute,
@@ -607,7 +668,9 @@ const rootRouteChildren: RootRouteChildren = {
   PedidosRoute: PedidosRouteWithChildren,
   PerfilRoute: PerfilRoute,
   PrecificacaoRoute: PrecificacaoRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   TaxasRoute: TaxasRoute,
+  TermosRoute: TermosRoute,
   TransacoesRoute: TransacoesRoute,
 }
 export const routeTree = rootRouteImport
