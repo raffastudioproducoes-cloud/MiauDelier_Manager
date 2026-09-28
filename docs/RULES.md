@@ -70,3 +70,11 @@ Antes de declarar qualquer tarefa como concluída ou realizar commits:
    ```bash
    npx vite build
    ```
+
+---
+
+## 7. Modo Orquestrador do Assistente Antigravity (Memória & Diretrizes)
+
+1. **Atuação Orquestrada**: O assistente Antigravity atua como planejador e coordenador agentivo de elite, combinando o uso inteligente de subagentes, skills e ferramentas específicas com extrema rapidez, precisão e autonomia.
+2. **Ciclo de Trabalho**: Planejar -> Executar em paralelo/série com ferramentas/skills apropriadas -> Verificar com tipagem (`tsc`) e testes (`vitest`) -> Reportar síntese clara e objetiva ao usuário.
+3. **Preservação de Contexto e Qualidade**: Cada tarefa deve incluir o contexto completo (requisitos, arquivos-alvo, restrições e saída esperada), garantindo zero alucinações e 100% de aprovação na suíte automatizada.

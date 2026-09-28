@@ -16,9 +16,16 @@ import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 import { calcularPrecificacao } from '../pricing/pricing'
 import { calcularVolumeTotalForma } from '../calculator/volume'
 import type { Forma, Material, Equipamento, UsoEnergiaPeca } from '../../db/schema'
-import { converterQuantidade, obterOpcoesUnidadeCompativeis } from '../../lib/unidades'
+import { converterQuantidade, obterOpcoesUnidadeCompativeis, formatarVolumeEMassaLegivel } from '../../lib/unidades'
 import { SeletorImagem } from '../../components/ui/SeletorImagem'
 import { VitrinePecasProntas } from './VitrinePecasProntas'
+import {
+  calcularRestanteCura,
+  calcularProgressoCura,
+  formatarTempoRestanteCura,
+  adicionarTempoCura,
+  verificarCurasConcluidas,
+} from './curaRepo'
 
 const schemaPeca = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da peça').max(120),
@@ -30,9 +37,16 @@ interface LinhaConsumo {
   unidade: string
 }
 
+interface LinhaConsumo {
+  materialId: string
+  quantidade: string
+  unidade: string
+}
+
 interface LinhaUsoEquipamento {
   equipamentoId: string
-  minutosUso: string
+  valorUso: string
+  unidadeUso: 'minutos' | 'horas' | 'dias'
 }
 
 function linhaConsumoVazia(): LinhaConsumo {
@@ -40,7 +54,7 @@ function linhaConsumoVazia(): LinhaConsumo {
 }
 
 function linhaEquipamentoVazia(): LinhaUsoEquipamento {
-  return { equipamentoId: '', minutosUso: '' }
+  return { equipamentoId: '', valorUso: '', unidadeUso: 'minutos' }
 }
 
 export function PecasPage() {
@@ -59,7 +73,8 @@ export function PecasPage() {
   const [volumeResinaMl, setVolumeResinaMl] = useState('')
   const [consumos, setConsumos] = useState<LinhaConsumo[]>([linhaConsumoVazia()])
 
-  const [tempoCuraHoras, setTempoCuraHoras] = useState('')
+  const [valorTempoCura, setValorTempoCura] = useState('')
+  const [unidadeTempoCura, setUnidadeTempoCura] = useState<'dias' | 'horas' | 'minutos'>('horas')
   const [usosEnergiaCura, setUsosEnergiaCura] = useState<LinhaUsoEquipamento[]>([linhaEquipamentoVazia()])
 
   const [usosEnergiaAcabamento, setUsosEnergiaAcabamento] = useState<LinhaUsoEquipamento[]>([linhaEquipamentoVazia()])
@@ -78,6 +93,11 @@ export function PecasPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [pecaExcluindoId, setPecaExcluindoId] = useState<number | null>(null)
   const [carregado, setCarregado] = useState(false)
+
+  const [agora, setAgora] = useState(Date.now())
+  const [pecaAdicionarCuraId, setPecaAdicionarCuraId] = useState<number | null>(null)
+  const [addCuraValor, setAddCuraValor] = useState('')
+  const [addCuraUnidade, setAddCuraUnidade] = useState<'dias' | 'horas' | 'minutos'>('horas')
 
   const montado = useRef(true)
 
@@ -115,13 +135,32 @@ export function PecasPage() {
     }
   }, [])
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setAgora(Date.now())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (carregado) {
+      verificarCurasConcluidas().then((concluidas) => {
+        if (concluidas.length > 0) {
+          mostrarToast(`${concluidas.length} peça(s) concluíram o tempo de cura!`, 'sucesso')
+          recarregar()
+        }
+      })
+    }
+  }, [agora, carregado])
+
   function limparFormulario() {
     setEtapaFormulario(1)
     setNome('')
     setFormaId('')
     setVolumeResinaMl('')
     setConsumos([linhaConsumoVazia()])
-    setTempoCuraHoras('')
+    setValorTempoCura('')
+    setUnidadeTempoCura('horas')
     setUsosEnergiaCura([linhaEquipamentoVazia()])
     setUsosEnergiaAcabamento([linhaEquipamentoVazia()])
     setHorasMaoDeObra('')
@@ -196,14 +235,19 @@ export function PecasPage() {
     const lista: UsoEnergiaPeca[] = []
     const todasLinhas = [...usosEnergiaCura, ...usosEnergiaAcabamento]
     for (const linha of todasLinhas) {
-      if (linha.equipamentoId && Number(linha.minutosUso) > 0) {
+      const val = Number(linha.valorUso)
+      if (linha.equipamentoId && val > 0) {
         const eq = equipamentos.find((e) => e.id === Number(linha.equipamentoId))
         if (eq) {
+          let minUso = val
+          if (linha.unidadeUso === 'horas') minUso = val * 60
+          else if (linha.unidadeUso === 'dias') minUso = val * 1440
+
           lista.push({
             equipamentoId: eq.id!,
             nomeEquipamento: eq.nome,
             potenciaWatts: eq.potenciaWatts,
-            minutosUso: Number(linha.minutosUso),
+            minutosUso: Math.round(minUso),
           })
         }
       }
@@ -270,6 +314,29 @@ export function PecasPage() {
     percentualTaxas,
   ])
 
+  async function handleConfirmarAdicionarCura() {
+    if (!pecaAdicionarCuraId) return
+    const val = Number(addCuraValor)
+    if (!val || val <= 0) {
+      mostrarToast('Informe um valor válido para adicionar ao tempo de cura', 'erro')
+      return
+    }
+    let minAdicionais = val
+    if (addCuraUnidade === 'dias') minAdicionais = Math.round(val * 24 * 60)
+    else if (addCuraUnidade === 'horas') minAdicionais = Math.round(val * 60)
+
+    try {
+      await adicionarTempoCura(pecaAdicionarCuraId, minAdicionais)
+      mostrarToast('Tempo de cura adicionado com sucesso!')
+      setPecaAdicionarCuraId(null)
+      setAddCuraValor('')
+      setAddCuraUnidade('horas')
+      await recarregar()
+    } catch (falha) {
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao adicionar tempo de cura.', 'erro')
+    }
+  }
+
   async function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
     setErro(null)
@@ -293,7 +360,13 @@ export function PecasPage() {
     }
 
     try {
-      const tempoCuraMin = Number(tempoCuraHoras) > 0 ? Math.round(Number(tempoCuraHoras) * 60) : undefined
+      let tempoCuraMin: number | undefined = undefined
+      const valCura = Number(valorTempoCura)
+      if (valCura > 0) {
+        if (unidadeTempoCura === 'dias') tempoCuraMin = Math.round(valCura * 24 * 60)
+        else if (unidadeTempoCura === 'horas') tempoCuraMin = Math.round(valCura * 60)
+        else if (unidadeTempoCura === 'minutos') tempoCuraMin = Math.round(valCura)
+      }
 
       await criarPeca({
         nome: resultado.data.nome,
@@ -496,21 +569,24 @@ export function PecasPage() {
                 </select>
               </div>
 
-              {formaSelecionada && (
-                <div className="rounded-xl border border-primary/40 bg-primary/10 p-3.5 flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">
-                      📐 Volume Média Sugerido pela Forma
-                    </span>
-                    <span className="text-xs font-mono font-bold text-primary">
-                      {volumeSugeridoMl.toFixed(1)} ml
-                    </span>
+              {formaSelecionada && (() => {
+                const infoFormatada = formatarVolumeEMassaLegivel(volumeSugeridoMl)
+                return (
+                  <div className="rounded-xl border border-primary/40 bg-primary/10 p-3.5 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                        📐 Volume Média Sugerido pela Forma
+                      </span>
+                      <span className="text-xs font-mono font-bold text-primary">
+                        {infoFormatada.volumeLegivel}
+                      </span>
+                    </div>
+                    <p className="text-xs text-on-surface-variant">
+                      Molde &quot;{formaSelecionada.nome}&quot;: requer em média <strong>{infoFormatada.resumoExtenso}</strong>.
+                    </p>
                   </div>
-                  <p className="text-xs text-on-surface-variant">
-                    Molde &quot;{formaSelecionada.nome}&quot;: requer em média <strong>{volumeSugeridoMl.toFixed(1)} ml</strong> de resina/mistura (~{(volumeSugeridoMl * 1.1 / 1000).toFixed(3)} kg resina).
-                  </p>
-                </div>
-              )}
+                )
+              })()}
 
               <TextField
                 id="volume-resina-peca"
@@ -631,19 +707,36 @@ export function PecasPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <TextField
-                  id="tempo-cura-horas"
-                  rotulo="Tempo de Cura Estimado (em Horas)"
-                  type="number"
-                  step="0.5"
-                  value={tempoCuraHoras}
-                  onChange={(e) => setTempoCuraHoras(e.target.value)}
-                  placeholder="Ex: 24 (Resina rígida) ou 12 (Resina rápida)"
-                />
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <TextField
+                      id="valor-tempo-cura"
+                      rotulo="Tempo de Cura Estimado"
+                      type="number"
+                      step="0.5"
+                      value={valorTempoCura}
+                      onChange={(e) => setValorTempoCura(e.target.value)}
+                      placeholder="Ex: 24 (horas) ou 7 (dias)"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 w-32">
+                    <label htmlFor="unidade-tempo-cura" className="text-xs font-medium text-on-surface">Unidade</label>
+                    <select
+                      id="unidade-tempo-cura"
+                      value={unidadeTempoCura}
+                      onChange={(e) => setUnidadeTempoCura(e.target.value as 'dias' | 'horas' | 'minutos')}
+                      className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="dias">Dias</option>
+                      <option value="horas">Horas</option>
+                      <option value="minutos">Minutos</option>
+                    </select>
+                  </div>
+                </div>
                 <div className="rounded-xl border border-outline-variant/40 bg-surface-container/30 p-3 flex flex-col justify-center">
                   <span className="text-xs font-semibold text-on-surface">💡 Dica Técnica de Cura</span>
                   <p className="text-[11px] text-on-surface-variant mt-1">
-                    Resinas de baixa viscosidade costumam curar em 24h a 25°C. O uso de estufa a 40°C acelera a cura para 6h–8h.
+                    Resinas de baixa viscosidade ou para mesas altas costumam curar em 24h a 7 dias ou mais a 25°C dependendo da espessura e clima. O uso de estufa a 40°C–50°C acelera a cura para 6h–12h.
                   </p>
                 </div>
               </div>
@@ -652,7 +745,7 @@ export function PecasPage() {
                 <h4 className="text-sm font-semibold text-on-surface mb-2">Equipamentos Elétricos Usados no Preparo/Cura (Soprador, Canhão Térmico, Vácuo, Estufa)</h4>
                 {usosEnergiaCura.map((linha, indice) => (
                   <div key={indice} className="flex flex-wrap items-end gap-2 mb-2 p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container/20">
-                    <div className="flex-1 min-w-[200px] flex flex-col gap-1">
+                    <div className="flex-1 min-w-[180px] flex flex-col gap-1">
                       <label htmlFor={`equipamento-cura-${indice}`} className="text-xs font-medium text-on-surface">Equipamento</label>
                       <select
                         id={`equipamento-cura-${indice}`}
@@ -669,16 +762,30 @@ export function PecasPage() {
                       </select>
                     </div>
 
-                    <div className="w-36">
+                    <div className="w-28">
                       <TextField
-                        id={`minutos-cura-${indice}`}
-                        rotulo="Minutos de Uso"
+                        id={`valor-uso-cura-${indice}`}
+                        rotulo="Tempo Uso"
                         type="number"
-                        step="1"
-                        value={linha.minutosUso}
-                        onChange={(e) => atualizarLinhaEquipamento(setUsosEnergiaCura, indice, 'minutosUso', e.target.value)}
+                        step="0.5"
+                        value={linha.valorUso}
+                        onChange={(e) => atualizarLinhaEquipamento(setUsosEnergiaCura, indice, 'valorUso', e.target.value)}
                         placeholder="Ex: 15"
                       />
+                    </div>
+
+                    <div className="flex flex-col gap-1 w-28">
+                      <label htmlFor={`unidade-uso-cura-${indice}`} className="text-xs font-medium text-on-surface">Unidade</label>
+                      <select
+                        id={`unidade-uso-cura-${indice}`}
+                        value={linha.unidadeUso}
+                        onChange={(e) => atualizarLinhaEquipamento(setUsosEnergiaCura, indice, 'unidadeUso', e.target.value as any)}
+                        className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="minutos">Minutos</option>
+                        <option value="horas">Horas</option>
+                        <option value="dias">Dias</option>
+                      </select>
                     </div>
 
                     {usosEnergiaCura.length > 1 && (
@@ -754,7 +861,7 @@ export function PecasPage() {
                 <h4 className="text-sm font-semibold text-on-surface mb-2">Máquinas e Ferramentas Elétricas de Acabamento (Lixadeira, Politriz, Furadeira, Router)</h4>
                 {usosEnergiaAcabamento.map((linha, indice) => (
                   <div key={indice} className="flex flex-wrap items-end gap-2 mb-2 p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container/20">
-                    <div className="flex-1 min-w-[200px] flex flex-col gap-1">
+                    <div className="flex-1 min-w-[180px] flex flex-col gap-1">
                       <label htmlFor={`equipamento-acab-${indice}`} className="text-xs font-medium text-on-surface">Máquina / Ferramenta</label>
                       <select
                         id={`equipamento-acab-${indice}`}
@@ -771,16 +878,30 @@ export function PecasPage() {
                       </select>
                     </div>
 
-                    <div className="w-36">
+                    <div className="w-28">
                       <TextField
-                        id={`minutos-acab-${indice}`}
-                        rotulo="Minutos de Uso"
+                        id={`valor-uso-acab-${indice}`}
+                        rotulo="Tempo Uso"
                         type="number"
-                        step="1"
-                        value={linha.minutosUso}
-                        onChange={(e) => atualizarLinhaEquipamento(setUsosEnergiaAcabamento, indice, 'minutosUso', e.target.value)}
+                        step="0.5"
+                        value={linha.valorUso}
+                        onChange={(e) => atualizarLinhaEquipamento(setUsosEnergiaAcabamento, indice, 'valorUso', e.target.value)}
                         placeholder="Ex: 30"
                       />
+                    </div>
+
+                    <div className="flex flex-col gap-1 w-28">
+                      <label htmlFor={`unidade-uso-acab-${indice}`} className="text-xs font-medium text-on-surface">Unidade</label>
+                      <select
+                        id={`unidade-uso-acab-${indice}`}
+                        value={linha.unidadeUso}
+                        onChange={(e) => atualizarLinhaEquipamento(setUsosEnergiaAcabamento, indice, 'unidadeUso', e.target.value as any)}
+                        className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="minutos">Minutos</option>
+                        <option value="horas">Horas</option>
+                        <option value="dias">Dias</option>
+                      </select>
                     </div>
 
                     {usosEnergiaAcabamento.length > 1 && (
@@ -814,10 +935,10 @@ export function PecasPage() {
             <div className="flex flex-col gap-4 animate-fadeIn">
               <div className="bg-blue-950/20 border border-blue-800/40 p-3.5 rounded-xl">
                 <h3 className="text-sm font-semibold text-blue-300 mb-1 flex items-center gap-1.5">
-                  <span>💰 Etapa 4: Taxas Comerciais, Propaganda, Frete & Precificação Final</span>
+                  <span>💰 Etapa 4: Propaganda, Frete & Precificação Final</span>
                 </h3>
                 <p className="text-xs text-slate-300">
-                  Defina os custos de divulgação/propaganda, frete ou embalagem individual, taxa da plataforma e margem de lucro. O sistema recalcula o preço final sugerido.
+                  Defina os custos de divulgação/propaganda e frete da peça. As taxas da loja e a margem de lucro são aplicadas automaticamente conforme configurado na Precificação.
                 </p>
               </div>
 
@@ -848,35 +969,15 @@ export function PecasPage() {
                 </p>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <TextField
-                  id="valor-frete"
-                  rotulo="Frete / Embalagem Individual (R$)"
-                  type="number"
-                  step="0.50"
-                  value={valorFrete}
-                  onChange={(e) => setValorFrete(e.target.value)}
-                  placeholder="Ex: 15.00 (Valor integral do frete)"
-                />
-                <TextField
-                  id="percentual-taxas"
-                  rotulo="Taxas de Venda / Loja (%)"
-                  type="number"
-                  step="0.5"
-                  value={percentualTaxas}
-                  onChange={(e) => setPercentualTaxas(e.target.value)}
-                  placeholder="Ex: 12.0 (Shopee, Elo7, Cartão)"
-                />
-                <TextField
-                  id="margem-lucro"
-                  rotulo="Margem de Lucro Desejada (%)"
-                  type="number"
-                  step="5"
-                  value={margemLucroPercent}
-                  onChange={(e) => setMargemLucroPercent(e.target.value)}
-                  placeholder="Ex: 50"
-                />
-              </div>
+              <TextField
+                id="valor-frete"
+                rotulo="Frete (R$)"
+                type="number"
+                step="0.50"
+                value={valorFrete}
+                onChange={(e) => setValorFrete(e.target.value)}
+                placeholder="Ex: 15.00 (Valor integral do frete)"
+              />
 
               <SeletorImagem
                 imagemUrl={imagemUrl}
@@ -998,6 +1099,49 @@ export function PecasPage() {
                       )}
                     </div>
 
+                    {(() => {
+                      const temCuraAtiva = peca.curaMinutos && peca.curaIniciadaEm
+                      if (!temCuraAtiva && peca.status !== 'curando') return null
+                      const restanteCura = temCuraAtiva ? calcularRestanteCura(peca, agora) : 0
+                      const progressoCura = temCuraAtiva ? calcularProgressoCura(peca, agora) * 100 : 0
+                      const curaConcluida = temCuraAtiva && restanteCura <= 0
+
+                      return (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-2.5 flex flex-col gap-1.5 my-1">
+                          <div className="flex items-center justify-between text-xs font-semibold">
+                            <span className="text-amber-300 flex items-center gap-1">
+                              {curaConcluida ? '✅ Cura Concluída!' : '⏳ Tempo de Cura em Andamento'}
+                            </span>
+                            <span className="font-mono text-amber-400">
+                              {curaConcluida ? 'Concluída' : `Faltam ${formatarTempoRestanteCura(restanteCura)}`}
+                            </span>
+                          </div>
+                          {temCuraAtiva && (
+                            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-amber-500/20">
+                              <div
+                                className={`h-full transition-all duration-500 ${curaConcluida ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                                style={{ width: `${progressoCura}%` }}
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>{progressoCura.toFixed(0)}% concluído</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPecaAdicionarCuraId(peca.id!)
+                                setAddCuraValor('')
+                                setAddCuraUnidade('horas')
+                              }}
+                              className="text-amber-400 hover:text-amber-300 font-semibold underline flex items-center gap-1"
+                            >
+                              ➕ Adicionar Tempo de Cura
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         {peca.imagemUrl ? (
@@ -1051,6 +1195,41 @@ export function PecasPage() {
         onConfirmar={() => pecaExcluindoId !== null && handleExcluir(pecaExcluindoId)}
         onCancelar={() => setPecaExcluindoId(null)}
       />
+
+      <ConfirmModal
+        aberto={pecaAdicionarCuraId !== null}
+        titulo="➕ Adicionar Tempo de Cura"
+        descricao="Adicione mais dias, horas ou minutos ao cronômetro de cura desta peça."
+        onConfirmar={handleConfirmarAdicionarCura}
+        onCancelar={() => setPecaAdicionarCuraId(null)}
+      >
+        <div className="flex gap-2 items-end pt-2 text-left">
+          <div className="flex-1">
+            <TextField
+              id="add-cura-val"
+              rotulo="Tempo a Adicionar"
+              type="number"
+              step="0.5"
+              value={addCuraValor}
+              onChange={(e) => setAddCuraValor(e.target.value)}
+              placeholder="Ex: 1 (dia), 12 (horas)"
+            />
+          </div>
+          <div className="flex flex-col gap-1 w-32">
+            <label htmlFor="add-cura-unidade" className="text-xs font-medium text-on-surface">Unidade</label>
+            <select
+              id="add-cura-unidade"
+              value={addCuraUnidade}
+              onChange={(e) => setAddCuraUnidade(e.target.value as any)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="dias">Dias</option>
+              <option value="horas">Horas</option>
+              <option value="minutos">Minutos</option>
+            </select>
+          </div>
+        </div>
+      </ConfirmModal>
         </>
       )}
     </div>

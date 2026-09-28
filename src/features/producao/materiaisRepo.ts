@@ -1,4 +1,4 @@
-import { db, type Material } from '../../db/schema'
+import { db, type Material, type TipoClassificacaoMaterial } from '../../db/schema'
 import { cifrarCampo } from '../../lib/camposCifrados'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
@@ -10,6 +10,7 @@ export interface NovoMaterial {
   quantidadeEstoque: number
   custoUnitario: number
   valorFrete?: number
+  tipoClassificacao?: TipoClassificacaoMaterial
 }
 
 export interface RegistrarCompraParams {

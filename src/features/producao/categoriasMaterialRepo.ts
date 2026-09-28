@@ -1,19 +1,20 @@
-import { db, type CategoriaMaterial } from '../../db/schema'
+import { db, type CategoriaMaterial, type TipoClassificacaoMaterial } from '../../db/schema'
 
-export async function criarCategoriaMaterial(nome: string, categoriaPaiId?: number): Promise<number> {
+export async function criarCategoriaMaterial(
+  nome: string,
+  categoriaPaiId?: number,
+  tipoClassificacao?: TipoClassificacaoMaterial,
+): Promise<number> {
   jaInicializadoPadrao = true
-  const id = await db.categoriasMaterial.add({ nome, categoriaPaiId })
+  const id = await db.categoriasMaterial.add({ nome, categoriaPaiId, tipoClassificacao })
   return id as number
 }
 
-export const CATEGORIAS_PADRAO_SUGERIDAS = [
-  'Resinas & Líquidos',
-  'Silicones & Moldes',
-  'Pigmentos & Artes',
-  'Adornos & Decoração',
-  'Consumíveis & Lixas',
-  'Equipamentos & EPIs',
-  'Administrativo & Embalagens',
+export const CATEGORIAS_PADRAO_SUGERIDAS: { nome: string; tipoClassificacao: TipoClassificacaoMaterial }[] = [
+  { nome: 'Insumos & Consumíveis', tipoClassificacao: 'consumivel' },
+  { nome: 'Ferramentas & Equipamentos', tipoClassificacao: 'ferramenta' },
+  { nome: 'Administrativo & Embalagens', tipoClassificacao: 'administrativo' },
+  { nome: 'EPIs & Proteção', tipoClassificacao: 'epi' },
 ]
 
 let jaInicializadoPadrao = false
@@ -30,10 +31,10 @@ export async function garantirCategoriasPadrao(): Promise<void> {
   }
   const total = await db.categoriasMaterial.count()
   if (total === 0) {
-    for (const nome of CATEGORIAS_PADRAO_SUGERIDAS) {
-      const existe = await db.categoriasMaterial.where('nome').equals(nome).first()
+    for (const item of CATEGORIAS_PADRAO_SUGERIDAS) {
+      const existe = await db.categoriasMaterial.where('nome').equals(item.nome).first()
       if (!existe) {
-        await db.categoriasMaterial.add({ nome })
+        await db.categoriasMaterial.add({ nome: item.nome, tipoClassificacao: item.tipoClassificacao })
       }
     }
   }
@@ -45,8 +46,13 @@ export async function listarCategoriasMaterial(): Promise<CategoriaMaterial[]> {
   return db.categoriasMaterial.toArray()
 }
 
-export async function atualizarCategoriaMaterial(categoriaId: number, nome: string, categoriaPaiId?: number): Promise<void> {
-  await db.categoriasMaterial.update(categoriaId, { nome, categoriaPaiId })
+export async function atualizarCategoriaMaterial(
+  categoriaId: number,
+  nome: string,
+  categoriaPaiId?: number,
+  tipoClassificacao?: TipoClassificacaoMaterial,
+): Promise<void> {
+  await db.categoriasMaterial.update(categoriaId, { nome, categoriaPaiId, tipoClassificacao })
 }
 
 export async function excluirCategoriaMaterial(categoriaId: number): Promise<void> {

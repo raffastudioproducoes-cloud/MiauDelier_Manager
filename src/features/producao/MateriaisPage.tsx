@@ -16,7 +16,7 @@ import {
   excluirMaterial,
 } from './materiaisRepo'
 import { listarContas, type ContaDecifrada } from '../financeiro/contasRepo'
-import type { CategoriaMaterial, Material } from '../../db/schema'
+import type { CategoriaMaterial, Material, TipoClassificacaoMaterial } from '../../db/schema'
 
 const schemaMaterial = z.object({
   nome: z.string().trim().min(1, 'Informe o nome do material').max(120),
@@ -25,6 +25,28 @@ const schemaMaterial = z.object({
   custoUnitario: z.number().finite().min(0, 'Custo unitário não pode ser negativo'),
   valorFrete: z.number().finite().min(0, 'Valor do frete não pode ser negativo').optional(),
 })
+
+export const DIVISOES_ESTOQUE = [
+  { id: 'todos', rotulo: 'Todos', icone: '🌐' },
+  { id: 'consumivel', rotulo: 'Insumos / Consumíveis', icone: '🧪', desc: 'Resinas, silicones, pigmentos, enfeites' },
+  { id: 'ferramenta', rotulo: 'Ferramentas & Equipamentos', icone: '🛠️', desc: 'Estufas, incubadoras, sopradores, politrizes' },
+  { id: 'administrativo', rotulo: 'Administrativo & Embalagens', icone: '📦', desc: 'Papel, etiquetas, caixas, fitas' },
+  { id: 'epi', rotulo: 'EPIs & Proteção', icone: '🥽', desc: 'Luvas, máscaras, toucas, refis' },
+] as const
+
+export function obterClassificacaoMaterial(
+  material: Material,
+  categorias: CategoriaMaterial[],
+): TipoClassificacaoMaterial {
+  if (material.tipoClassificacao) return material.tipoClassificacao
+  const catPai = categorias.find((c) => c.id === material.categoriaId)
+  if (catPai?.tipoClassificacao) return catPai.tipoClassificacao
+  const nomeCat = (catPai?.nome ?? '').toLowerCase()
+  if (nomeCat.includes('epi')) return 'epi'
+  if (nomeCat.includes('ferramenta') || nomeCat.includes('equipamento')) return 'ferramenta'
+  if (nomeCat.includes('administrativo') || nomeCat.includes('embalagen')) return 'administrativo'
+  return 'consumivel'
+}
 
 export const GRUPOS_UNIDADES = [
   {
@@ -74,6 +96,7 @@ function formatarMoeda(valor: number): string {
 export function MateriaisPage() {
   const { mostrarToast } = useToast()
   const [abaAtiva, setAbaAtiva] = useState('estoque')
+  const [subAbaClassificacao, setSubAbaClassificacao] = useState<'todos' | TipoClassificacaoMaterial>('todos')
   const [categorias, setCategorias] = useState<CategoriaMaterial[]>([])
   const [materiais, setMateriais] = useState<Material[]>([])
   const [contas, setContas] = useState<ContaDecifrada[]>([])
@@ -87,6 +110,7 @@ export function MateriaisPage() {
   const [valorFrete, setValorFrete] = useState('')
   const [categoriaId, setCategoriaId] = useState<string>('')
   const [subcategoriaId, setSubcategoriaId] = useState<string>('')
+  const [tipoClassificacao, setTipoClassificacao] = useState<TipoClassificacaoMaterial>('consumivel')
   const [novaCategoriaNome, setNovaCategoriaNome] = useState('')
   const [novaSubcategoriaNome, setNovaSubcategoriaNome] = useState('')
   const [erro, setErro] = useState<string | null>(null)
@@ -143,6 +167,7 @@ export function MateriaisPage() {
     setValorFrete('')
     setCategoriaId('')
     setSubcategoriaId('')
+    setTipoClassificacao('consumivel')
     setNovaCategoriaNome('')
     setNovaSubcategoriaNome('')
     setMaterialEmEdicaoId(null)
@@ -183,6 +208,7 @@ export function MateriaisPage() {
     setValorFrete(material.valorFrete ? String(material.valorFrete) : '')
     setCategoriaId(String(material.categoriaId))
     setSubcategoriaId(material.subcategoriaId ? String(material.subcategoriaId) : '')
+    setTipoClassificacao(obterClassificacaoMaterial(material, categorias))
     setNovaCategoriaNome('')
     setNovaSubcategoriaNome('')
   }
@@ -223,12 +249,12 @@ export function MateriaisPage() {
           setErro('Informe o nome da nova categoria')
           return
         }
-        categoriaIdFinal = await criarCategoriaMaterial(novaCategoriaNome.trim())
+        categoriaIdFinal = await criarCategoriaMaterial(novaCategoriaNome.trim(), undefined, tipoClassificacao)
       } else if (categoriaId) {
         categoriaIdFinal = Number(categoriaId)
       } else {
         categoriaIdFinal = categorias.find((c) => !c.categoriaPaiId)?.id
-        if (!categoriaIdFinal) categoriaIdFinal = await criarCategoriaMaterial('Geral')
+        if (!categoriaIdFinal) categoriaIdFinal = await criarCategoriaMaterial('Geral', undefined, tipoClassificacao)
       }
 
       let subcategoriaIdFinal: number | undefined
@@ -237,7 +263,7 @@ export function MateriaisPage() {
           setErro('Informe o nome da nova subcategoria')
           return
         }
-        subcategoriaIdFinal = await criarCategoriaMaterial(novaSubcategoriaNome.trim(), categoriaIdFinal)
+        subcategoriaIdFinal = await criarCategoriaMaterial(novaSubcategoriaNome.trim(), categoriaIdFinal, tipoClassificacao)
       } else if (subcategoriaId) {
         subcategoriaIdFinal = Number(subcategoriaId)
       }
@@ -248,12 +274,14 @@ export function MateriaisPage() {
           ...dadosSemEstoque,
           categoriaId: categoriaIdFinal,
           subcategoriaId: subcategoriaIdFinal,
+          tipoClassificacao,
         })
       } else {
         await criarMaterial({
           ...resultado.data,
           categoriaId: categoriaIdFinal,
           subcategoriaId: subcategoriaIdFinal,
+          tipoClassificacao,
         })
       }
     } catch (falha) {
@@ -543,7 +571,24 @@ export function MateriaisPage() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor="tipo-classificacao-material" className="text-sm font-medium text-on-surface">
+                          Divisão / Tipo
+                        </label>
+                        <select
+                          id="tipo-classificacao-material"
+                          value={tipoClassificacao}
+                          onChange={(e) => setTipoClassificacao(e.target.value as TipoClassificacaoMaterial)}
+                          className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                        >
+                          <option value="consumivel">🧪 Insumo / Consumível (resinas, silicones, enfeites)</option>
+                          <option value="ferramenta">🛠️ Ferramenta / Equipamento (estufa, incubadora, politriz)</option>
+                          <option value="administrativo">📦 Administrativo / Embalagem (papel, etiquetas, caixas)</option>
+                          <option value="epi">🥽 EPI / Proteção (luvas, máscara, touca, refil)</option>
+                        </select>
+                      </div>
+
                       <div className="flex flex-col gap-1">
                         <label htmlFor="categoria-material" className="text-sm font-medium text-on-surface">
                           Categoria Principal
@@ -552,8 +597,15 @@ export function MateriaisPage() {
                           id="categoria-material"
                           value={categoriaId}
                           onChange={(e) => {
-                            setCategoriaId(e.target.value)
+                            const val = e.target.value
+                            setCategoriaId(val)
                             setSubcategoriaId('')
+                            if (val && val !== NOVA_CATEGORIA) {
+                              const cat = categorias.find((c) => String(c.id) === val)
+                              if (cat?.tipoClassificacao) {
+                                setTipoClassificacao(cat.tipoClassificacao)
+                              }
+                            }
                           }}
                           className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                         >
@@ -626,99 +678,170 @@ export function MateriaisPage() {
                 </Card>
 
                 <section>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-on-surface">Todos os Materiais em Estoque</h2>
+                  <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-sm font-semibold text-on-surface">Materiais em Estoque</h2>
+                      <p className="text-xs text-on-surface-variant">
+                        Filtre pelas divisões do estoque para visualizar cada tipo de material.
+                      </p>
+                    </div>
                     <Button variante="primary" onClick={() => setAbaAtiva('compra')}>
                       🛒 Registrar Nova Compra
                     </Button>
                   </div>
-                  {materiais.length === 0 ? (
-                    <EmptyState
-                      titulo="Nenhum material cadastrado"
-                      descricao="Cadastre o primeiro insumo ou registre uma compra."
-                    />
-                  ) : (
-                    <div className="relative pl-6 sm:pl-32 flex flex-col gap-5 before:absolute before:left-2.5 sm:before:left-[108px] before:top-3 before:bottom-3 before:w-[2px] before:bg-outline-variant/40 before:border-r before:border-dashed before:border-outline-variant/60">
-                      {materiais.map((material) => {
-                        const totalItem = material.quantidadeEstoque * material.custoUnitario
-                        const ehZerado = material.quantidadeEstoque <= 0
 
-                        return (
-                          <div key={material.id} className="relative flex flex-col sm:flex-row items-start gap-4">
-                            {/* Rótulo Esquerda (Desktop) */}
-                            <div className="hidden sm:flex flex-col items-end w-24 shrink-0 pt-1 text-right">
-                              <span className="text-xs font-semibold text-on-surface uppercase tracking-wider">
-                                MATERIAL
-                              </span>
-                              <span className="text-[11px] text-on-surface-variant font-mono">
-                                #{material.id}
-                              </span>
-                            </div>
+                  {/* Divisões do Estoque / Sub-abas */}
+                  <div className="flex flex-wrap gap-2 border-b border-outline-variant/40 pb-3 mb-4">
+                    {DIVISOES_ESTOQUE.map((div) => {
+                      const ativa = subAbaClassificacao === div.id
+                      const qtd =
+                        div.id === 'todos'
+                          ? materiais.length
+                          : materiais.filter((m) => obterClassificacaoMaterial(m, categorias) === div.id).length
 
-                            {/* Marcador Central (Node Dot) */}
-                            <div className="absolute -left-6 sm:static sm:left-auto pt-1 shrink-0 z-10">
-                              <div
-                                className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shadow-sm ${
-                                  ehZerado
-                                    ? 'border-error bg-error/20 text-error'
-                                    : 'border-primary bg-primary/20 text-primary'
-                                }`}
-                              >
-                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                              </div>
-                            </div>
+                      return (
+                        <button
+                          key={div.id}
+                          type="button"
+                          onClick={() => setSubAbaClassificacao(div.id as typeof subAbaClassificacao)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                            ativa
+                              ? 'bg-primary text-on-primary font-semibold shadow-sm'
+                              : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+                          }`}
+                        >
+                          <span>{div.icone}</span>
+                          <span>{div.rotulo}</span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                              ativa ? 'bg-on-primary/20 text-on-primary' : 'bg-outline-variant/40 text-on-surface'
+                            }`}
+                          >
+                            {qtd}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
 
-                            {/* Card de Conteúdo à Direita */}
-                            <Card className="flex-1 w-full glow-hover flex flex-col gap-2">
-                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="sm:hidden text-xs font-semibold uppercase text-on-surface">
-                                    MATERIAL #{material.id}
-                                  </span>
-                                  <span className="text-[11px] font-bold uppercase text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-                                    🏷️ {nomeCategoria(material.categoriaId, material.subcategoriaId)}
-                                  </span>
-                                  {ehZerado && (
-                                    <span className="text-[11px] font-bold uppercase text-error bg-error/10 px-2 py-0.5 rounded border border-error/20">
-                                      ⚠️ Sem Estoque
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-xs font-mono font-semibold text-primary">
-                                  Total: {formatarMoeda(totalItem)}
+                  {(() => {
+                    const materiaisFiltrados =
+                      subAbaClassificacao === 'todos'
+                        ? materiais
+                        : materiais.filter((m) => obterClassificacaoMaterial(m, categorias) === subAbaClassificacao)
+
+                    if (materiaisFiltrados.length === 0) {
+                      return (
+                        <EmptyState
+                          titulo={
+                            subAbaClassificacao === 'todos'
+                              ? 'Nenhum material cadastrado'
+                              : `Nenhum item em "${DIVISOES_ESTOQUE.find((d) => d.id === subAbaClassificacao)?.rotulo}"`
+                          }
+                          descricao={
+                            subAbaClassificacao === 'todos'
+                              ? 'Cadastre o primeiro insumo ou registre uma compra.'
+                              : 'Cadastre materiais atribuindo esta divisão no formulário acima.'
+                          }
+                        />
+                      )
+                    }
+
+                    return (
+                      <div className="relative pl-6 sm:pl-32 flex flex-col gap-5 before:absolute before:left-2.5 sm:before:left-[108px] before:top-3 before:bottom-3 before:w-[2px] before:bg-outline-variant/40 before:border-r before:border-dashed before:border-outline-variant/60">
+                        {materiaisFiltrados.map((material) => {
+                          const totalItem = material.quantidadeEstoque * material.custoUnitario
+                          const ehZerado = material.quantidadeEstoque <= 0
+                          const classif = obterClassificacaoMaterial(material, categorias)
+                          const metaBadge =
+                            classif === 'consumivel'
+                              ? { label: '🧪 INSUMO', style: 'text-emerald-700 bg-emerald-500/10 border-emerald-500/30' }
+                              : classif === 'ferramenta'
+                              ? { label: '🛠️ FERRAMENTA', style: 'text-amber-700 bg-amber-500/10 border-amber-500/30' }
+                              : classif === 'administrativo'
+                              ? { label: '📦 ADM / EMBALAGEM', style: 'text-purple-700 bg-purple-500/10 border-purple-500/30' }
+                              : { label: '🥽 EPI', style: 'text-cyan-700 bg-cyan-500/10 border-cyan-500/30' }
+
+                          return (
+                            <div key={material.id} className="relative flex flex-col sm:flex-row items-start gap-4">
+                              {/* Rótulo Esquerda (Desktop) */}
+                              <div className="hidden sm:flex flex-col items-end w-24 shrink-0 pt-1 text-right">
+                                <span className="text-xs font-semibold text-on-surface uppercase tracking-wider">
+                                  MATERIAL
+                                </span>
+                                <span className="text-[11px] text-on-surface-variant font-mono">
+                                  #{material.id}
                                 </span>
                               </div>
 
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-                                <div>
-                                  <h3 className="font-semibold text-base text-on-surface">{material.nome}</h3>
-                                  <p className="text-xs text-on-surface-variant mt-0.5">
-                                    {material.quantidadeEstoque} {material.unidade} em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade} {material.valorFrete !== undefined && material.valorFrete > 0 ? `(Frete: ${formatarMoeda(material.valorFrete)})` : ''} · Categoria: {nomeCategoria(material.categoriaId, material.subcategoriaId)}
-                                  </p>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Button
-                                    variante="ghost"
-                                    className="text-xs"
-                                    onClick={() => material.id !== undefined && iniciarCompraParaMaterial(material.id)}
-                                  >
-                                    🛒 Repor Estoque
-                                  </Button>
-                                  <Button variante="ghost" className="text-xs" onClick={() => iniciarEdicao(material)}>
-                                    Editar
-                                  </Button>
-                                  <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setMaterialExcluindoId(material.id ?? null)}>
-                                    Excluir
-                                  </Button>
+                              {/* Marcador Central (Node Dot) */}
+                              <div className="absolute -left-6 sm:static sm:left-auto pt-1 shrink-0 z-10">
+                                <div
+                                  className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shadow-sm ${
+                                    ehZerado
+                                      ? 'border-error bg-error/20 text-error'
+                                      : 'border-primary bg-primary/20 text-primary'
+                                  }`}
+                                >
+                                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
                                 </div>
                               </div>
-                            </Card>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+
+                              {/* Card de Conteúdo à Direita */}
+                              <Card className="flex-1 w-full glow-hover flex flex-col gap-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="sm:hidden text-xs font-semibold uppercase text-on-surface">
+                                      MATERIAL #{material.id}
+                                    </span>
+                                    <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded border ${metaBadge.style}`}>
+                                      {metaBadge.label}
+                                    </span>
+                                    <span className="text-[11px] font-bold uppercase text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                                      🏷️ {nomeCategoria(material.categoriaId, material.subcategoriaId)}
+                                    </span>
+                                    {ehZerado && (
+                                      <span className="text-[11px] font-bold uppercase text-error bg-error/10 px-2 py-0.5 rounded border border-error/20">
+                                        ⚠️ Sem Estoque
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs font-mono font-semibold text-primary">
+                                    Total: {formatarMoeda(totalItem)}
+                                  </span>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                                  <div>
+                                    <h3 className="font-semibold text-base text-on-surface">{material.nome}</h3>
+                                    <p className="text-xs text-on-surface-variant mt-0.5">
+                                      {material.quantidadeEstoque} {material.unidade} em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade} {material.valorFrete !== undefined && material.valorFrete > 0 ? `(Frete: ${formatarMoeda(material.valorFrete)})` : ''} · Categoria: {nomeCategoria(material.categoriaId, material.subcategoriaId)}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                                      variante="ghost"
+                                      className="text-xs"
+                                      onClick={() => material.id !== undefined && iniciarCompraParaMaterial(material.id)}
+                                    >
+                                      🛒 Repor Estoque
+                                    </Button>
+                                    <Button variante="ghost" className="text-xs" onClick={() => iniciarEdicao(material)}>
+                                      Editar
+                                    </Button>
+                                    <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setMaterialExcluindoId(material.id ?? null)}>
+                                      Excluir
+                                    </Button>
+                                  </div>
+                                </div>
+                              </Card>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </section>
               </div>
             ),

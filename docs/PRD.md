@@ -73,7 +73,7 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
   - Captura e anexo de imagens (via câmera ao vivo com solicitação de permissão ou galeria).
 - **Gestão de Peças & Produção por Etapas**:
   - Cadastro de peça guiado por 4 etapas reais de ateliê (Molde & Resina Inicial, Cura & Equipamentos Térmicos, Desmolde & Acabamento com EPIs/Água, e Comercial/Propaganda/Frete).
-  - Exibição em destaque do **Volume Média Sugerido pela Forma** (ml/kg) ao selecionar a forma cadastrada.
+  - Exibição em destaque do **Volume Média Sugerido pela Forma** com conversão inteligente e automática de unidades (exibe em **Litros / kg** para volumes >= 1000 ml / 1 kg, ex: **10,9 L (~12,0 kg resina)** ou **2,5 L (~2,75 kg resina)**, e em **ml / g** para volumes < 1000 ml / 1 kg, ex: **500 ml (~550 g resina)**).
   - Consumo de equipamentos elétricos de cura (soprador térmico, estufa, câmara de vácuo) e acabamento (lixadeira, politriz, furadeira).
   - Custo de horas de mão de obra ativa, água e consumíveis/EPIs (luvas, máscaras, lixas).
   - Confirmado no motor de precificação que a **amortização do molde entra somada ao custo total da peça**.

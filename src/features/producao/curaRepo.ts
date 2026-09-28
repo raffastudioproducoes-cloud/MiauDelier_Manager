@@ -17,6 +17,24 @@ export function calcularProgressoCura(peca: Peca, agora = Date.now()): number {
   return Math.min(1, Math.max(0, (agora - peca.curaIniciadaEm) / duracao))
 }
 
+export function formatarTempoRestanteCura(restanteMs: number): string {
+  if (restanteMs <= 0) return 'Cura Concluída!'
+
+  const totalSegundos = Math.floor(restanteMs / 1000)
+  const dias = Math.floor(totalSegundos / 86400)
+  const horas = Math.floor((totalSegundos % 86400) / 3600)
+  const minutos = Math.floor((totalSegundos % 3600) / 60)
+  const segundos = totalSegundos % 60
+
+  const partes: string[] = []
+  if (dias > 0) partes.push(`${dias}d`)
+  if (horas > 0 || dias > 0) partes.push(`${horas}h`)
+  partes.push(`${minutos}m`)
+  if (dias === 0 && horas === 0 && minutos < 5) partes.push(`${segundos}s`)
+
+  return partes.join(' ')
+}
+
 export async function iniciarCura(pecaId: number, minutos: number, tipoProcesso = 'cura'): Promise<void> {
   const agora = Date.now()
   await db.pecas.update(pecaId, {
@@ -33,6 +51,29 @@ export async function iniciarCura(pecaId: number, minutos: number, tipoProcesso 
   })
 }
 
+export async function adicionarTempoCura(pecaId: number, minutosAdicionais: number): Promise<void> {
+  const peca = await db.pecas.get(pecaId)
+  if (!peca) throw new Error(`Peça ${pecaId} não encontrada`)
+
+  const minutosAtuais = peca.curaMinutos ?? 0
+  const novosMinutos = minutosAtuais + minutosAdicionais
+  const agora = Date.now()
+  const inicioCura = peca.curaIniciadaEm ?? agora
+
+  await db.pecas.update(pecaId, {
+    status: 'curando',
+    curaMinutos: novosMinutos,
+    curaIniciadaEm: inicioCura,
+  })
+
+  await db.eventosPeca.add({
+    pecaId,
+    tipo: 'tempo_cura_adicionado',
+    descricao: `Adicionado mais tempo de cura (${minutosAdicionais} min). Novo tempo total de cura: ${novosMinutos} min.`,
+    criadoEm: new Date(agora).toISOString(),
+  })
+}
+
 export async function verificarCurasConcluidas(agora = Date.now()): Promise<Peca[]> {
   const pecasEmCura = await db.pecas.where('status').equals('curando').toArray()
   const concluidas: Peca[] = []
@@ -42,33 +83,38 @@ export async function verificarCurasConcluidas(agora = Date.now()): Promise<Peca
     const termino = calcularTerminoCura(peca)
     if (!termino || agora < termino) continue
 
-    await db.pecas.update(peca.id, { status: 'pronta' })
-    await db.eventosPeca.add({
-      pecaId: peca.id,
-      tipo: 'cura_concluida',
-      descricao: `Cura da peça ${peca.numeroSerie ?? peca.nome} concluída.`,
-      criadoEm: new Date(agora).toISOString(),
-    })
+    const mensagemChave = `A peça "${peca.nome}" finalizou o tempo de cura e está pronta para inspeção/desmolde!`
 
-    const titulo = 'Cura Concluída! 🧪'
-    const mensagem = `A peça "${peca.nome}" finalizou o tempo de cura e está pronta!`
+    const todasNotifs = await db.notificacoes.toArray()
+    const notificacaoExistente = todasNotifs.find((n) => n.mensagem === mensagemChave)
 
-    await db.notificacoes.add({
-      titulo,
-      mensagem,
-      lida: false,
-      criadoEm: new Date(agora).toISOString(),
-    })
+    if (!notificacaoExistente) {
+      const titulo = 'Cura Concluída! 🧪'
 
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      try {
-        new Notification(titulo, { body: mensagem })
-      } catch {
-        // Ignora erro em ambientes sem suporte
+      await db.notificacoes.add({
+        titulo,
+        mensagem: mensagemChave,
+        lida: false,
+        criadoEm: new Date(agora).toISOString(),
+      })
+
+      await db.eventosPeca.add({
+        pecaId: peca.id,
+        tipo: 'cura_concluida',
+        descricao: `Tempo de cura da peça ${peca.numeroSerie ?? peca.nome} atingido. Aguardando verificação/desmolde.`,
+        criadoEm: new Date(agora).toISOString(),
+      })
+
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+          new Notification(titulo, { body: mensagemChave })
+        } catch {
+          // Ignora erro em ambientes sem suporte
+        }
       }
     }
 
-    concluidas.push({ ...peca, status: 'pronta' })
+    concluidas.push(peca)
   }
 
   return concluidas

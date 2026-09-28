@@ -1,10 +1,13 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { getDbNameForPerfil } from '../lib/perfisRepo'
 
+export type TipoClassificacaoMaterial = 'consumivel' | 'ferramenta' | 'administrativo' | 'epi'
+
 export interface CategoriaMaterial {
   id?: number
   nome: string
   categoriaPaiId?: number
+  tipoClassificacao?: TipoClassificacaoMaterial
 }
 
 export interface Material {
@@ -16,6 +19,7 @@ export interface Material {
   quantidadeEstoque: number
   custoUnitario: number
   valorFrete?: number
+  tipoClassificacao?: TipoClassificacaoMaterial
 }
 
 export type FormaGeometria = 'retangular' | 'cilindrico' | 'esferico' | 'direto'

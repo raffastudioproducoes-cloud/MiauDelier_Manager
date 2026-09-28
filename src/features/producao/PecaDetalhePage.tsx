@@ -23,6 +23,13 @@ import { SeletorImagem } from '../../components/ui/SeletorImagem'
 import { listarContas } from '../financeiro/contasRepo'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 import { calcularPrecificacao } from '../pricing/pricing'
+import { formatarVolumeEMassaLegivel } from '../../lib/unidades'
+import {
+  calcularRestanteCura,
+  calcularProgressoCura,
+  formatarTempoRestanteCura,
+  adicionarTempoCura,
+} from './curaRepo'
 import type { EventoPeca, StatusPeca } from '../../db/schema'
 
 const routeApi = getRouteApi('/pecas/$pecaId')
@@ -54,8 +61,21 @@ export function PecaDetalhePage() {
   const [editLitrosAgua, setEditLitrosAgua] = useState('')
   const [editCustoEpiInsumos, setEditCustoEpiInsumos] = useState('')
 
+  const [addCuraAberto, setAddCuraAberto] = useState(false)
+  const [addCuraValor, setAddCuraValor] = useState('')
+  const [addCuraUnidade, setAddCuraUnidade] = useState<'dias' | 'horas' | 'minutos'>('horas')
+
+  const [agora, setAgora] = useState(Date.now())
+
   const montado = useRef(true)
   const id = Number(pecaId)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setAgora(Date.now())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   async function recarregar() {
     const [pecas, consumosCarregados, eventosCarregados, tarifasConfig] = await Promise.all([
@@ -206,6 +226,28 @@ export function PecaDetalhePage() {
     }
   }
 
+  async function handleConfirmarAdicionarCura() {
+    const val = Number(addCuraValor)
+    if (!val || val <= 0) {
+      mostrarToast('Informe um valor válido para adicionar ao tempo de cura', 'erro')
+      return
+    }
+    let minAdicionais = val
+    if (addCuraUnidade === 'dias') minAdicionais = Math.round(val * 24 * 60)
+    else if (addCuraUnidade === 'horas') minAdicionais = Math.round(val * 60)
+
+    try {
+      await adicionarTempoCura(id, minAdicionais)
+      mostrarToast('Tempo de cura adicionado com sucesso!')
+      setAddCuraAberto(false)
+      setAddCuraValor('')
+      setAddCuraUnidade('horas')
+      await recarregar()
+    } catch (falha) {
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao adicionar tempo de cura.', 'erro')
+    }
+  }
+
   if (!carregado) return null
 
   if (!peca) {
@@ -251,11 +293,14 @@ export function PecaDetalhePage() {
         <Card className="flex flex-col gap-4">
           <h2 className="font-semibold text-sm text-on-surface border-b border-outline-variant/30 pb-2 flex items-center justify-between">
             <span>✨ Etapa 1 & 2: Molde, Mistura & Cura</span>
-            {peca.volumeResinaMl && (
-              <span className="text-xs font-mono font-normal text-violet-400">
-                {peca.volumeResinaMl} ml resina
-              </span>
-            )}
+            {peca.volumeResinaMl && (() => {
+              const fmt = formatarVolumeEMassaLegivel(peca.volumeResinaMl)
+              return (
+                <span className="text-xs font-mono font-normal text-violet-400">
+                  {fmt.volumeLegivel} ({fmt.massaLegivel})
+                </span>
+              )
+            })()}
           </h2>
 
           <div className="flex flex-col gap-2 text-xs">
@@ -263,19 +308,62 @@ export function PecaDetalhePage() {
               <span className="text-on-surface-variant">Forma:</span>
               <strong className="text-on-surface">{peca.nomeForma}</strong>
             </div>
-            {peca.volumeResinaMl && (
-              <div className="flex justify-between border-b border-outline-variant/20 pb-1.5">
-                <span className="text-on-surface-variant">Volume Real de Resina:</span>
-                <strong className="text-on-surface font-mono">{peca.volumeResinaMl} ml</strong>
-              </div>
-            )}
+            {peca.volumeResinaMl && (() => {
+              const fmt = formatarVolumeEMassaLegivel(peca.volumeResinaMl)
+              return (
+                <div className="flex justify-between border-b border-outline-variant/20 pb-1.5">
+                  <span className="text-on-surface-variant">Volume Real de Resina:</span>
+                  <strong className="text-on-surface font-mono">{fmt.resumoExtenso}</strong>
+                </div>
+              )
+            })()}
             <div className="flex justify-between border-b border-outline-variant/20 pb-1.5">
-              <span className="text-on-surface-variant">Tempo de Cura Registrado:</span>
+              <span className="text-on-surface-variant">Tempo de Cura Total Registrado:</span>
               <strong className="text-on-surface">
-                {peca.curaMinutos ? `${(peca.curaMinutos / 60).toFixed(1)} horas` : 'Não especificado'}
+                {peca.curaMinutos ? formatarTempoRestanteCura(peca.curaMinutos * 60_000) : 'Não especificado'}
               </strong>
             </div>
           </div>
+
+          {peca.curaMinutos && peca.curaIniciadaEm && (() => {
+            const restanteCura = calcularRestanteCura(peca, agora)
+            const progressoCura = calcularProgressoCura(peca, agora) * 100
+            const curaConcluida = restanteCura <= 0
+
+            return (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3 flex flex-col gap-2 my-1">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-amber-300 flex items-center gap-1">
+                    {curaConcluida ? '✅ Cura Concluída!' : '⏳ Cronômetro de Cura em Andamento'}
+                  </span>
+                  <span className="font-mono text-amber-400">
+                    {curaConcluida ? 'Concluída' : `Faltam ${formatarTempoRestanteCura(restanteCura)}`}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-amber-500/20">
+                  <div
+                    className={`h-full transition-all duration-500 ${curaConcluida ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                    style={{ width: `${progressoCura}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>{progressoCura.toFixed(0)}% concluído</span>
+                  <Button
+                    type="button"
+                    variante="ghost"
+                    onClick={() => {
+                      setAddCuraAberto(true)
+                      setAddCuraValor('')
+                      setAddCuraUnidade('horas')
+                    }}
+                    className="text-amber-400 hover:text-amber-300 text-xs font-semibold py-0.5 px-2"
+                  >
+                    ➕ Adicionar Tempo de Cura
+                  </Button>
+                </div>
+              </div>
+            )
+          })()}
 
           <div className="mt-1">
             <h3 className="text-xs font-semibold text-on-surface mb-2">Materiais Consumidos no Preparo</h3>
@@ -457,6 +545,41 @@ export function PecaDetalhePage() {
           onChange={(e) => setValorVenda(e.target.value)}
           erro={erroValorVenda ?? undefined}
         />
+      </ConfirmModal>
+
+      <ConfirmModal
+        aberto={addCuraAberto}
+        titulo="➕ Adicionar Tempo de Cura"
+        descricao="Adicione mais dias, horas ou minutos ao cronômetro de cura desta peça."
+        onConfirmar={handleConfirmarAdicionarCura}
+        onCancelar={() => setAddCuraAberto(false)}
+      >
+        <div className="flex gap-2 items-end pt-2 text-left">
+          <div className="flex-1">
+            <TextField
+              id="add-cura-val-det"
+              rotulo="Tempo a Adicionar"
+              type="number"
+              step="0.5"
+              value={addCuraValor}
+              onChange={(e) => setAddCuraValor(e.target.value)}
+              placeholder="Ex: 1 (dia), 12 (horas)"
+            />
+          </div>
+          <div className="flex flex-col gap-1 w-32">
+            <label htmlFor="add-cura-unidade-det" className="text-xs font-medium text-on-surface">Unidade</label>
+            <select
+              id="add-cura-unidade-det"
+              value={addCuraUnidade}
+              onChange={(e) => setAddCuraUnidade(e.target.value as any)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="dias">Dias</option>
+              <option value="horas">Horas</option>
+              <option value="minutos">Minutos</option>
+            </select>
+          </div>
+        </div>
       </ConfirmModal>
     </div>
   )

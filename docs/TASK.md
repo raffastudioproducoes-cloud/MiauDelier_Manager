@@ -6,9 +6,9 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 ## Resumo de Progresso
 
-- **Total de Tarefas**: 28
-- **Concluídas**: 26
-- **Em Andamento**: 2
+- **Total de Tarefas**: 29
+- **Concluídas**: 28
+- **Em Andamento**: 1
 - **Não Iniciadas**: 0
 
 ---
@@ -36,7 +36,7 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | 2.1 | Implementar motor de cálculo de volume (retangular, cilíndrico, esférico, direto) | Alta | Concluída |
 | 2.2 | Implementar suporte a furos/vazados em comedouros pets e pés de mesa resinados | Alta | Concluída |
 | 2.3 | Implementar motor de precificação (custo direto + amortização de molde + mão de obra + taxas + margem) | Alta | Concluída |
-| 2.4 | Criar módulo de conversão automática de unidades de medida (ml, L, g, kg, un) | Média | Concluída |
+| 2.4 | Criar módulo de conversão automática de unidades de medida (ml, L, g, kg, un) e formatação legível de volume e massa | Alta | Concluída |
 
 ---
 
@@ -51,8 +51,10 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | 3.3 | Implementar gestão de peças com número de série (`#0001`), débitos de material e estornos no cancelamento | Alta | Concluída |
 | 3.4 | Implementar componente `SeletorImagem` com captura de foto via câmera (permissões/fallback) e galeria | Alta | Concluída |
 | 3.5 | Criar aba "Vitrine - Peças Prontas" com postagens formatadas e link direto de atendimento no WhatsApp | Alta | Concluída |
-| 3.6 | Implementar fluxo por 4 etapas de produção (Molde/Volume Sugerido, Cura/Bolhas, Desmolde/EPIs, Propaganda/Frete) | Alta | Concluída |
+| 3.6 | Implementar fluxo por 4 etapas de produção (Molde/Volume Sugerido em L e kg, Cura Flexível em Dias/Horas/Minutos, Desmolde/EPIs, Propaganda/Frete) | Alta | Concluída |
 | 3.7 | Implementar tela de detalhes da peça com linha do tempo de eventos, discriminação por etapas e modal de venda automática | Alta | Concluída |
+| 3.8 | Implementar cronômetro de cura em tempo real com contagem regressiva viva, barra de progresso, notificação ao finalizar sem alteração forçada de status e extensão de tempo ("➕ Adicionar Tempo de Cura") | Alta | Concluída |
+| 3.9 | Implementar divisões do estoque em abas por tipo de material (`INSUMO`, `FERRAMENTA`, `ADMINISTRATIVO`, `EPI`) mantendo subcategorias flexíveis | Alta | Concluída |
 
 ---
 
@@ -90,5 +92,5 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | --- | --- | --- | --- |
 | 6.1 | Configurar manifesto PWA e Service Worker via `vite-plugin-pwa` para execução offline | Alta | Em andamento |
 | 6.2 | Garantir suíte de testes (Vitest + Testing Library) com 100% de cobertura nos fluxos críticos | Alta | Concluída |
-| 6.3 | Configurar pipeline de CI/CD para lint, verificação de tipos (`tsc`) e build automatizado | Média | Em andamento |
+| 6.3 | Configurar pipeline de CI/CD para lint, verificação de tipos (`tsc`) e build automatizado | Média | Concluída |
 | 6.4 | Implementar registrador de eventos e captura de falhas silenciosas (`src/lib/logger.ts`, `ErrorBoundary`, `/logs`) com sanitização de senhas/dados sensíveis | Alta | Concluída |
