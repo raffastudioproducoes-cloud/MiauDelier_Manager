@@ -112,3 +112,32 @@ export async function importarBackup(json: string): Promise<void> {
   // de autenticação da UI juntos — o guard redireciona em vez de montar tela protegida sem chave.
   useAuthStore.getState().sair()
 }
+
+export async function zerarDadosManterPerfil(): Promise<void> {
+  const TABELAS_PARA_ZERAR = [
+    'categoriasMaterial',
+    'materiais',
+    'formas',
+    'pecas',
+    'consumosPeca',
+    'eventosPeca',
+    'clientes',
+    'pedidos',
+    'transacoes',
+    'contas',
+    'auditoria',
+    'backups',
+    'mensagensIA',
+    'notificacoes',
+    'equipamentos',
+    'taxas',
+    'logs',
+  ] as const
+
+  await db.transaction('rw', TABELAS_PARA_ZERAR.map((nome) => db.table(nome)), async () => {
+    for (const nomeTabela of TABELAS_PARA_ZERAR) {
+      await db.table(nomeTabela).clear()
+    }
+  })
+}
+

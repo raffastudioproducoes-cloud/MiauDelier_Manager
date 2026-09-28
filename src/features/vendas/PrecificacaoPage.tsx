@@ -3,7 +3,7 @@ import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
-import { db, type Equipamento, type Material } from '../../db/schema'
+import { db, type CategoriaMaterial, type Equipamento, type Material } from '../../db/schema'
 import { calcularPrecificacao, type UsoEnergiaItem } from '../pricing/pricing'
 import { listarPecas, listarConsumosDaPeca, atualizarPrecoVendaPeca, type PecaComForma } from '../producao/pecasRepo'
 import { listarMateriais } from '../producao/materiaisRepo'
@@ -27,6 +27,7 @@ export function PrecificacaoPage() {
   const [pecas, setPecas] = useState<PecaComForma[]>([])
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([])
   const [materiaisEstoque, setMateriaisEstoque] = useState<Material[]>([])
+  const [categorias, setCategorias] = useState<CategoriaMaterial[]>([])
   const [pecaSelecionadaId, setPecaSelecionadaId] = useState('')
 
   // Custos Diretos
@@ -67,19 +68,43 @@ export function PrecificacaoPage() {
 
   const [carregado, setCarregado] = useState(false)
 
+  const materiaisAdministrativos = useMemo(() => {
+    return materiaisEstoque.filter((m) => {
+      if (m.tipoClassificacao === 'administrativo') return true
+      const cat = categorias.find((c) => c.id === m.categoriaId)
+      if (cat?.tipoClassificacao === 'administrativo') return true
+      const nomeCat = (cat?.nome || '').toLowerCase()
+      const nomeMat = (m.nome || '').toLowerCase()
+      return (
+        nomeCat.includes('administrativo') ||
+        nomeCat.includes('embalagen') ||
+        nomeCat.includes('gráfica') ||
+        nomeCat.includes('mimo') ||
+        nomeMat.includes('caixa') ||
+        nomeMat.includes('embalagem') ||
+        nomeMat.includes('etiqueta') ||
+        nomeMat.includes('papel') ||
+        nomeMat.includes('fita') ||
+        nomeMat.includes('bolha')
+      )
+    })
+  }, [materiaisEstoque, categorias])
+
   useEffect(() => {
     montado.current = true
     Promise.all([
       listarPecas(),
       db.equipamentos.toArray(),
       listarMateriais(),
+      db.categoriasMaterial.toArray(),
       obterTarifasConfig(),
     ])
-      .then(([listaPecas, listaEquipamentos, listaMateriais, tarifas]) => {
+      .then(([listaPecas, listaEquipamentos, listaMateriais, listaCategorias, tarifas]) => {
         if (!montado.current) return
         setPecas(listaPecas)
         setEquipamentos(listaEquipamentos)
         setMateriaisEstoque(listaMateriais)
+        setCategorias(listaCategorias)
 
         // Carrega tarifas padrões e concessionárias
         setValorHora(String(tarifas.valorHoraMaoDeObra))
@@ -341,44 +366,50 @@ export function PrecificacaoPage() {
       <section>
         <h2 className="mb-2 text-sm font-semibold text-on-surface">2. Custos Diretos de Matéria-Prima, Moldes & Insumos</h2>
         <Card className="flex flex-col gap-4">
-          {pecaSelecionadaId && (
-            <p className="text-xs text-primary font-medium bg-primary/10 p-2.5 rounded-lg border border-primary/20">
-              ℹ️ Os custos de resina, acessórios, mão de obra e molde/forma foram preenchidos automaticamente a partir dos dados de produção da peça selecionada.
-            </p>
-          )}
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3.5 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
+                🏭 Custos Consolidados da Produção (Automático)
+              </h3>
+              {pecaSelecionadaId ? (
+                <span className="text-[11px] font-semibold text-success bg-success/15 px-2 py-0.5 rounded">
+                  ✓ Peça Vinculada
+                </span>
+              ) : (
+                <span className="text-[11px] text-on-surface-variant italic">
+                  Selecione uma peça no item 1 para carregar os valores da produção
+                </span>
+              )}
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <TextField
-              id="custo-material"
-              rotulo="Custo do material / Resina (R$)"
-              type="number"
-              value={custoMaterial}
-              onChange={(e) => setCustoMaterial(e.target.value)}
-              readOnly={!!pecaSelecionadaId}
-            />
-            <TextField
-              id="custo-acessorios"
-              rotulo="Acessórios (R$)"
-              type="number"
-              value={custoAcessorios}
-              onChange={(e) => setCustoAcessorios(e.target.value)}
-              readOnly={!!pecaSelecionadaId}
-            />
-            <TextField
-              id="custo-forma"
-              rotulo="Molde / Forma (+ R$ / uso)"
-              type="number"
-              value={custoForma}
-              onChange={(e) => setCustoForma(e.target.value)}
-              readOnly={!!pecaSelecionadaId}
-            />
-            <TextField
-              id="custo-embalagem"
-              rotulo="Embalagens, Mimos & Gráfica (R$)"
-              type="number"
-              value={custoEmbalagem}
-              onChange={(e) => setCustoEmbalagem(e.target.value)}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-surface p-2.5 rounded border border-outline-variant/40 flex flex-col gap-0.5">
+                <span className="text-xs text-on-surface-variant font-medium">🧪 Material / Resina</span>
+                <span className="text-base font-bold text-on-surface">
+                  {formatarMoeda(Number(custoMaterial) || 0)}
+                </span>
+                <span className="text-[10px] text-on-surface-variant">Vindo dos insumos da produção</span>
+              </div>
+
+              <div className="bg-surface p-2.5 rounded border border-outline-variant/40 flex flex-col gap-0.5">
+                <span className="text-xs text-on-surface-variant font-medium">💎 Acessórios & Enfeites</span>
+                <span className="text-base font-bold text-on-surface">
+                  {formatarMoeda(Number(custoAcessorios) || 0)}
+                </span>
+                <span className="text-[10px] text-on-surface-variant">Vindo dos insumos da produção</span>
+              </div>
+
+              <div className="bg-surface p-2.5 rounded border border-outline-variant/40 flex flex-col gap-0.5">
+                <span className="text-xs text-on-surface-variant font-medium">🧱 Molde / Forma (Amortização)</span>
+                <span className="text-base font-bold text-on-surface">
+                  {formatarMoeda(Number(custoForma) || 0)}
+                </span>
+                <span className="text-[10px] text-on-surface-variant">Custo de fabricação / Vida útil</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
             <TextField
               id="percentual-desperdicio"
               rotulo="Desperdício / Sobras de Copo (%)"
@@ -391,12 +422,12 @@ export function PrecificacaoPage() {
           {/* Escolher Caixas e Insumos do Estoque */}
           <div className="flex flex-col gap-3 pt-3 border-t border-outline-variant/50">
             <h3 className="text-xs font-semibold uppercase text-on-surface-variant">
-              📦 Caixas & Insumos Cadastrados no Estoque
+              📦 Caixas, Embalagens & Insumos Administrativos (Estoque)
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="flex flex-col gap-1">
                 <label htmlFor="select-insumo-estoque" className="text-sm font-medium text-on-surface">
-                  Caixa / Embalagem / Insumo
+                  Caixa / Embalagem / Papelaria / Plástico Bolha
                 </label>
                 <select
                   id="select-insumo-estoque"
@@ -404,8 +435,12 @@ export function PrecificacaoPage() {
                   onChange={(e) => setMaterialInsumoId(e.target.value)}
                   className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 >
-                  <option value="">Selecione uma caixa/insumo do estoque...</option>
-                  {materiaisEstoque.map((m) => (
+                  <option value="">
+                    {materiaisAdministrativos.length > 0
+                      ? 'Selecione um item administrativo/embalagem...'
+                      : 'Nenhum item administrativo/embalagem no estoque'}
+                  </option>
+                  {materiaisAdministrativos.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nome} ({formatarMoeda(m.custoUnitario)} / {m.unidade})
                     </option>

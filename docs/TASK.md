@@ -6,12 +6,13 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 ## Resumo de Progresso
 
-- **Total de Tarefas**: 29
-- **Concluídas**: 28
+- **Total de Tarefas**: 30
+- **Concluídas**: 29
 - **Em Andamento**: 1
 - **Não Iniciadas**: 0
 
 ---
+
 
 ## Fase 1 — Fundação, Autenticação e Segurança Local-First
 
@@ -81,6 +82,8 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | 5.1 | Implementar assistente de IA Gemini com chave de API cifrada e instrução de sistema restrita | Média | Concluída |
 | 5.2 | Implementar resumo diário automatizado no Dashboard com rate-limit de 24h e cache em `localStorage` | Média | Concluída |
 | 5.3 | Implementar exportação e importação de backups JSON com validação de checksum SHA-256 | Alta | Concluída |
+| 5.4 | Implementar opção de apagar dados na aba de backup mantendo preservados os dados do Perfil do Ateliê e a senha de acesso | Alta | Concluída |
+
 
 ---
 

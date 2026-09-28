@@ -163,7 +163,22 @@ describe('backup JSON', () => {
     await expect(importarBackup('{"qualquer":"coisa"}')).rejects.toThrow(/backup inválido/i)
     await expect(importarBackup('não é json')).rejects.toThrow(/não é JSON/i)
   })
+
+  it('zera os dados das tabelas mantendo as configurações de autenticação', async () => {
+    await setupAccount('senha-do-ateliê')
+    await semearMaterial()
+
+    expect(await db.materiais.count()).toBe(1)
+    expect(await db.configuracoes.count()).toBe(2)
+
+    const { zerarDadosManterPerfil } = await import('./backup')
+    await zerarDadosManterPerfil()
+
+    expect(await db.materiais.count()).toBe(0)
+    expect(await db.configuracoes.count()).toBe(2)
+  })
 })
+
 
 // Reconstrói um envelope com checksum coerente para os dados adulterados, de modo que os testes
 // exercitem a validação de conteúdo e não parem antes, no checksum.

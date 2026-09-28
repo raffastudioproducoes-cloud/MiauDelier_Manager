@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { exportarBackup, importarBackup } from '../../lib/backup'
+import { exportarBackup, importarBackup, zerarDadosManterPerfil } from '../../lib/backup'
 import { ehBackupGestoraX, importarBackupGestoraX, type RelatorioImportacaoGestoraX } from '../../lib/gestoraxImport'
 
 export function BackupPage() {
@@ -12,6 +12,7 @@ export function BackupPage() {
   const [conteudoSelecionado, setConteudoSelecionado] = useState<string | null>(null)
   const [ehGestoraX, setEhGestoraX] = useState(false)
   const [relatorioGestoraX, setRelatorioGestoraX] = useState<RelatorioImportacaoGestoraX | null>(null)
+  const [confirmandoZerar, setConfirmandoZerar] = useState(false)
   const inputArquivoRef = useRef<HTMLInputElement>(null)
   const montado = useRef(true)
 
@@ -77,6 +78,19 @@ export function BackupPage() {
     }
   }
 
+  async function handleConfirmarZerar() {
+    try {
+      await zerarDadosManterPerfil()
+      if (!montado.current) return
+      mostrarToast('Todos os dados do ateliê foram zerados com sucesso. Os dados do seu perfil foram mantidos.', 'sucesso')
+      setConfirmandoZerar(false)
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao apagar dados do ateliê.', 'erro')
+      setConfirmandoZerar(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -110,6 +124,23 @@ export function BackupPage() {
             className="mt-1 block w-full text-sm text-on-surface-variant file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-primary file:cursor-pointer"
           />
           {erro && <p role="alert" className="mt-2 text-sm text-error">{erro}</p>}
+        </Card>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-error">Apagar Dados do Ateliê</h2>
+        <Card className="border border-error/30 bg-error/5">
+          <p className="mb-3 text-sm text-on-surface-variant">
+            Zera todos os dados cadastrados (materiais, formas, peças, vendas, clientes, contas e transações), deixando apenas as informações do seu <strong>Perfil do Ateliê</strong> e sua senha de acesso intactos.
+          </p>
+          <Button
+            type="button"
+            variante="ghost"
+            className="border border-error/50 text-error hover:bg-error/10 font-medium"
+            onClick={() => setConfirmandoZerar(true)}
+          >
+            🗑️ Apagar dados (Manter perfil)
+          </Button>
         </Card>
       </section>
 
@@ -155,6 +186,15 @@ export function BackupPage() {
         onConfirmar={handleConfirmarImportacao}
         onCancelar={limparSelecao}
       />
+
+      <ConfirmModal
+        aberto={confirmandoZerar}
+        titulo="Apagar todos os dados do ateliê?"
+        descricao="Esta ação irá excluir permanentemente todos os materiais, formas, peças, clientes, pedidos e histórico financeiro. Os dados do seu perfil e seu login serão mantidos intactos. Esta ação NÃO pode ser desfeita. Deseja continuar?"
+        onConfirmar={handleConfirmarZerar}
+        onCancelar={() => setConfirmandoZerar(false)}
+      />
     </div>
   )
 }
+

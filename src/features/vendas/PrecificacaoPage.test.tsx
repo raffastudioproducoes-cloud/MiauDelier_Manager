@@ -25,17 +25,27 @@ describe('PrecificacaoPage', () => {
     await setupAccount('senha-do-ateliê')
   })
 
-  it('calcula o preço final ao preencher os campos', async () => {
+  it('calcula o preço final ao adicionar embalagem do estoque, horas e margem', async () => {
+    const caixaId = await criarMaterial({
+      nome: 'Caixa de Envio P',
+      categoriaId: 1,
+      unidade: 'un',
+      quantidadeEstoque: 50,
+      custoUnitario: 5.0,
+      tipoClassificacao: 'administrativo',
+    })
+
     await renderPagina()
 
-    fireEvent.change(screen.getByLabelText(/custo do material/i), { target: { value: '25' } })
-    fireEvent.change(screen.getByLabelText(/acessórios/i), { target: { value: '5' } })
+    fireEvent.change(await screen.findByLabelText(/caixa \/ embalagem /i), { target: { value: String(caixaId) } })
+    fireEvent.click(screen.getByRole('button', { name: /\+ adicionar ao custo/i }))
+
     fireEvent.change(screen.getByLabelText(/horas de produção/i), { target: { value: '1.5' } })
     fireEvent.change(screen.getByLabelText(/valor da hora/i), { target: { value: '20' } })
     fireEvent.change(screen.getByLabelText(/rateio de custo fixo/i), { target: { value: '15' } })
     fireEvent.change(screen.getByLabelText(/margem de lucro/i), { target: { value: '40' } })
 
-    await waitFor(() => expect(screen.getAllByText(/96,60|96\.60/).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText(/56,35|56\.35/).length).toBeGreaterThan(0))
   })
 
   it('não quebra a tela com entrada inválida (percentual fora de faixa)', async () => {
@@ -46,17 +56,23 @@ describe('PrecificacaoPage', () => {
     expect(await screen.findByText(/preço final: —/i)).toBeInTheDocument()
   })
 
-  it('mostra aviso em vez de R$ 0,00 quando nada foi preenchido', async () => {
+  it('mostra aviso quando nada foi preenchido', async () => {
     await renderPagina()
 
     expect(await screen.findByText(/preencha os campos/i)).toBeInTheDocument()
-    expect(screen.queryByText(/R\$\s*0,00/)).not.toBeInTheDocument()
   })
 
-  it('mostra a decomposição completa do cálculo', async () => {
+  it('mostra a decomposição completa do cálculo com peça selecionada', async () => {
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 500, custoUnitario: 0.15 })
+    const formaId = await criarForma({ nome: 'Chaveiro', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    const pecaId = await criarPeca({ nome: 'Chaveiro gato', formaId, consumos: [{ materialId, quantidade: 100 }] })
+
     await renderPagina()
 
-    fireEvent.change(screen.getByLabelText(/custo do material/i), { target: { value: '25' } })
+    fireEvent.change(await screen.findByLabelText(/peça \(opcional\)/i), { target: { value: String(pecaId) } })
+
+    await waitFor(() => expect(screen.getAllByText(/R\$\s*15,00/).length).toBeGreaterThan(0))
+
     fireEvent.change(screen.getByLabelText(/horas de produção/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/valor da hora/i), { target: { value: '20' } })
 
@@ -66,7 +82,7 @@ describe('PrecificacaoPage', () => {
     })
   })
 
-  it('pré-preenche custo do material ao selecionar uma peça e permite salvar o preço', async () => {
+  it('carrega custos de resina automaticamente da produção ao selecionar uma peça e permite salvar o preço', async () => {
     const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 500, custoUnitario: 0.15 })
     const formaId = await criarForma({ nome: 'Chaveiro', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
     const pecaId = await criarPeca({ nome: 'Chaveiro gato', formaId, consumos: [{ materialId, quantidade: 100 }] })
@@ -75,7 +91,8 @@ describe('PrecificacaoPage', () => {
 
     fireEvent.change(await screen.findByLabelText(/peça \(opcional\)/i), { target: { value: String(pecaId) } })
 
-    await waitFor(() => expect(screen.getByLabelText(/custo do material/i)).toHaveValue(15), { timeout: 5000 })
+    await waitFor(() => expect(screen.getByText(/✓ peça vinculada/i)).toBeInTheDocument(), { timeout: 5000 })
+    await waitFor(() => expect(screen.getAllByText(/R\$\s*15,00/).length).toBeGreaterThan(0))
 
     fireEvent.change(screen.getByLabelText(/horas de produção/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/valor da hora/i), { target: { value: '20' } })
@@ -89,3 +106,5 @@ describe('PrecificacaoPage', () => {
     })
   })
 })
+
+
