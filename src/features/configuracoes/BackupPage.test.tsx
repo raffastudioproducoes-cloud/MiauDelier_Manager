@@ -27,10 +27,10 @@ describe('BackupPage', () => {
     render(<ToastProvider><BackupPage /></ToastProvider>)
 
     const arquivo = new File(['{ "json": "invalido, sem campos" }'], 'backup.json', { type: 'application/json' })
-    const input = screen.getByLabelText(/importar backup/i) as HTMLInputElement
+    const input = screen.getByTestId('import-backup-input') as HTMLInputElement
     await fireEvent.change(input, { target: { files: [arquivo] } })
 
-    fireEvent.click(await screen.findByRole('button', { name: /confirmar/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /Substituir Perfil Atual/i }))
 
     expect(await screen.findByRole('alert')).toBeInTheDocument()
   })

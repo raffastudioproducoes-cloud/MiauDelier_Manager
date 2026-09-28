@@ -177,6 +177,7 @@ export function BackupPage() {
                 accept="application/json"
                 onChange={handleSelecionarArquivo}
                 className="hidden"
+                data-testid="import-backup-input"
               />
               <Button type="button" onClick={() => inputArquivoRef.current?.click()}>
                 📁 Selecionar Arquivo

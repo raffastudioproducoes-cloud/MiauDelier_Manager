@@ -121,8 +121,8 @@ export function PedidoDetalhePage() {
           <p className="text-sm text-on-surface-variant">Nenhuma peça vinculada.</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {pecasDoPedido.map((peca) => (
-              <li key={peca.id} className="flex items-center justify-between text-sm text-on-surface-variant">
+            {pecasDoPedido.map((peca, index) => (
+              <li key={`${peca.id}-${index}`} className="flex items-center justify-between text-sm text-on-surface-variant">
                 <span>{peca.nome}</span>
                 <span className="font-medium text-on-surface">R$ {(peca.precoVenda ?? 0).toFixed(2)}</span>
               </li>
