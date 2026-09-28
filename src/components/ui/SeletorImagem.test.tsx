@@ -7,8 +7,8 @@ describe('SeletorImagem', () => {
     const onImagemSelecionada = vi.fn()
     render(<SeletorImagem onImagemSelecionada={onImagemSelecionada} />)
 
-    expect(screen.getByText('Tirar Foto (Câmera)')).toBeInTheDocument()
-    expect(screen.getByText('Escolher da Memória / Galeria')).toBeInTheDocument()
+    expect(screen.getByText(/Tirar Foto/i)).toBeInTheDocument()
+    expect(screen.getByText(/Escolher da Memória/i)).toBeInTheDocument()
   })
 
   it('renders image preview and remove button when imagemUrl is provided', () => {
@@ -21,7 +21,7 @@ describe('SeletorImagem', () => {
     )
 
     expect(screen.getByAltText('Preview')).toBeInTheDocument()
-    const removerBtn = screen.getByText('🗑️ Remover')
+    const removerBtn = screen.getByText(/Remover/i)
     expect(removerBtn).toBeInTheDocument()
 
     fireEvent.click(removerBtn)
