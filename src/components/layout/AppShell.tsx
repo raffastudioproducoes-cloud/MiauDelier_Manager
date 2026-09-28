@@ -7,6 +7,7 @@ import { NavItem } from './NavItem'
 import { Button } from '../ui/Button'
 import logoMiauDelier from '../../assets/logo-miaudelier.png'
 
+import { exportarBackup } from '../../lib/backup'
 import { BannerConsentimentoLGPD } from '../ui/BannerConsentimentoLGPD'
 
 interface ItemMenu {
@@ -308,6 +309,37 @@ export function AppShell({ children }: { children: ReactNode }) {
       // ignorar erro de escrita no localStorage
     }
   }, [retraido])
+
+  useEffect(() => {
+    async function checarBackupAutomatico() {
+      try {
+        const ultimoBackup = localStorage.getItem('miaudelier_ultimo_backup_automatico')
+        const agora = new Date().getTime()
+        const vinteQuatroHoras = 24 * 60 * 60 * 1000
+
+        if (!ultimoBackup || agora - parseInt(ultimoBackup, 10) > vinteQuatroHoras) {
+          const json = await exportarBackup()
+          const blob = new Blob([json], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = 'backupAutomatico.json'
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+          setTimeout(() => URL.revokeObjectURL(url), 0)
+          
+          localStorage.setItem('miaudelier_ultimo_backup_automatico', agora.toString())
+        }
+      } catch (err) {
+        console.error('Erro ao realizar backup automático', err)
+      }
+    }
+    
+    checarBackupAutomatico()
+    const intervalo = setInterval(checarBackupAutomatico, 60 * 60 * 1000)
+    return () => clearInterval(intervalo)
+  }, [])
 
   function irPara(rota: string) {
     navigate({ to: rota })

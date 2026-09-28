@@ -1,4 +1,4 @@
-import { db } from '../db/schema'
+import { db, type MiauDelierDB } from '../db/schema'
 import { CHAVE_SALT, CHAVE_VERIFICADOR } from './auth'
 import { useAuthStore } from '../stores/authStore'
 import { logInfo, logError } from './logger'
@@ -100,8 +100,9 @@ export async function exportarBackup(): Promise<string> {
   }
 }
 
-export async function importarBackup(json: string): Promise<void> {
+export async function importarBackup(json: string, targetDb?: MiauDelierDB): Promise<void> {
   await logInfo('backup', 'Iniciando validação e restauração de backup JSON MiauDelier', { tamanhoString: json.length })
+  const dbAlvo = targetDb || db
 
   try {
     const parsed = validarEnvelope(json)
@@ -118,11 +119,11 @@ export async function importarBackup(json: string): Promise<void> {
       validarLinhasDaTabela(nomeTabela, parsed.dados[nomeTabela] ?? [])
     }
 
-    await db.transaction('rw', TABELAS.map((nome) => db.table(nome)), async () => {
+    await dbAlvo.transaction('rw', TABELAS.map((nome) => dbAlvo.table(nome)), async () => {
       for (const nomeTabela of TABELAS) {
-        await db.table(nomeTabela).clear()
+        await dbAlvo.table(nomeTabela).clear()
         const linhas = parsed.dados[nomeTabela] ?? []
-        if (linhas.length > 0) await db.table(nomeTabela).bulkAdd(linhas)
+        if (linhas.length > 0) await dbAlvo.table(nomeTabela).bulkAdd(linhas)
       }
     })
 

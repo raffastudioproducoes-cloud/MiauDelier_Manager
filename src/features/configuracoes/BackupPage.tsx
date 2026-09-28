@@ -3,6 +3,9 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
+import * as Dialog from '@radix-ui/react-dialog'
+import { criarPerfil, selecionarPerfil, getDbNameForPerfil } from '../../lib/perfisRepo'
+import { MiauDelierDB } from '../../db/schema'
 import { exportarBackup, importarBackup, zerarDadosManterPerfil } from '../../lib/backup'
 import { ehBackupGestoraX, importarBackupGestoraX, type RelatorioImportacaoGestoraX } from '../../lib/gestoraxImport'
 import { logError } from '../../lib/logger'
@@ -27,11 +30,15 @@ export function BackupPage() {
   async function handleExportar() {
     try {
       const json = await exportarBackup()
+      const parsed = JSON.parse(json)
+      const checksumStr = parsed.checksum ? `-${parsed.checksum.substring(0, 8)}` : ''
+      const dataHora = new Date().toISOString().replace(/[:.]/g, '-')
+
       const blob = new Blob([json], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `miaudelier-backup-${new Date().toISOString().slice(0, 10)}.json`
+      link.download = `miaudelier-backup-${dataHora}${checksumStr}.json`
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -69,20 +76,51 @@ export function BackupPage() {
     if (inputArquivoRef.current) inputArquivoRef.current.value = ''
   }
 
-  async function handleConfirmarImportacao() {
+  async function handleConfirmarImportacaoGestoraX() {
+    if (!conteudoSelecionado || !ehGestoraX) return
+    try {
+      const relatorio = await importarBackupGestoraX(conteudoSelecionado)
+      if (!montado.current) return
+      setRelatorioGestoraX(relatorio)
+      mostrarToast('Dados do GestoraX importados e mesclados com sucesso')
+      limparSelecao()
+    } catch (falha) {
+      if (!montado.current) return
+      const mensagem = falha instanceof Error ? falha.message : 'Arquivo de backup inválido.'
+      logError('backup', `Erro ao importar arquivo JSON GestoraX: ${mensagem}`, falha)
+      setErro(mensagem)
+      limparSelecao()
+    }
+  }
+
+  async function handleImportarNovoPerfil() {
     if (!conteudoSelecionado) return
     try {
-      if (ehGestoraX) {
-        const relatorio = await importarBackupGestoraX(conteudoSelecionado)
-        if (!montado.current) return
-        setRelatorioGestoraX(relatorio)
-        mostrarToast('Dados do GestoraX importados e mesclados com sucesso')
-        limparSelecao()
-      } else {
-        await importarBackup(conteudoSelecionado)
-        mostrarToast('Backup importado. Faça login novamente.')
-        limparSelecao()
-      }
+      const novoPerfil = criarPerfil('Ateliê Restaurado')
+      const dbName = getDbNameForPerfil(novoPerfil.id)
+      const targetDb = new MiauDelierDB(dbName)
+      
+      await importarBackup(conteudoSelecionado, targetDb)
+      targetDb.close()
+      
+      selecionarPerfil(novoPerfil.id)
+      mostrarToast('Backup carregado no novo perfil! Entrando...', 'sucesso')
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (falha) {
+      if (!montado.current) return
+      const mensagem = falha instanceof Error ? falha.message : 'Erro ao importar backup.'
+      logError('backup', `Erro ao importar para novo perfil: ${mensagem}`, falha)
+      setErro(mensagem)
+      limparSelecao()
+    }
+  }
+
+  async function handleImportarPerfilAtual() {
+    if (!conteudoSelecionado) return
+    try {
+      await importarBackup(conteudoSelecionado)
+      mostrarToast('Backup importado. Faça login novamente.', 'sucesso')
+      limparSelecao()
     } catch (falha) {
       if (!montado.current) return
       const mensagem = falha instanceof Error ? falha.message : 'Arquivo de backup inválido.'
@@ -189,15 +227,36 @@ export function BackupPage() {
         </section>
       )}
 
+      <Dialog.Root open={conteudoSelecionado !== null && !ehGestoraX} onOpenChange={(abertoAgora) => !abertoAgora && limparSelecao()}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-outline-variant bg-surface-container p-6 shadow-lg">
+            <Dialog.Title className="text-base font-semibold text-on-surface">Onde deseja carregar o backup?</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-on-surface-variant">
+              Você selecionou um backup válido do MiauDelier.
+              <br /><br />
+              <strong className="text-error">Atenção:</strong> Se você carregar no perfil atual, <strong>todas</strong> as informações atuais serão perdidas e substituídas pelo backup. Aconselhamos carregar este save em um novo perfil criado automaticamente.
+            </Dialog.Description>
+            <div className="mt-5 flex flex-col gap-2">
+              <Button onClick={handleImportarNovoPerfil} className="w-full flex justify-center">
+                ✨ Carregar em NOVO Perfil
+              </Button>
+              <Button onClick={handleImportarPerfilAtual} variante="outline" className="w-full flex justify-center border-error/50 text-error hover:bg-error/10">
+                ⚠️ Substituir Perfil Atual
+              </Button>
+              <Button onClick={limparSelecao} variante="ghost" className="w-full flex justify-center mt-2">
+                Cancelar
+              </Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
       <ConfirmModal
-        aberto={conteudoSelecionado !== null}
-        titulo={ehGestoraX ? 'Importar dados do GestoraX?' : 'Importar backup?'}
-        descricao={
-          ehGestoraX
-            ? `Arquivo reconhecido como backup do GestoraX. Materiais, formas, peças, contas e transações serão mesclados aos dados atuais do MiauDelier (nada é apagado, e sua sessão continua aberta). Registros sem correspondência válida serão listados como ignorados.`
-            : 'Importar este arquivo substitui todos os dados atuais e encerra sua sessão. Você precisará entrar de novo com a senha do backup. Essa ação não pode ser desfeita.'
-        }
-        onConfirmar={handleConfirmarImportacao}
+        aberto={conteudoSelecionado !== null && ehGestoraX}
+        titulo="Importar dados do GestoraX?"
+        descricao="Arquivo reconhecido como backup do GestoraX. Materiais, formas, peças, contas e transações serão mesclados aos dados atuais do MiauDelier (nada é apagado, e sua sessão continua aberta). Registros sem correspondência válida serão listados como ignorados."
+        onConfirmar={handleConfirmarImportacaoGestoraX}
         onCancelar={limparSelecao}
       />
 

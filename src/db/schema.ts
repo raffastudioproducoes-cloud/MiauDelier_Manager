@@ -241,7 +241,7 @@ export interface LogSistema {
   stack?: string
 }
 
-class MiauDelierDB extends Dexie {
+export class MiauDelierDB extends Dexie {
   categoriasMaterial!: EntityTable<CategoriaMaterial, 'id'>
   materiais!: EntityTable<Material, 'id'>
   formas!: EntityTable<Forma, 'id'>
@@ -261,8 +261,8 @@ class MiauDelierDB extends Dexie {
   taxas!: EntityTable<Taxa, 'id'>
   logs!: EntityTable<LogSistema, 'id'>
 
-  constructor() {
-    super(getDbNameForPerfil())
+  constructor(dbName?: string) {
+    super(dbName || getDbNameForPerfil())
     this.version(1).stores({
       categoriasMaterial: '++id, nome',
       materiais: '++id, nome, categoriaId',

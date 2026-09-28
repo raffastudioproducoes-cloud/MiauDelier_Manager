@@ -29,6 +29,13 @@ export async function garantirCategoriasPadrao(): Promise<void> {
     jaInicializadoPadrao = true
     return
   }
+  
+  const config = await db.configuracoes.where('chave').equals('categorias_padrao_criadas').first()
+  if (config?.valor === 'true') {
+    jaInicializadoPadrao = true
+    return
+  }
+
   const total = await db.categoriasMaterial.count()
   if (total === 0) {
     for (const item of CATEGORIAS_PADRAO_SUGERIDAS) {
@@ -37,6 +44,11 @@ export async function garantirCategoriasPadrao(): Promise<void> {
         await db.categoriasMaterial.add({ nome: item.nome, tipoClassificacao: item.tipoClassificacao })
       }
     }
+  }
+  
+  const checkDbConfig = await db.configuracoes.where('chave').equals('categorias_padrao_criadas').first()
+  if (!checkDbConfig) {
+    await db.configuracoes.add({ chave: 'categorias_padrao_criadas', valor: 'true' })
   }
   jaInicializadoPadrao = true
 }
