@@ -1,49 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Card } from '../../components/ui/Card'
-import { ICONES_MAIS } from './iconesMais'
-
-const SECOES = [
-  {
-    titulo: 'Produção',
-    links: [
-      { rotulo: 'Materiais', rota: '/materiais' },
-      { rotulo: 'Formas', rota: '/formas' },
-      { rotulo: 'Peças', rota: '/pecas' },
-      { rotulo: 'Equipamentos (kWh)', rota: '/equipamentos' },
-      { rotulo: 'Categorias', rota: '/categorias' },
-    ],
-  },
-  {
-    titulo: 'Vendas',
-    links: [
-      { rotulo: 'Clientes', rota: '/clientes' },
-      { rotulo: 'Pedidos', rota: '/pedidos' },
-      { rotulo: 'Precificação', rota: '/precificacao' },
-      { rotulo: 'Taxas & Canais', rota: '/taxas' },
-      { rotulo: 'Agenda', rota: '/agenda' },
-    ],
-  },
-  {
-    titulo: 'Financeiro',
-    links: [
-      { rotulo: 'Contas', rota: '/contas' },
-      { rotulo: 'Transações', rota: '/transacoes' },
-      { rotulo: 'Diagnóstico PDF', rota: '/diagnostico' },
-      { rotulo: 'Analytics', rota: '/analytics' },
-    ],
-  },
-
-  {
-    titulo: 'Sistema',
-    links: [
-      { rotulo: 'Configurações', rota: '/configuracoes' },
-      { rotulo: 'Backup', rota: '/backup' },
-      { rotulo: 'Auditoria', rota: '/auditoria' },
-      { rotulo: 'Logs do Sistema', rota: '/logs' },
-      { rotulo: 'Assistente', rota: '/assistente' },
-    ],
-  },
-]
+import { Button } from '../../components/ui/Button'
 
 export function MaisPage() {
   return (
@@ -51,27 +8,25 @@ export function MaisPage() {
       <div>
         <h1 className="text-xl font-semibold text-on-surface">Mais</h1>
         <p className="text-label-sm text-on-surface-variant">
-          Hub central com atalhos para todas as seções da aplicação.
+          Navegação unificada do ateliê.
         </p>
       </div>
 
-      <div className="flex flex-col gap-8">
-        {SECOES.map((secao) => (
-          <section key={secao.titulo} className="flex flex-col gap-4">
-            <h2 className="text-lg font-medium text-on-surface">{secao.titulo}</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {secao.links.map((item) => (
-                <Link key={item.rota} to={item.rota}>
-                  <Card className="glow-hover flex aspect-square flex-col items-center justify-center gap-2 text-center">
-                    <span className="text-on-surface-variant">{ICONES_MAIS[item.rota]}</span>
-                    <p className="text-sm font-medium text-on-surface">{item.rotulo}</p>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+      <Card className="flex flex-col items-center justify-center gap-4 p-8 text-center border border-primary/20 bg-primary/5">
+        <span className="text-4xl">✨</span>
+        <div className="flex flex-col gap-1 max-w-md">
+          <h2 className="text-base font-bold text-on-surface">Atalhos Unificados no Menu Principal</h2>
+          <p className="text-sm text-on-surface-variant">
+            Os botões duplicados foram limpos. Todas as ferramentas do ateliê (Produção, Vendas, Financeiro, Equipamentos, Taxas, Diagnóstico, Logs e Sistema) estão agora disponíveis diretamente no menu lateral / drawer.
+          </p>
+        </div>
+        <Link to="/">
+          <Button variante="ghost" className="border border-primary/30 text-primary">
+            Ir para o Início
+          </Button>
+        </Link>
+      </Card>
     </div>
   )
 }
+

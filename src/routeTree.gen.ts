@@ -28,6 +28,7 @@ import { Route as MaisRouteImport } from './routes/mais'
 import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as PecasRouteImport } from './routes/pecas'
 import { Route as PedidosRouteImport } from './routes/pedidos'
+import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PrecificacaoRouteImport } from './routes/precificacao'
 import { Route as TaxasRouteImport } from './routes/taxas'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
@@ -130,6 +131,11 @@ const PedidosRoute = PedidosRouteImport.update({
   path: '/pedidos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrecificacaoRoute = PrecificacaoRouteImport.update({
   id: '/precificacao',
   path: '/precificacao',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
+  '/perfil': typeof PerfilRoute
   '/precificacao': typeof PrecificacaoRoute
   '/taxas': typeof TaxasRoute
   '/transacoes': typeof TransacoesRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
+  '/perfil': typeof PerfilRoute
   '/precificacao': typeof PrecificacaoRoute
   '/taxas': typeof TaxasRoute
   '/transacoes': typeof TransacoesRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
   '/pedidos': typeof PedidosRouteWithChildren
+  '/perfil': typeof PerfilRoute
   '/precificacao': typeof PrecificacaoRoute
   '/taxas': typeof TaxasRoute
   '/transacoes': typeof TransacoesRoute
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/materiais'
     | '/pecas'
     | '/pedidos'
+    | '/perfil'
     | '/precificacao'
     | '/taxas'
     | '/transacoes'
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/materiais'
     | '/pecas'
     | '/pedidos'
+    | '/perfil'
     | '/precificacao'
     | '/taxas'
     | '/transacoes'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/materiais'
     | '/pecas'
     | '/pedidos'
+    | '/perfil'
     | '/precificacao'
     | '/taxas'
     | '/transacoes'
@@ -341,6 +353,7 @@ export interface RootRouteChildren {
   MateriaisRoute: typeof MateriaisRoute
   PecasRoute: typeof PecasRouteWithChildren
   PedidosRoute: typeof PedidosRouteWithChildren
+  PerfilRoute: typeof PerfilRoute
   PrecificacaoRoute: typeof PrecificacaoRoute
   TaxasRoute: typeof TaxasRoute
   TransacoesRoute: typeof TransacoesRoute
@@ -481,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PedidosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/precificacao': {
       id: '/precificacao'
       path: '/precificacao'
@@ -578,6 +598,7 @@ const rootRouteChildren: RootRouteChildren = {
   MateriaisRoute: MateriaisRoute,
   PecasRoute: PecasRouteWithChildren,
   PedidosRoute: PedidosRouteWithChildren,
+  PerfilRoute: PerfilRoute,
   PrecificacaoRoute: PrecificacaoRoute,
   TaxasRoute: TaxasRoute,
   TransacoesRoute: TransacoesRoute,
