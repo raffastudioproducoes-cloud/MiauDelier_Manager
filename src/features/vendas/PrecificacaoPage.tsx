@@ -2,12 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
 import { Button } from '../../components/ui/Button'
+import { Badge } from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/useToast'
-import { db, type CategoriaMaterial, type Equipamento, type Material } from '../../db/schema'
+import { db, type CategoriaMaterial, type Equipamento, type Material, type Taxa } from '../../db/schema'
 import { calcularPrecificacao, type UsoEnergiaItem } from '../pricing/pricing'
 import { listarPecas, listarConsumosDaPeca, atualizarPrecoVendaPeca, type PecaComForma } from '../producao/pecasRepo'
 import { listarMateriais } from '../producao/materiaisRepo'
-import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
+import { obterTarifasConfig, salvarTarifasConfig } from '../pricing/tarifasConfigRepo'
+import { sincronizarTarifasConcessionaria } from '../pricing/concessionariasService'
+import { listarTaxas } from './taxasRepo'
 
 function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -28,6 +31,7 @@ export function PrecificacaoPage() {
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([])
   const [materiaisEstoque, setMateriaisEstoque] = useState<Material[]>([])
   const [categorias, setCategorias] = useState<CategoriaMaterial[]>([])
+  const [taxasDisponiveis, setTaxasDisponiveis] = useState<Taxa[]>([])
   const [pecaSelecionadaId, setPecaSelecionadaId] = useState('')
 
   // Custos Diretos
@@ -42,27 +46,36 @@ export function PrecificacaoPage() {
   const [materialInsumoId, setMaterialInsumoId] = useState('')
   const [quantidadeInsumo, setQuantidadeInsumo] = useState('1')
 
+  // Localização Geográfica e Tarifas de Concessionárias (Seção 3)
+  const [pais, setPais] = useState('Brasil')
+  const [estado, setEstado] = useState('SP')
+  const [cidadeBairro, setCidadeBairro] = useState('São Paulo')
+  const [concessionariaLuz, setConcessionariaLuz] = useState<string | undefined>()
+  const [concessionariaAgua, setConcessionariaAgua] = useState<string | undefined>()
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | undefined>()
+  const [statusMensagem, setStatusMensagem] = useState<string | undefined>()
+  const [buscandoTarifas, setBuscandoTarifas] = useState(false)
+  const [salvandoTarifas, setSalvandoTarifas] = useState(false)
+
   // Energia Elétrica (Luz)
   const [minutosLuz, setMinutosLuz] = useState('')
   const [tarifaKwh, setTarifaKwh] = useState('0.85')
   const [usosEnergia, setUsosEnergia] = useState<UsoEnergiaItem[]>([])
 
-  // Concessionárias
-  const [concessionariaLuz, setConcessionariaLuz] = useState('')
-  const [concessionariaAgua, setConcessionariaAgua] = useState('')
-  const [statusTarifas, setStatusTarifas] = useState('')
-
   // Água
   const [litrosAgua, setLitrosAgua] = useState('')
-  const [tarifaAguaPorLitro, setTarifaAguaPorLitro] = useState('0.015')
+  const [tarifaAguaM3, setTarifaAguaM3] = useState('15.00')
 
-  // Mão de Obra e Custos Fixos
+  // Mão de Obra e Custos Fixos (Seção 4)
+  const [valorDiaMaoDeObra, setValorDiaMaoDeObra] = useState('200.00')
+  const [jornadaHorasDia, setJornadaHorasDia] = useState('8')
   const [horasProducao, setHorasProducao] = useState('')
-  const [valorHora, setValorHora] = useState('')
+  const [valorHora, setValorHora] = useState('25.00')
   const [rateioFixoPercent, setRateioFixoPercent] = useState('')
 
-  // Taxas e Margem
+  // Lucro e Taxas do Marketplace (Seção 4)
   const [margemLucroPercent, setMargemLucroPercent] = useState('')
+  const [taxaSelecionadaId, setTaxaSelecionadaId] = useState('')
   const [percentualTaxas, setPercentualTaxas] = useState('0')
   const [taxaFixa, setTaxaFixa] = useState('0')
 
@@ -90,6 +103,24 @@ export function PrecificacaoPage() {
     })
   }, [materiaisEstoque, categorias])
 
+  async function carregarTarifasLocais() {
+    const t = await obterTarifasConfig()
+    if (!montado.current) return
+    const vHora = t.valorHoraMaoDeObra || 25.0
+    setValorHora(String(vHora))
+    setValorDiaMaoDeObra((vHora * 8).toFixed(2))
+    setTarifaKwh(String(t.tarifaKwh))
+    setTarifaAguaM3(String(t.tarifaAguaM3))
+    setPais(t.pais || 'Brasil')
+    setEstado(t.estado || 'SP')
+    setCidadeBairro(t.cidadeBairro || 'São Paulo')
+    setConcessionariaLuz(t.concessionariaLuz)
+    setConcessionariaAgua(t.concessionariaAgua)
+    setUltimaAtualizacao(t.ultimaAtualizacaoTarifas)
+    setStatusMensagem(t.statusAtualizacaoTarifas)
+  }
+
+
   useEffect(() => {
     montado.current = true
     Promise.all([
@@ -97,22 +128,24 @@ export function PrecificacaoPage() {
       db.equipamentos.toArray(),
       listarMateriais(),
       db.categoriasMaterial.toArray(),
-      obterTarifasConfig(),
+      listarTaxas(),
+      carregarTarifasLocais(),
     ])
-      .then(([listaPecas, listaEquipamentos, listaMateriais, listaCategorias, tarifas]) => {
+      .then(([listaPecas, listaEquipamentos, listaMateriais, listaCategorias, listaTaxas]) => {
         if (!montado.current) return
         setPecas(listaPecas)
         setEquipamentos(listaEquipamentos)
         setMateriaisEstoque(listaMateriais)
         setCategorias(listaCategorias)
+        setTaxasDisponiveis(listaTaxas)
 
-        // Carrega tarifas padrões e concessionárias
-        setValorHora(String(tarifas.valorHoraMaoDeObra))
-        setTarifaKwh(String(tarifas.tarifaKwh))
-        setTarifaAguaPorLitro(String(tarifas.tarifaAguaM3 / 1000))
-        setConcessionariaLuz(tarifas.concessionariaLuz || '')
-        setConcessionariaAgua(tarifas.concessionariaAgua || '')
-        setStatusTarifas(tarifas.statusAtualizacaoTarifas || '')
+        // Sincroniza concessionárias em segundo plano se necessário
+        sincronizarTarifasConcessionaria(false).then((res) => {
+          if (montado.current && res.atualizou) {
+            carregarTarifasLocais()
+          }
+        }).catch(() => {})
+
         setCarregado(true)
       })
       .catch((falha) => {
@@ -124,6 +157,95 @@ export function PrecificacaoPage() {
       montado.current = false
     }
   }, [])
+
+  // Atualização automática do valor por hora ao modificar o valor do dia ou jornada
+  function handleMudarValorDia(valDiaStr: string) {
+    setValorDiaMaoDeObra(valDiaStr)
+    const dia = Number(valDiaStr) || 0
+    const jrn = Number(jornadaHorasDia) || 8
+    if (jrn > 0) {
+      setValorHora((dia / jrn).toFixed(2))
+    }
+  }
+
+  function handleMudarJornada(jrnStr: string) {
+    setJornadaHorasDia(jrnStr)
+    const dia = Number(valorDiaMaoDeObra) || 0
+    const jrn = Number(jrnStr) || 8
+    if (jrn > 0) {
+      setValorHora((dia / jrn).toFixed(2))
+    }
+  }
+
+  function handleMudarValorHora(valHoraStr: string) {
+    setValorHora(valHoraStr)
+    const hr = Number(valHoraStr) || 0
+    const jrn = Number(jornadaHorasDia) || 8
+    setValorDiaMaoDeObra((hr * jrn).toFixed(2))
+  }
+
+  // Atualização da taxa selecionada (Taxas & Canais)
+  function handleSelecionarTaxa(taxaIdStr: string) {
+    setTaxaSelecionadaId(taxaIdStr)
+    if (!taxaIdStr) {
+      setPercentualTaxas('0')
+      setTaxaFixa('0')
+      return
+    }
+    const encontrada = taxasDisponiveis.find((t) => String(t.id) === taxaIdStr)
+    if (encontrada) {
+      setPercentualTaxas(String(encontrada.percentual * 100))
+      setTaxaFixa(String(encontrada.valorFixo))
+    }
+  }
+
+  async function handleBuscarConcessionariasOnline() {
+    setBuscandoTarifas(true)
+    try {
+      const res = await sincronizarTarifasConcessionaria(true, { pais, estado, cidadeBairro })
+      if (!montado.current) return
+      setTarifaKwh(String(res.tarifaKwh))
+      setTarifaAguaM3(String(res.tarifaAguaM3))
+      setConcessionariaLuz(res.concessionariaLuz)
+
+      setConcessionariaAgua(res.concessionariaAgua)
+      setUltimaAtualizacao(res.ultimaAtualizacaoIso)
+      setStatusMensagem(res.mensagemStatus)
+      mostrarToast(`Concessionárias de ${estado ? estado.toUpperCase() : 'SP'} atualizadas com sucesso!`, 'sucesso')
+    } catch (err) {
+      if (!montado.current) return
+      mostrarToast(err instanceof Error ? err.message : 'Erro ao consultar concessionárias.', 'erro')
+    } finally {
+      if (montado.current) setBuscandoTarifas(false)
+    }
+  }
+
+  async function handleSalvarTarifasLocais(e: React.FormEvent) {
+    e.preventDefault()
+    setSalvandoTarifas(true)
+    try {
+      await salvarTarifasConfig({
+        valorHoraMaoDeObra: Number(valorHora) || 0,
+        tarifaKwh: Number(tarifaKwh) || 0,
+        tarifaAguaM3: Number(tarifaAguaM3) || 0,
+        pais,
+        estado,
+        cidadeBairro,
+      })
+      const res = await sincronizarTarifasConcessionaria(true, { pais, estado, cidadeBairro })
+      if (!montado.current) return
+      setConcessionariaLuz(res.concessionariaLuz)
+      setConcessionariaAgua(res.concessionariaAgua)
+      setUltimaAtualizacao(res.ultimaAtualizacaoIso)
+      setStatusMensagem(res.mensagemStatus)
+      mostrarToast('Tarifas de utilidades salvas com sucesso!', 'sucesso')
+    } catch (err) {
+      if (!montado.current) return
+      mostrarToast(err instanceof Error ? err.message : 'Erro ao salvar tarifas.', 'erro')
+    } finally {
+      if (montado.current) setSalvandoTarifas(false)
+    }
+  }
 
   async function handleSelecionarPeca(id: string) {
     setPecaSelecionadaId(id)
@@ -276,7 +398,7 @@ export function PrecificacaoPage() {
         // Água
         custoAgua: 0,
         litrosAgua: Number(litrosAgua) || 0,
-        tarifaAguaPorLitro: Number(tarifaAguaPorLitro) || 0.015,
+        tarifaAguaPorLitro: Number(tarifaAguaM3) > 0 ? Number(tarifaAguaM3) / 1000 : 0.015,
 
         // Mão de Obra e Custos Fixos
         horasProducao: Number(horasProducao) || 0,
@@ -292,6 +414,7 @@ export function PrecificacaoPage() {
     } catch (falha) {
       return { resultado: null, erroValidacao: falha instanceof Error ? falha.message : 'Dados inválidos.' }
     }
+
   }, [
     custoMaterial,
     custoAcessorios,
@@ -302,7 +425,7 @@ export function PrecificacaoPage() {
     minutosLuz,
     tarifaKwh,
     litrosAgua,
-    tarifaAguaPorLitro,
+    tarifaAguaM3,
     horasProducao,
     valorHora,
     rateioFixoPercent,
@@ -481,26 +604,115 @@ export function PrecificacaoPage() {
         </Card>
       </section>
 
+      {/* SEÇÃO 3: Consumo de Utilidades (Energia Elétrica / Luz & Água) + Tarifas Geográficas das Concessionárias */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface">3. Consumo de Utilidades (Energia Elétrica / Luz & Água)</h2>
-        <Card className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg border border-primary/20 bg-primary/5 text-xs text-on-surface">
-            <div>
-              <p className="font-semibold text-primary">
-                ⚙️ Tarifas das Configurações: Luz R$ {tarifaKwh}/kWh | Água R$ {(Number(tarifaAguaPorLitro) * 1000).toFixed(2)}/m³ (R$ {tarifaAguaPorLitro}/L)
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">
+          3. Consumo de Utilidades (Energia Elétrica / Luz & Água) & Tarifas Locais
+        </h2>
+        <Card className="flex flex-col gap-5">
+          <form onSubmit={handleSalvarTarifasLocais} className="flex flex-col gap-4 bg-surface-container-high/30 p-3.5 rounded-xl border border-outline-variant/20">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
+                📍 Localização do Ateliê & Consulta Automática de Tarifas
+              </h3>
+              <p className="text-xs text-on-surface-variant">
+                Defina o país, estado e cidade para buscar e aplicar automaticamente as tarifas de energia e água vigentes na sua região.
               </p>
-              {(concessionariaLuz || concessionariaAgua) && (
-                <p className="text-[11px] text-on-surface-variant mt-0.5">
-                  🏬 Concessionárias: {concessionariaLuz || 'Energia'} | {concessionariaAgua || 'Saneamento'} {statusTarifas ? `(${statusTarifas})` : ''}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <TextField
+                id="config-pais"
+                rotulo="País"
+                value={pais}
+                onChange={(e) => setPais(e.target.value)}
+                placeholder="Brasil"
+              />
+              <TextField
+                id="config-estado"
+                rotulo="Estado (UF)"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                placeholder="SP, RJ, MG..."
+              />
+              <TextField
+                id="config-cidade-bairro"
+                rotulo="Cidade / Bairro"
+                value={cidadeBairro}
+                onChange={(e) => setCidadeBairro(e.target.value)}
+                placeholder="Ex: Rio de Janeiro / Centro"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-outline-variant/30">
+              <TextField
+                id="config-tarifa-kwh"
+                rotulo="Tarifa de Luz (R$ / kWh)"
+                type="number"
+                step="0.01"
+                value={tarifaKwh}
+                onChange={(e) => setTarifaKwh(e.target.value)}
+              />
+              <TextField
+                id="config-tarifa-agua-m3"
+                rotulo="Tarifa de Água (R$ / m³)"
+                type="number"
+                step="0.01"
+                value={tarifaAguaM3}
+                onChange={(e) => setTarifaAguaM3(e.target.value)}
+              />
+
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <Button
+                type="button"
+                variante="ghost"
+                className="text-xs flex items-center gap-1.5 border border-primary/30 text-primary hover:bg-primary/10"
+                onClick={handleBuscarConcessionariasOnline}
+                disabled={buscandoTarifas}
+              >
+                {buscandoTarifas ? '⏳ Consultando Concessionárias...' : `⚡ Buscar Tarifas da Concessionária da Região (${estado ? estado.toUpperCase() : 'SP'})`}
+              </Button>
+              <Button type="submit" disabled={salvandoTarifas}>
+                Salvar Tarifas do Ateliê
+              </Button>
+            </div>
+
+            {/* Card de Status da Concessionária */}
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex flex-col gap-2 mt-1">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
+                  🏬 Concessionárias Identificadas ({estado} / {pais})
+                </h4>
+                {ultimaAtualizacao && (
+                  <Badge variant="neutral">
+                    Última checagem: {new Date(ultimaAtualizacao).toLocaleDateString('pt-BR')}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-on-surface">
+                <div>
+                  ⚡ <strong>Luz:</strong> {concessionariaLuz || 'Não identificada'} ({formatarMoeda(Number(tarifaKwh))} / kWh)
+                </div>
+                <div>
+                  💧 <strong>Água:</strong> {concessionariaAgua || 'Não identificada'} ({formatarMoeda(Number(tarifaAguaM3))} / m³)
+                </div>
+              </div>
+
+              {statusMensagem && (
+                <p className="text-[11px] text-on-surface-variant font-medium mt-1">
+                  ℹ️ Status das Tarifas: {statusMensagem}
                 </p>
               )}
             </div>
-          </div>
+          </form>
 
-          {/* Energia Elétrica (Luz) */}
+          {/* Energia Elétrica (Maquinário & Soprador) */}
           <div className="flex flex-col gap-3 rounded-lg border border-outline-variant/60 bg-surface-variant/20 p-3">
             <h3 className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
-              ⚡ Energia Elétrica (Ferramentas & Maquinários)
+              ⚡ Energia Elétrica da Produção (Maquinários & Soprador)
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="flex flex-col gap-1">
@@ -518,7 +730,7 @@ export function PrecificacaoPage() {
                   }}
                   className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 >
-                  <option value="">+ Selecionar ferramenta (Lâmpada, Secador, Soprador, Furadeira, Politriz...)</option>
+                  <option value="">+ Selecionar ferramenta (Lâmpada UV, Secador, Soprador, Furadeira, Politriz...)</option>
                   {equipamentos.map((eq) => (
                     <option key={eq.id} value={eq.id}>
                       {eq.nome} ({eq.potenciaWatts}W) {eq.descricao ? `- ${eq.descricao}` : ''}
@@ -581,10 +793,10 @@ export function PrecificacaoPage() {
                 onChange={(e) => setLitrosAgua(e.target.value)}
               />
               <div className="flex flex-col justify-center text-xs text-on-surface-variant">
-                <p>Calculado automaticamente usando a tarifa das configurações (R$ {tarifaAguaPorLitro}/Litro).</p>
+                <p>Calculado com base na tarifa local configurada acima (R$ {(Number(tarifaAguaM3) / 1000).toFixed(4)}/Litro).</p>
                 {Number(litrosAgua) > 0 && (
                   <p className="font-semibold text-primary mt-1">
-                    Custo de água estimado: {formatarMoeda((Number(litrosAgua) || 0) * (Number(tarifaAguaPorLitro) || 0.015))}
+                    Custo de água estimado: {formatarMoeda((Number(litrosAgua) || 0) * (Number(tarifaAguaM3) / 1000 || 0.015))}
                   </p>
                 )}
               </div>
@@ -593,16 +805,96 @@ export function PrecificacaoPage() {
         </Card>
       </section>
 
+      {/* SEÇÃO 4: Mão de Obra (por Dia/Hora), Custo Fixo, Margem de Lucro & Canais de Venda */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-on-surface">4. Mão de Obra, Custo Fixo e Margens</h2>
-        <Card>
+        <h2 className="mb-2 text-sm font-semibold text-on-surface">4. Mão de Obra, Custo Fixo & Margens</h2>
+        <Card className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <TextField id="horas-producao" rotulo="Horas de produção" type="number" step="0.1" value={horasProducao} onChange={(e) => setHorasProducao(e.target.value)} />
-            <TextField id="valor-hora" rotulo="Valor da hora (R$)" type="number" value={valorHora} onChange={(e) => setValorHora(e.target.value)} readOnly={true} />
-            <TextField id="rateio-fixo" rotulo="Rateio de custo fixo (%)" type="number" value={rateioFixoPercent} onChange={(e) => setRateioFixoPercent(e.target.value)} />
-            <TextField id="margem-lucro" rotulo="Margem de lucro (%)" type="number" value={margemLucroPercent} onChange={(e) => setMargemLucroPercent(e.target.value)} />
-            <TextField id="percentual-taxas" rotulo="Taxas de Venda / Marketplace (%)" type="number" value={percentualTaxas} onChange={(e) => setPercentualTaxas(e.target.value)} />
-            <TextField id="taxa-fixa" rotulo="Taxa Fixa da Plataforma (R$)" type="number" value={taxaFixa} onChange={(e) => setTaxaFixa(e.target.value)} />
+            <TextField
+              id="valor-dia-mao-obra"
+              rotulo="Mão de Obra por Dia (R$ / Dia)"
+              type="number"
+              step="0.01"
+              value={valorDiaMaoDeObra}
+              onChange={(e) => handleMudarValorDia(e.target.value)}
+              placeholder="Ex: 200.00"
+            />
+            <TextField
+              id="jornada-horas-dia"
+              rotulo="Jornada diária (Horas / Dia)"
+              type="number"
+              step="0.5"
+              value={jornadaHorasDia}
+              onChange={(e) => handleMudarJornada(e.target.value)}
+              placeholder="8"
+            />
+            <TextField
+              id="valor-hora"
+              rotulo="Valor da hora (R$)"
+              type="number"
+              step="0.01"
+              value={valorHora}
+              onChange={(e) => handleMudarValorHora(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-outline-variant/30">
+            <TextField
+              id="horas-producao"
+              rotulo="Horas de produção desta peça"
+              type="number"
+              step="0.1"
+              value={horasProducao}
+              onChange={(e) => setHorasProducao(e.target.value)}
+              placeholder="Ex: 1.5"
+            />
+            <TextField
+              id="rateio-fixo"
+              rotulo="Rateio de custo fixo (%)"
+              type="number"
+              value={rateioFixoPercent}
+              onChange={(e) => setRateioFixoPercent(e.target.value)}
+              placeholder="Ex: 15"
+            />
+            <TextField
+              id="margem-lucro"
+              rotulo="Margem de lucro (%)"
+              type="number"
+              value={margemLucroPercent}
+              onChange={(e) => setMargemLucroPercent(e.target.value)}
+              placeholder="Ex: 40"
+            />
+          </div>
+
+          {/* Seleção de Canais de Venda e Taxas de Marketplace cadastrados em Taxas & Canais */}
+          <div className="flex flex-col gap-2 pt-3 border-t border-outline-variant/30">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <label htmlFor="select-taxa-canal" className="text-sm font-medium text-on-surface">
+                Canal de Venda / Plataforma (Taxas do Marketplace)
+              </label>
+              <span className="text-xs text-primary font-medium">
+                📌 As taxas são cadastradas na aba <strong>Taxas & Canais</strong>
+              </span>
+            </div>
+            <select
+              id="select-taxa-canal"
+              value={taxaSelecionadaId}
+              onChange={(e) => handleSelecionarTaxa(e.target.value)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              <option value="">Venda Direta / Sem Taxa de Plataforma (0%)</option>
+              {taxasDisponiveis.map((taxa) => (
+                <option key={taxa.id} value={taxa.id}>
+                  {taxa.nome} — {(taxa.percentual * 100).toFixed(1)}% {taxa.valorFixo > 0 ? `+ ${formatarMoeda(taxa.valorFixo)}` : ''}
+                </option>
+              ))}
+            </select>
+            {taxaSelecionadaId && (
+              <p className="text-xs text-on-surface-variant">
+                Taxa aplicada: <strong>{(Number(percentualTaxas)).toFixed(1)}%</strong>
+                {Number(taxaFixa) > 0 ? ` + ${formatarMoeda(Number(taxaFixa))} taxa fixa` : ''} por venda.
+              </p>
+            )}
           </div>
 
           {erroValidacao && (
@@ -710,3 +1002,4 @@ export function PrecificacaoPage() {
     </div>
   )
 }
+
