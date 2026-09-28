@@ -206,9 +206,10 @@ export function AjudaSuportePage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-          <Button type="button" variante="secondary" className="text-xs w-full sm:w-auto" onClick={copiarEmailSuporte}>
+          <Button type="button" variante="ghost" className="text-xs w-full sm:w-auto" onClick={copiarEmailSuporte}>
             📋 Copiar E-mail
           </Button>
+
           <a
             href="mailto:contato.raffasp@gmail.com"
             className="text-xs px-3 py-2 rounded-lg bg-primary text-on-primary font-semibold hover:opacity-90 transition-opacity text-center w-full sm:w-auto"
