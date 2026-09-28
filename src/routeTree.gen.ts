@@ -182,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/equipamentos': typeof EquipamentosRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/mais': typeof MaisRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
@@ -209,6 +210,7 @@ export interface FileRoutesByTo {
   '/equipamentos': typeof EquipamentosRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/mais': typeof MaisRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
@@ -237,6 +239,7 @@ export interface FileRoutesById {
   '/equipamentos': typeof EquipamentosRoute
   '/formas': typeof FormasRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/mais': typeof MaisRoute
   '/materiais': typeof MateriaisRoute
   '/pecas': typeof PecasRouteWithChildren
@@ -266,6 +269,7 @@ export interface FileRouteTypes {
     | '/equipamentos'
     | '/formas'
     | '/login'
+    | '/logs'
     | '/mais'
     | '/materiais'
     | '/pecas'
@@ -293,6 +297,7 @@ export interface FileRouteTypes {
     | '/equipamentos'
     | '/formas'
     | '/login'
+    | '/logs'
     | '/mais'
     | '/materiais'
     | '/pecas'
@@ -320,6 +325,7 @@ export interface FileRouteTypes {
     | '/equipamentos'
     | '/formas'
     | '/login'
+    | '/logs'
     | '/mais'
     | '/materiais'
     | '/pecas'
@@ -594,6 +600,7 @@ const rootRouteChildren: RootRouteChildren = {
   EquipamentosRoute: EquipamentosRoute,
   FormasRoute: FormasRoute,
   LoginRoute: LoginRoute,
+  LogsRoute: LogsRoute,
   MaisRoute: MaisRoute,
   MateriaisRoute: MateriaisRoute,
   PecasRoute: PecasRouteWithChildren,
