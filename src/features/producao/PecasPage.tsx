@@ -625,8 +625,9 @@ export function PecasPage() {
                             className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                           >
                             <option value="">Selecione o insumo...</option>
-                            {materiaisConsumiveisPeca.map((material) => (
+                            {materiais.map((material) => (
                               <option key={material.id} value={String(material.id)}>
+
                                 {material.nome} ({material.quantidadeEstoque} {material.unidade} em estoque)
                               </option>
                             ))}

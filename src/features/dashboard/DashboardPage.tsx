@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import type { ReactNode, KeyboardEvent, KeyboardEventHandler } from 'react'
+import type { ReactNode } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/useToast'
+
 import { obterResumoDashboard, type ResumoDashboard } from './dashboardRepo'
 import { FluxoCaixaChart } from './FluxoCaixaChart'
 import { ResumoLojaCard } from './ResumoLojaCard'
@@ -59,15 +60,6 @@ export function DashboardPage() {
     navigate({ to: modo })
   }
 
-  function handleAtalhoKeyDown(
-    evento: KeyboardEvent<HTMLDivElement>,
-    destino: '/materiais' | '/pedidos',
-  ) {
-    if (evento.key === 'Enter' || evento.key === ' ') {
-      evento.preventDefault()
-      navegarPara(destino)
-    }
-  }
 
   function CardKPI_Click({
     label,
@@ -177,8 +169,6 @@ export function DashboardPage() {
                   </svg>
                 }
                 destination="/materiais"
-                onClick={() => navegarPara('/materiais')}
-                onKeyDown={(evento) => handleAtalhoKeyDown(evento, '/materiais')}
               />
               <CardKPI_Click
                 label="Pedidos em aberto"
@@ -192,9 +182,8 @@ export function DashboardPage() {
                   </svg>
                 }
                 destination="/pedidos"
-                onClick={() => navegarPara('/pedidos')}
-                onKeyDown={(evento) => handleAtalhoKeyDown(evento, '/pedidos')}
               />
+
             </div>
           </section>
         </>
