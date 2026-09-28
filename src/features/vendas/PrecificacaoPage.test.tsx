@@ -123,7 +123,7 @@ describe('PrecificacaoPage', () => {
       expect(screen.getAllByText(/Light/i).length).toBeGreaterThan(0)
     }, { timeout: 4000 })
     
-    expect(await screen.findByText(/Águas do Rio/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Águas do Rio/i))[0]).toBeInTheDocument();
   })
 
   it('calcula o valor da hora de mão de obra a partir do valor por dia e jornada diária', async () => {
