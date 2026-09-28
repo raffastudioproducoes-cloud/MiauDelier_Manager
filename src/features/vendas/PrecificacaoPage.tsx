@@ -16,6 +16,76 @@ function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+export const LISTA_PAISES = [
+  'Brasil',
+  'Portugal',
+  'Estados Unidos',
+  'Espanha',
+  'Argentina',
+  'Uruguai',
+  'Outro País',
+]
+
+export const ESTADOS_BRASIL = [
+  { uf: 'AC', nome: 'Acre (AC)' },
+  { uf: 'AL', nome: 'Alagoas (AL)' },
+  { uf: 'AM', nome: 'Amazonas (AM)' },
+  { uf: 'AP', nome: 'Amapá (AP)' },
+  { uf: 'BA', nome: 'Bahia (BA)' },
+  { uf: 'CE', nome: 'Ceará (CE)' },
+  { uf: 'DF', nome: 'Distrito Federal (DF)' },
+  { uf: 'ES', nome: 'Espírito Santo (ES)' },
+  { uf: 'GO', nome: 'Goiás (GO)' },
+  { uf: 'MA', nome: 'Maranhão (MA)' },
+  { uf: 'MG', nome: 'Minas Gerais (MG)' },
+  { uf: 'MS', nome: 'Mato Grosso do Sul (MS)' },
+  { uf: 'MT', nome: 'Mato Grosso (MT)' },
+  { uf: 'PA', nome: 'Pará (PA)' },
+  { uf: 'PB', nome: 'Paraíba (PB)' },
+  { uf: 'PE', nome: 'Pernambuco (PE)' },
+  { uf: 'PI', nome: 'Piauí (PI)' },
+  { uf: 'PR', nome: 'Paraná (PR)' },
+  { uf: 'RJ', nome: 'Rio de Janeiro (RJ)' },
+  { uf: 'RN', nome: 'Rio Grande do Norte (RN)' },
+  { uf: 'RO', nome: 'Rondônia (RO)' },
+  { uf: 'RR', nome: 'Roraima (RR)' },
+  { uf: 'RS', nome: 'Rio Grande do Sul (RS)' },
+  { uf: 'SC', nome: 'Santa Catarina (SC)' },
+  { uf: 'SE', nome: 'Sergipe (SE)' },
+  { uf: 'SP', nome: 'São Paulo (SP)' },
+  { uf: 'TO', nome: 'Tocantins (TO)' },
+]
+
+export const CIDADES_BAIRROS_POR_ESTADO: Record<string, string[]> = {
+  SP: ['São Paulo - Centro', 'São Paulo - Zona Sul', 'São Paulo - Zona Norte', 'São Paulo - Zona Leste', 'São Paulo - Zona Oeste', 'Campinas', 'Santos', 'Ribeirão Preto', 'São José dos Campos', 'Sorocaba', 'Outra Região/Bairro'],
+  RJ: ['Rio de Janeiro - Centro', 'Rio de Janeiro - Zona Sul', 'Rio de Janeiro - Zona Norte', 'Rio de Janeiro - Zona Oeste', 'Niterói', 'Duque de Caxias', 'Nova Iguaçu', 'Outra Região/Bairro'],
+  MG: ['Belo Horizonte - Centro', 'Belo Horizonte - Savassi', 'Belo Horizonte - Pampulha', 'Uberlândia', 'Juiz de Fora', 'Contagem', 'Outra Região/Bairro'],
+  BA: ['Salvador - Centro', 'Salvador - Barra', 'Salvador - Pituba', 'Feira de Santana', 'Vitória da Conquista', 'Outra Região/Bairro'],
+  PR: ['Curitiba - Centro', 'Curitiba - Batel', 'Londrina', 'Maringá', 'Ponta Grossa', 'Outra Região/Bairro'],
+  RS: ['Porto Alegre - Centro', 'Porto Alegre - Moinhos de Vento', 'Caxias do Sul', 'Pelotas', 'Outra Região/Bairro'],
+  PE: ['Recife - Centro', 'Recife - Boa Viagem', 'Olinda', 'Caruaru', 'Outra Região/Bairro'],
+  CE: ['Fortaleza - Centro', 'Fortaleza - Meireles', 'Caucaia', 'Juazeiro do Norte', 'Outra Região/Bairro'],
+  DF: ['Brasília - Plano Piloto', 'Brasília - Taguatinga', 'Brasília - Águas Claras', 'Brasília - Ceilândia', 'Outra Região/Bairro'],
+  ES: ['Vitória - Centro', 'Vila Velha', 'Serra', 'Cariacica', 'Outra Região/Bairro'],
+  GO: ['Goiânia - Centro', 'Goiânia - Bueno', 'Aparecida de Goiânia', 'Anápolis', 'Outra Região/Bairro'],
+  SC: ['Florianópolis - Centro', 'Joinville', 'Blumenau', 'São José', 'Outra Região/Bairro'],
+  MA: ['São Luís - Centro', 'Imperatriz', 'Outra Região/Bairro'],
+  AM: ['Manaus - Centro', 'Manaus - Adrianópolis', 'Outra Região/Bairro'],
+  PA: ['Belém - Centro', 'Ananindeua', 'Santarém', 'Outra Região/Bairro'],
+  PB: ['João Pessoa - Centro', 'Campina Grande', 'Outra Região/Bairro'],
+  RN: ['Natal - Centro', 'Mossoró', 'Outra Região/Bairro'],
+  AL: ['Maceió - Centro', 'Arapiraca', 'Outra Região/Bairro'],
+  SE: ['Aracaju - Centro', 'Nossa Senhora do Socorro', 'Outra Região/Bairro'],
+  PI: ['Teresina - Centro', 'Parnaíba', 'Outra Região/Bairro'],
+  MT: ['Cuiabá - Centro', 'Várzea Grande', 'Rondonópolis', 'Outra Região/Bairro'],
+  MS: ['Campo Grande - Centro', 'Dourados', 'Outra Região/Bairro'],
+  RO: ['Porto Velho - Centro', 'Ji-Paraná', 'Outra Região/Bairro'],
+  AC: ['Rio Branco - Centro', 'Cruzeiro do Sul', 'Outra Região/Bairro'],
+  RR: ['Boa Vista - Centro', 'Outra Região/Bairro'],
+  AP: ['Macapá - Centro', 'Santana', 'Outra Região/Bairro'],
+  TO: ['Palmas - Centro', 'Araguaína', 'Outra Região/Bairro'],
+}
+
 export interface InsumoGraficoEmbalagem {
   id: string
   materialId: number
@@ -49,7 +119,7 @@ export function PrecificacaoPage() {
   // Localização Geográfica e Tarifas de Concessionárias (Seção 3)
   const [pais, setPais] = useState('Brasil')
   const [estado, setEstado] = useState('SP')
-  const [cidadeBairro, setCidadeBairro] = useState('São Paulo')
+  const [cidadeBairro, setCidadeBairro] = useState('São Paulo - Centro')
   const [concessionariaLuz, setConcessionariaLuz] = useState<string | undefined>()
   const [concessionariaAgua, setConcessionariaAgua] = useState<string | undefined>()
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | undefined>()
@@ -62,8 +132,7 @@ export function PrecificacaoPage() {
   const [tarifaKwh, setTarifaKwh] = useState('0.85')
   const [usosEnergia, setUsosEnergia] = useState<UsoEnergiaItem[]>([])
 
-  // Água
-  const [litrosAgua, setLitrosAgua] = useState('')
+  // Água (Tarifa por m³)
   const [tarifaAguaM3, setTarifaAguaM3] = useState('15.00')
 
   // Mão de Obra e Custos Fixos (Seção 4)
@@ -218,6 +287,72 @@ export function PrecificacaoPage() {
     } finally {
       if (montado.current) setBuscandoTarifas(false)
     }
+  }
+
+  const opcoesCidadeBairro = useMemo(() => {
+    const lista = CIDADES_BAIRROS_POR_ESTADO[estado]
+      ? [...CIDADES_BAIRROS_POR_ESTADO[estado]]
+      : ['Região Central', 'Zona Norte / Sul / Leste / Oeste', 'Outra Região/Bairro']
+    if (cidadeBairro && !lista.includes(cidadeBairro)) {
+      lista.unshift(cidadeBairro)
+    }
+    return lista
+  }, [estado, cidadeBairro])
+
+  function handleMudarPais(novoPais: string) {
+    setPais(novoPais)
+    if (novoPais === 'Brasil') {
+      const novoEst = estado && ESTADOS_BRASIL.some((e) => e.uf === estado) ? estado : 'SP'
+      setEstado(novoEst)
+      const cidades = CIDADES_BAIRROS_POR_ESTADO[novoEst] || ['Região Central']
+      const novaCid = cidades[0]
+      setCidadeBairro(novaCid)
+      sincronizarTarifasConcessionaria(true, { pais: novoPais, estado: novoEst, cidadeBairro: novaCid })
+        .then((res) => {
+          if (montado.current) {
+            setTarifaKwh(String(res.tarifaKwh))
+            setTarifaAguaM3(String(res.tarifaAguaM3))
+            setConcessionariaLuz(res.concessionariaLuz)
+            setConcessionariaAgua(res.concessionariaAgua)
+            setUltimaAtualizacao(res.ultimaAtualizacaoIso)
+            setStatusMensagem(res.mensagemStatus)
+          }
+        })
+        .catch(() => {})
+    } else {
+      sincronizarTarifasConcessionaria(true, { pais: novoPais, estado, cidadeBairro })
+        .then((res) => {
+          if (montado.current) {
+            setTarifaKwh(String(res.tarifaKwh))
+            setTarifaAguaM3(String(res.tarifaAguaM3))
+            setConcessionariaLuz(res.concessionariaLuz)
+            setConcessionariaAgua(res.concessionariaAgua)
+            setUltimaAtualizacao(res.ultimaAtualizacaoIso)
+            setStatusMensagem(res.mensagemStatus)
+          }
+        })
+        .catch(() => {})
+    }
+  }
+
+  function handleMudarEstado(novoEstado: string) {
+    setEstado(novoEstado)
+    const cidades = CIDADES_BAIRROS_POR_ESTADO[novoEstado] || ['Região Central', 'Outra Região/Bairro']
+    const novaCidade = cidades[0] || 'Região Central'
+    setCidadeBairro(novaCidade)
+
+    sincronizarTarifasConcessionaria(true, { pais, estado: novoEstado, cidadeBairro: novaCidade })
+      .then((res) => {
+        if (montado.current) {
+          setTarifaKwh(String(res.tarifaKwh))
+          setTarifaAguaM3(String(res.tarifaAguaM3))
+          setConcessionariaLuz(res.concessionariaLuz)
+          setConcessionariaAgua(res.concessionariaAgua)
+          setUltimaAtualizacao(res.ultimaAtualizacaoIso)
+          setStatusMensagem(res.mensagemStatus)
+        }
+      })
+      .catch(() => {})
   }
 
   async function handleSalvarTarifasLocais(e: React.FormEvent) {
@@ -375,7 +510,6 @@ export function PrecificacaoPage() {
     custoForma,
     minutosLuz,
     usosEnergia.length > 0 ? 'sim' : '',
-    litrosAgua,
     horasProducao,
     rateioFixoPercent,
     margemLucroPercent,
@@ -397,7 +531,6 @@ export function PrecificacaoPage() {
 
         // Água
         custoAgua: 0,
-        litrosAgua: Number(litrosAgua) || 0,
         tarifaAguaPorLitro: Number(tarifaAguaM3) > 0 ? Number(tarifaAguaM3) / 1000 : 0.015,
 
         // Mão de Obra e Custos Fixos
@@ -424,7 +557,6 @@ export function PrecificacaoPage() {
     usosEnergia,
     minutosLuz,
     tarifaKwh,
-    litrosAgua,
     tarifaAguaM3,
     horasProducao,
     valorHora,
@@ -621,27 +753,63 @@ export function PrecificacaoPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <TextField
-                id="config-pais"
-                rotulo="País"
-                value={pais}
-                onChange={(e) => setPais(e.target.value)}
-                placeholder="Brasil"
-              />
-              <TextField
-                id="config-estado"
-                rotulo="Estado (UF)"
-                value={estado}
-                onChange={(e) => setEstado(e.target.value)}
-                placeholder="SP, RJ, MG..."
-              />
-              <TextField
-                id="config-cidade-bairro"
-                rotulo="Cidade / Bairro"
-                value={cidadeBairro}
-                onChange={(e) => setCidadeBairro(e.target.value)}
-                placeholder="Ex: Rio de Janeiro / Centro"
-              />
+              <div className="flex flex-col gap-1">
+                <label htmlFor="config-pais" className="text-sm font-medium text-on-surface">
+                  País
+                </label>
+                <select
+                  id="config-pais"
+                  value={pais}
+                  onChange={(e) => handleMudarPais(e.target.value)}
+                  className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                >
+                  {LISTA_PAISES.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="config-estado" className="text-sm font-medium text-on-surface">
+                  Estado (UF)
+                </label>
+                <select
+                  id="config-estado"
+                  value={estado}
+                  onChange={(e) => handleMudarEstado(e.target.value)}
+                  className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                >
+                  {pais === 'Brasil' ? (
+                    ESTADOS_BRASIL.map((est) => (
+                      <option key={est.uf} value={est.uf}>
+                        {est.nome}
+                      </option>
+                    ))
+                  ) : (
+                    <option value={estado}>{estado || 'Geral'}</option>
+                  )}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="config-cidade-bairro" className="text-sm font-medium text-on-surface">
+                  Cidade / Bairro
+                </label>
+                <select
+                  id="config-cidade-bairro"
+                  value={cidadeBairro}
+                  onChange={(e) => setCidadeBairro(e.target.value)}
+                  className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                >
+                  {opcoesCidadeBairro.map((cb) => (
+                    <option key={cb} value={cb}>
+                      {cb}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-outline-variant/30">
@@ -778,28 +946,21 @@ export function PrecificacaoPage() {
             )}
           </div>
 
-          {/* Consumo de Água */}
-          <div className="flex flex-col gap-3 rounded-lg border border-outline-variant/60 bg-surface-variant/20 p-3">
+          {/* Consumo de Água (Registro da Tarifa Cadastrada) */}
+          <div className="flex flex-col gap-2.5 rounded-lg border border-outline-variant/60 bg-surface-variant/20 p-3.5">
             <h3 className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
-              💧 Consumo de Água (Lixamento d'água / Lavagem)
+              💧 Tarifa Local de Água (Concessionária {concessionariaAgua ? `- ${concessionariaAgua}` : ''})
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <TextField
-                id="litros-agua"
-                rotulo="Volume de Água Usada (Litros)"
-                type="number"
-                placeholder="Ex: 15"
-                value={litrosAgua}
-                onChange={(e) => setLitrosAgua(e.target.value)}
-              />
-              <div className="flex flex-col justify-center text-xs text-on-surface-variant">
-                <p>Calculado com base na tarifa local configurada acima (R$ {(Number(tarifaAguaM3) / 1000).toFixed(4)}/Litro).</p>
-                {Number(litrosAgua) > 0 && (
-                  <p className="font-semibold text-primary mt-1">
-                    Custo de água estimado: {formatarMoeda((Number(litrosAgua) || 0) * (Number(tarifaAguaM3) / 1000 || 0.015))}
-                  </p>
-                )}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-on-surface-variant">
+              <div>
+                <p className="text-sm font-semibold text-on-surface">
+                  Tarifa Vigente: {formatarMoeda(Number(tarifaAguaM3) || 15)} / m³ (R$ {(Number(tarifaAguaM3) / 1000).toFixed(4)} / Litro)
+                </p>
+                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                  ℹ️ O consumo de água (litros) é registrado diretamente na produção das peças. Aqui fica registrado o valor da tarifa oficial para a sua região ({estado} / {pais}).
+                </p>
               </div>
+              <Badge variant="neutral">Concessionária: {concessionariaAgua || 'Local'}</Badge>
             </div>
           </div>
         </Card>
@@ -809,30 +970,47 @@ export function PrecificacaoPage() {
       <section>
         <h2 className="mb-2 text-sm font-semibold text-on-surface">4. Mão de Obra, Custo Fixo & Margens</h2>
         <Card className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <TextField
-              id="valor-dia-mao-obra"
-              rotulo="Mão de Obra por Dia (R$ / Dia)"
-              type="number"
-              step="0.01"
-              value={valorDiaMaoDeObra}
-              onChange={(e) => handleMudarValorDia(e.target.value)}
-              placeholder="Ex: 200.00"
-            />
+          <div className="flex flex-col gap-3 bg-surface-container-high/30 p-3.5 rounded-xl border border-outline-variant/20">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
+                💼 Mão de Obra & Ganho Diário do Ateliê
+              </h3>
+              <p className="text-xs text-on-surface-variant">
+                Informe quanto você deseja receber por dia trabalhado (ex: R$ 300,00). A divisão pelas horas ativas trabalhadas por peça ocorre na produção.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+              <TextField
+                id="valor-dia-mao-obra"
+                rotulo="Mão de Obra por Dia / Ganho Diário (R$ / Dia)"
+                type="number"
+                step="0.01"
+                value={valorDiaMaoDeObra}
+                onChange={(e) => handleMudarValorDia(e.target.value)}
+                placeholder="Ex: 300.00"
+              />
+              <div className="rounded-lg border border-outline-variant/40 bg-surface px-3 py-2 flex items-center justify-between">
+                <span className="text-xs text-on-surface-variant font-medium">Equivalente por hora (base 8h):</span>
+                <span className="text-sm font-bold text-primary font-mono">
+                  {formatarMoeda(Number(valorHora) || 0)} / hora
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden">
             <TextField
               id="jornada-horas-dia"
               rotulo="Jornada diária (Horas / Dia)"
               type="number"
-              step="0.5"
               value={jornadaHorasDia}
               onChange={(e) => handleMudarJornada(e.target.value)}
-              placeholder="8"
             />
             <TextField
               id="valor-hora"
               rotulo="Valor da hora (R$)"
               type="number"
-              step="0.01"
               value={valorHora}
               onChange={(e) => handleMudarValorHora(e.target.value)}
             />

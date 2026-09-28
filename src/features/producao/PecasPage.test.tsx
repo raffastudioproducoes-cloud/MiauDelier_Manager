@@ -38,7 +38,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/^material$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '20' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar peça/i }))
+    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
 
     await waitFor(() => expect(screen.getByText('Chaveiro gato')).toBeInTheDocument())
     expect(screen.getByText(/planejada/i)).toBeInTheDocument()
@@ -53,7 +53,7 @@ describe('PecasPage', () => {
     await waitFor(() =>
       expect(screen.getByText(/cadastre pelo menos um material e uma forma/i)).toBeInTheDocument(),
     )
-    expect(screen.getByRole('button', { name: /cadastrar peça/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled()
   })
 
   it('mostra mensagem de erro quando o consumo excede o estoque', async () => {
@@ -63,7 +63,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/^material$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '5000' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar peça/i }))
+    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
 
     await waitFor(() => expect(screen.getByText(/estoque insuficiente/i)).toBeInTheDocument())
     expect(screen.queryByText('Peça gigante')).not.toBeInTheDocument()
@@ -84,7 +84,7 @@ describe('PecasPage', () => {
     fireEvent.change(materiais[1], { target: { value: '2' } })
     fireEvent.change(quantidades[1], { target: { value: '5' } })
 
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar peça/i }))
+    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
 
     await waitFor(() => expect(screen.getByText('Peça mista')).toBeInTheDocument())
   })
@@ -96,7 +96,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar peça/i }))
+    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
 
     await waitFor(() => expect(screen.getByText('Peça a excluir')).toBeInTheDocument())
 
@@ -113,7 +113,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar peça/i }))
+    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
 
     await waitFor(() => expect(screen.getByText('Chaveiro gato')).toBeInTheDocument())
     const link = screen.getByText('Chaveiro gato').closest('a')

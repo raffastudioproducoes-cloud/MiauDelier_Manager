@@ -486,7 +486,7 @@ export function PecasPage() {
         <>
       <Card>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 border-b border-outline-variant/30 pb-3">
-          <h2 className="font-semibold text-base text-on-surface">Cadastrar peça</h2>
+          <h2 className="font-semibold text-base text-on-surface">Fabricar nova peça</h2>
           
           <div className="flex items-center gap-1.5 bg-surface-container-high/60 p-1 rounded-lg border border-outline-variant/40">
             <button
@@ -686,7 +686,7 @@ export function PecasPage() {
 
               <div className="flex justify-between items-center pt-2">
                 <Button type="submit" disabled={faltamPreRequisitos} variante="primary">
-                  Cadastrar peça
+                  Fabricar nova peça
                 </Button>
                 <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(2)}>
                   Próxima Etapa: Cura & Bolhas →
@@ -805,7 +805,7 @@ export function PecasPage() {
                 </Button>
                 <div className="flex gap-2">
                   <Button type="submit" disabled={faltamPreRequisitos} variante="primary">
-                    Cadastrar peça
+                    Fabricar nova peça
                   </Button>
                   <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(3)}>
                     Próxima Etapa: Desmolde & Acabamento →
@@ -921,7 +921,7 @@ export function PecasPage() {
                 </Button>
                 <div className="flex gap-2">
                   <Button type="submit" disabled={faltamPreRequisitos} variante="primary">
-                    Cadastrar peça
+                    Fabricar nova peça
                   </Button>
                   <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(4)}>
                     Próxima Etapa: Custos Comerciais & Preço →
@@ -1040,7 +1040,7 @@ export function PecasPage() {
                   ← Voltar
                 </Button>
                 <Button type="submit" disabled={faltamPreRequisitos} variante="primary" className="py-2.5 font-bold">
-                  Cadastrar peça
+                  Fabricar nova peça
                 </Button>
               </div>
             </div>
