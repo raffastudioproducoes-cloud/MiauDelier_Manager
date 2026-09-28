@@ -34,6 +34,12 @@ export function LoginForm() {
     }
   }, [autenticado, navigate])
 
+  useEffect(() => {
+    if (contaConfigurada === false) {
+      setModoCadastro(true)
+    }
+  }, [contaConfigurada])
+
   if (contaConfigurada === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4 text-on-surface-variant">
@@ -66,6 +72,11 @@ export function LoginForm() {
           }
         }
       } else {
+        if (!modoCadastro) {
+          setErro('Nenhuma conta foi encontrada. Por favor, vá na aba "Criar Conta" para se cadastrar.')
+          setEnviando(false)
+          return
+        }
         await criarConta(senha)
       }
       navigate({ to: '/' })
@@ -76,21 +87,15 @@ export function LoginForm() {
     }
   }
 
-  const tituloFormulario = !contaConfigurada
-    ? 'Criar senha'
-    : modoCadastro
+  const tituloFormulario = modoCadastro
     ? 'Criar conta'
     : 'Entrar'
 
-  const subTituloFormulario = !contaConfigurada
-    ? 'Defina a senha que vai proteger seus dados.'
-    : modoCadastro
+  const subTituloFormulario = modoCadastro
     ? 'Cadastre seu ateliê para controlar sua produção.'
     : 'Entre para continuar'
 
-  const rotuloBotaoPrincipal = !contaConfigurada
-    ? 'Criar senha'
-    : modoCadastro
+  const rotuloBotaoPrincipal = modoCadastro
     ? 'Cadastrar'
     : 'Entrar'
 
@@ -144,38 +149,36 @@ export function LoginForm() {
 
         <div className="w-full max-w-xs sm:max-w-sm mx-auto md:ml-6 lg:ml-10 flex flex-col gap-5">
           {/* Alternador Entrar / Cadastrar (Tabs Suaves e Compactas) */}
-          {contaConfigurada && (
-            <div className="flex rounded-xl bg-surface-container-high/40 p-1 border border-outline-variant/30">
-              <button
-                type="button"
-                onClick={() => {
-                  setModoCadastro(false)
-                  setErro(null)
-                }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  !modoCadastro
-                    ? 'bg-primary text-on-primary shadow-md'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Entrar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setModoCadastro(true)
-                  setErro(null)
-                }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  modoCadastro
-                    ? 'bg-primary text-on-primary shadow-md'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Criar Conta
-              </button>
-            </div>
-          )}
+          <div className="flex rounded-xl bg-surface-container-high/40 p-1 border border-outline-variant/30">
+            <button
+              type="button"
+              onClick={() => {
+                setModoCadastro(false)
+                setErro(null)
+              }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                !modoCadastro
+                  ? 'bg-primary text-on-primary shadow-md'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setModoCadastro(true)
+                setErro(null)
+              }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                modoCadastro
+                  ? 'bg-primary text-on-primary shadow-md'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Criar Conta
+            </button>
+          </div>
 
           {/* Cabeçalho do Formulário */}
           <div>
@@ -199,16 +202,14 @@ export function LoginForm() {
               />
             )}
 
-            {(modoCadastro || contaConfigurada) && (
-              <TextField
-                id="email"
-                rotulo="E-mail / Usuário"
-                type="email"
-                placeholder="Digite seu usuário ou e-mail"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            )}
+            <TextField
+              id="email"
+              rotulo="E-mail / Usuário"
+              type="email"
+              placeholder="Digite seu usuário ou e-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
 
             <div className="relative">
               <TextField
@@ -250,7 +251,7 @@ export function LoginForm() {
           </form>
 
           {/* Links Secundários (Esqueceu a senha) */}
-          {contaConfigurada && !modoCadastro && (
+          {!modoCadastro && (
             <div className="flex items-center justify-center text-xs text-on-surface-variant">
               <button
                 type="button"
@@ -263,8 +264,7 @@ export function LoginForm() {
           )}
 
           {/* Social Logins */}
-          {contaConfigurada && (
-            <div className="flex flex-col gap-3 pt-1">
+          <div className="flex flex-col gap-3 pt-1">
               <div className="relative flex items-center justify-center">
                 <div className="w-full border-t border-outline-variant/40" />
                 <span className="absolute bg-background px-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
@@ -299,7 +299,6 @@ export function LoginForm() {
                 </button>
               </div>
             </div>
-          )}
         </div>
       </div>
     </div>
