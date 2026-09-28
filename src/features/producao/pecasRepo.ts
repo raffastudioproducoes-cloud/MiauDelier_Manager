@@ -20,6 +20,7 @@ export interface NovaPeca {
   nome: string
   formaId: number
   consumos: NovoConsumo[]
+  imagemUrl?: string
 }
 
 export interface PecaComForma extends Peca {
@@ -38,6 +39,7 @@ export async function criarPeca(nova: NovaPeca): Promise<number> {
       formaId: nova.formaId,
       status: 'planejada',
       criadaEm: agora,
+      imagemUrl: nova.imagemUrl,
     })) as number
 
     for (const consumo of nova.consumos) {
@@ -285,3 +287,8 @@ export async function excluirPeca(pecaId: number): Promise<void> {
     await registrarAuditoria('peca', pecaId, 'exclusao')
   })
 }
+
+export async function atualizarImagemPeca(pecaId: number, imagemUrl?: string): Promise<void> {
+  await db.pecas.update(pecaId, { imagemUrl })
+}
+

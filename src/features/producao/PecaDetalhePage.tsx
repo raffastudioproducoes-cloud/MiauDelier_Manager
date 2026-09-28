@@ -13,9 +13,11 @@ import {
   listarEventosDaPeca,
   atualizarStatusPeca,
   registrarVendaPeca,
+  atualizarImagemPeca,
   type PecaComForma,
   type ConsumoComMaterial,
 } from './pecasRepo'
+import { SeletorImagem } from '../../components/ui/SeletorImagem'
 import { listarContas } from '../financeiro/contasRepo'
 import type { EventoPeca, StatusPeca } from '../../db/schema'
 
@@ -107,6 +109,16 @@ export function PecaDetalhePage() {
     await recarregar()
   }
 
+  async function handleSalvarImagem(novaUrl?: string) {
+    try {
+      await atualizarImagemPeca(id, novaUrl)
+      await recarregar()
+      mostrarToast('Imagem da peça salva!', 'sucesso')
+    } catch {
+      mostrarToast('Erro ao salvar imagem da peça.', 'erro')
+    }
+  }
+
   if (!carregado) return null
 
   if (!peca) {
@@ -118,7 +130,7 @@ export function PecaDetalhePage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-on-surface">{peca.nome}</h1>
-          <p className="mt-1 text-label-sm text-on-surface-variant">Forma: {peca.nomeForma}</p>
+          <p className="mt-1 text-label-sm text-on-surface-variant">Forma: {peca.nomeForma} · Série: {peca.numeroSerie}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={peca.status === 'cancelada' ? 'danger' : peca.status === 'vendida' ? 'success' : 'neutral'}>
@@ -143,6 +155,15 @@ export function PecaDetalhePage() {
           <strong>Produção Cancelada:</strong> Os materiais consumidos foram devolvidos ao estoque e o uso do molde foi estornado.
         </div>
       )}
+
+      <Card>
+        <h2 className="mb-3 font-medium text-on-surface">Imagem da Peça</h2>
+        <SeletorImagem
+          imagemUrl={peca.imagemUrl}
+          onImagemSelecionada={handleSalvarImagem}
+          label="Foto da peça (capturada pela câmera ou da galeria)"
+        />
+      </Card>
 
       <Card>
         <h2 className="mb-2 font-medium text-on-surface">Materiais consumidos</h2>

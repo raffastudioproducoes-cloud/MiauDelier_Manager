@@ -10,6 +10,7 @@ import { useToast } from '../../components/ui/useToast'
 import { calcularVolumeMl, calcularVolumeMesaResina, type FuroVazadoInput, type PeMesaInput } from '../calculator/volume'
 import { criarForma, listarFormas, atualizarForma, excluirForma, finalizarCuraForma } from './formasRepo'
 import { listarMateriais } from './materiaisRepo'
+import { SeletorImagem } from '../../components/ui/SeletorImagem'
 import type { Forma, FormaGeometria, Material, FuroVazadoForma } from '../../db/schema'
 
 const schemaForma = z.object({
@@ -123,6 +124,7 @@ export function FormasPage() {
   const [custoFabricacao, setCustoFabricacao] = useState('')
   const [vidaUtilUsos, setVidaUtilUsos] = useState('50')
   const [curaHoras, setCuraHoras] = useState('0')
+  const [imagemUrl, setImagemUrl] = useState<string | undefined>(undefined)
 
   const [erro, setErro] = useState<string | null>(null)
   const [formaEmEdicaoId, setFormaEmEdicaoId] = useState<number | null>(null)
@@ -294,6 +296,7 @@ export function FormasPage() {
     setCustoFabricacao('')
     setVidaUtilUsos('50')
     setCuraHoras('0')
+    setImagemUrl(undefined)
     setFormaEmEdicaoId(null)
     setErro(null)
   }
@@ -301,6 +304,7 @@ export function FormasPage() {
   function iniciarEdicao(forma: Forma) {
     setFormaEmEdicaoId(forma.id ?? null)
     setNome(forma.nome)
+    setImagemUrl(forma.imagemUrl)
     setGeometria(forma.geometria)
     const d = forma.dimensoesCm
     setComprimento(d.comprimento !== undefined ? String(d.comprimento) : '')
@@ -417,6 +421,7 @@ export function FormasPage() {
         custoFabricacao: custoFabricacao ? Number(custoFabricacao) : undefined,
         vidaUtilUsos: vidaUtilUsos ? Number(vidaUtilUsos) : 50,
         curaMinutos: curaMin > 0 ? curaMin : undefined,
+        imagemUrl: imagemUrl || undefined,
       }
       if (formaEmEdicaoId !== null) {
         await atualizarForma(formaEmEdicaoId, dados)
@@ -720,6 +725,12 @@ export function FormasPage() {
                 Amortização por uso no preço final da peça: <strong>R$ {custoPorUsoCalculado} / uso</strong> (R$ {custoFabricacao} ÷ {vidaUtilUsos} usos)
               </p>
             )}
+
+            <SeletorImagem
+              imagemUrl={imagemUrl}
+              onImagemSelecionada={setImagemUrl}
+              label="Foto do Molde / Forma (Câmera ou Galeria)"
+            />
           </div>
 
           {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
@@ -797,19 +808,28 @@ export function FormasPage() {
                       </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-                      <div>
-                        <h3 className="font-semibold text-base text-on-surface">{forma.nome}</h3>
-                        <p className="mt-0.5 text-xs text-on-surface-variant">
-                          {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
-                          {forma.litrosResina ? ` (${forma.litrosResina.toFixed(2)} L / ${forma.massaResinaKg?.toFixed(2)} kg)` : ''}
-                        </p>
-                        {forma.custoFabricacao !== undefined && (
-                          <p className="mt-1 text-xs text-on-surface-variant">
-                            Fabricação: R$ {forma.custoFabricacao.toFixed(2)}
-                            {forma.materialCaixaEstrutura ? ` (Estrutura: ${forma.materialCaixaEstrutura}${forma.custoCaixaEstrutura !== undefined ? ` - R$ ${forma.custoCaixaEstrutura.toFixed(2)}` : ''})` : ''} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
-                          </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                      <div className="flex items-start gap-3">
+                        {forma.imagemUrl && (
+                          <img
+                            src={forma.imagemUrl}
+                            alt={forma.nome}
+                            className="w-16 h-16 object-cover rounded-xl border border-outline-variant/40 shadow-sm shrink-0"
+                          />
                         )}
+                        <div>
+                          <h3 className="font-semibold text-base text-on-surface">{forma.nome}</h3>
+                          <p className="mt-0.5 text-xs text-on-surface-variant">
+                            {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
+                            {forma.litrosResina ? ` (${forma.litrosResina.toFixed(2)} L / ${forma.massaResinaKg?.toFixed(2)} kg)` : ''}
+                          </p>
+                          {forma.custoFabricacao !== undefined && (
+                            <p className="mt-1 text-xs text-on-surface-variant">
+                              Fabricação: R$ {forma.custoFabricacao.toFixed(2)}
+                              {forma.materialCaixaEstrutura ? ` (Estrutura: ${forma.materialCaixaEstrutura}${forma.custoCaixaEstrutura !== undefined ? ` - R$ ${forma.custoCaixaEstrutura.toFixed(2)}` : ''})` : ''} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">

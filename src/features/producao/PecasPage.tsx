@@ -13,6 +13,8 @@ import { listarFormas } from './formasRepo'
 import { listarMateriais } from './materiaisRepo'
 import type { Forma, Material } from '../../db/schema'
 import { converterQuantidade, obterOpcoesUnidadeCompativeis } from '../../lib/unidades'
+import { SeletorImagem } from '../../components/ui/SeletorImagem'
+import { VitrinePecasProntas } from './VitrinePecasProntas'
 
 const schemaPeca = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da peça').max(120),
@@ -36,6 +38,8 @@ export function PecasPage() {
   const [nome, setNome] = useState('')
   const [formaId, setFormaId] = useState('')
   const [consumos, setConsumos] = useState<LinhaConsumo[]>([linhaVazia()])
+  const [imagemUrl, setImagemUrl] = useState<string | undefined>(undefined)
+  const [abaAtiva, setAbaAtiva] = useState<'lista' | 'vitrine'>('lista')
   const [erro, setErro] = useState<string | null>(null)
   const [pecaExcluindoId, setPecaExcluindoId] = useState<number | null>(null)
   const [carregado, setCarregado] = useState(false)
@@ -75,6 +79,7 @@ export function PecasPage() {
     setNome('')
     setFormaId('')
     setConsumos([linhaVazia()])
+    setImagemUrl(undefined)
     setErro(null)
   }
 
@@ -134,6 +139,7 @@ export function PecasPage() {
           quantidade: Number(linha.quantidade),
           unidade: linha.unidade || undefined,
         })),
+        imagemUrl: imagemUrl || undefined,
       })
     } catch (falha) {
       if (!montado.current) return
@@ -188,11 +194,48 @@ export function PecasPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-on-surface">Peças</h1>
-        <p className="text-label-sm text-on-surface-variant">Fluxo das peças na oficina.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
+        <div>
+          <h1 className="text-xl font-semibold text-on-surface">Peças & Vitrine</h1>
+          <p className="text-label-sm text-on-surface-variant">Gerencie o fluxo de produção e divulgue seus produtos prontos.</p>
+        </div>
+
+        {/* Abas de Navegação entre Gestão de Peças e Vitrine Pronta */}
+        <div className="flex bg-surface-container-high/40 p-1 rounded-xl border border-outline-variant/40">
+          <button
+            type="button"
+            onClick={() => setAbaAtiva('lista')}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+              abaAtiva === 'lista'
+                ? 'bg-primary text-on-primary shadow-md'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            🧩 Todas as Peças
+          </button>
+          <button
+            type="button"
+            onClick={() => setAbaAtiva('vitrine')}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
+              abaAtiva === 'vitrine'
+                ? 'bg-primary text-on-primary shadow-md'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span>🛍️ Vitrine - Peças Prontas</span>
+            {pecas.filter((p) => p.status === 'pronta').length > 0 && (
+              <span className="bg-emerald-500 text-slate-950 font-bold text-[10px] px-1.5 py-0.2 rounded-full">
+                {pecas.filter((p) => p.status === 'pronta').length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
+      {abaAtiva === 'vitrine' ? (
+        <VitrinePecasProntas pecas={pecas} onRecarregar={recarregar} />
+      ) : (
+        <>
       <Card>
         <h2 className="mb-3 font-medium text-on-surface">Cadastrar peça</h2>
         {faltamPreRequisitos && (
@@ -301,6 +344,12 @@ export function PecasPage() {
           })}
           <Button type="button" variante="ghost" onClick={adicionarLinha}>+ Adicionar material</Button>
 
+          <SeletorImagem
+            imagemUrl={imagemUrl}
+            onImagemSelecionada={setImagemUrl}
+            label="Foto da Peça (Câmera ou Galeria)"
+          />
+
           {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
           <Button type="submit" disabled={faltamPreRequisitos}>Cadastrar peça</Button>
         </form>
@@ -363,9 +412,17 @@ export function PecasPage() {
 
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-semibold">
-                          🧩
-                        </div>
+                        {peca.imagemUrl ? (
+                          <img
+                            src={peca.imagemUrl}
+                            alt={peca.nome}
+                            className="w-12 h-12 object-cover rounded-xl border border-outline-variant/40 shadow-sm shrink-0"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-semibold">
+                            🧩
+                          </div>
+                        )}
                         <div className="flex flex-col min-w-0">
                           <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} className="hover:underline font-semibold text-on-surface text-base truncate">
                             {peca.nome}
@@ -406,6 +463,8 @@ export function PecasPage() {
         onConfirmar={() => pecaExcluindoId !== null && handleExcluir(pecaExcluindoId)}
         onCancelar={() => setPecaExcluindoId(null)}
       />
+        </>
+      )}
     </div>
   )
 }

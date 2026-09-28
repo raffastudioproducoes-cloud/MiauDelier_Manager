@@ -73,6 +73,7 @@ export interface Forma {
   margemSegurancaPercentual?: number
   massaResinaKg?: number
   litrosResina?: number
+  imagemUrl?: string
 }
 
 
@@ -102,6 +103,7 @@ export interface Peca {
   usosEnergia?: UsoEnergiaPeca[]
   percentualTaxas?: number
   margemDesejada?: number
+  imagemUrl?: string
 }
 
 export interface ConsumoPeca {
