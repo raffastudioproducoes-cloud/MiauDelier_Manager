@@ -160,25 +160,33 @@ export function ContasPage() {
         {contas.length === 0 ? (
           <EmptyState titulo="Nenhuma conta cadastrada" descricao="Cadastre a primeira conta do seu ateliê." />
         ) : (
-          <ul className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             {contas.map((conta) => (
-              <Card key={conta.id} className="glow-hover flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container text-sm font-semibold text-primary">
-                  {conta.nome.charAt(0).toUpperCase()}
+              <Card key={conta.id} className="glow-hover flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-sm font-bold text-primary shadow-sm">
+                    🏛️
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="font-semibold text-on-surface text-base truncate">{conta.nome}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
+                        Saldo: {conta.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-on-surface">{conta.nome}</p>
-                  <p className="mt-1 text-label-sm text-on-surface-variant">
-                    {conta.saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variante="ghost" onClick={() => iniciarEdicao(conta)}>Editar</Button>
-                  <Button variante="ghost" onClick={() => setContaExcluindoId(conta.id)}>Excluir</Button>
+                <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-outline-variant/30 justify-end">
+                  <Button variante="ghost" className="text-xs" onClick={() => iniciarEdicao(conta)}>
+                    Editar
+                  </Button>
+                  <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setContaExcluindoId(conta.id)}>
+                    Excluir
+                  </Button>
                 </div>
               </Card>
             ))}
-          </ul>
+          </div>
         )}
       </section>
 

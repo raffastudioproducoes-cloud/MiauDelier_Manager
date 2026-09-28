@@ -104,4 +104,27 @@ describe('FormasPage', () => {
 
     await waitFor(() => expect(screen.queryByText('Molde B')).not.toBeInTheDocument())
   })
+
+  it('cadastra uma forma com material e custo da caixa de contenção / estrutura', async () => {
+    render(<ToastProvider><FormasPage /></ToastProvider>)
+
+    fireEvent.change(await screen.findByLabelText(/nome da forma/i), { target: { value: 'Molde Mesa Pet' } })
+    fireEvent.change(screen.getByLabelText(/^geometria$/i), { target: { value: 'retangular' } })
+    fireEvent.change(await screen.findByLabelText(/comprimento/i), { target: { value: '50' } })
+    fireEvent.change(screen.getByLabelText(/largura/i), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText(/profundidade/i), { target: { value: '3' } })
+
+    fireEvent.change(screen.getByLabelText(/material da caixa\/estrutura/i), { target: { value: 'MDF 15mm' } })
+    fireEvent.change(screen.getByLabelText(/custo da caixa\/estrutura/i), { target: { value: '25.00' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /cadastrar forma/i }))
+
+    await waitFor(() => expect(screen.getByText('Molde Mesa Pet')).toBeInTheDocument())
+
+    const formas = await listarFormas()
+    const forma = formas.find((f) => f.nome === 'Molde Mesa Pet')
+    expect(forma?.materialCaixaEstrutura).toBe('MDF 15mm')
+    expect(forma?.custoCaixaEstrutura).toBe(25)
+    expect(forma?.custoFabricacao).toBe(25)
+  })
 })

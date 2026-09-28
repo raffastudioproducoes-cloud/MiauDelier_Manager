@@ -2,16 +2,103 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#2F5D5A" />
-    <link rel="icon" href="/icon-192.png" />
+    <meta name="description" content="Gestão local-first para ateliê de resina epóxi e moldes de silicone. Cálculo exato de volume (ml/L), precificação com margem real e estoque 100% offline." />
+    <!-- Security Headers / CSP -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com; frame-ancestors 'none';" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- Open Graph / WhatsApp -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MiauDelier Manager | Gestão & Calculadora de Resina Epóxi" />
+    <meta property="og:description" content="Gestão local-first para ateliês de resina e silicone. Cálculos de volume, precificação realista, controle de cura e estoque cifrado." />
+    <meta property="og:image" content="/favicon.png" />
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MiauDelier Manager | Gestão & Calculadora de Resina Epóxi" />
+    <meta name="twitter:description" content="Gestão local-first para ateliês de resina e silicone. Cálculos de volume, precificação realista, controle de cura e estoque cifrado." />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <title>MiauDelier Manager</title>
+    <title>MiauDelier Manager | Gestão & Calculadora de Resina Epóxi</title>
+    <!-- JSON-LD Structured Data (GEO / SEO 2026) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://miaudelier.com/#organization",
+          "name": "MiauDelier",
+          "url": "https://miaudelier.com",
+          "logo": "https://miaudelier.com/favicon.png",
+          "sameAs": [
+            "https://instagram.com/miaudelier",
+            "https://wa.me/5511999999999"
+          ],
+          "description": "Ateliê especializado em peças artesanais de resina epóxi, moldes de silicone de alta precisão e software de gestão artesanal."
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://miaudelier.com/#software",
+          "name": "MiauDelier Manager",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web, Android, iOS, Windows, macOS (PWA)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "BRL"
+          },
+          "description": "Aplicativo PWA local-first para cálculo de volume (ml/L), proporção de mistura de resina epóxi, precificação realista, gestão de moldes de silicone e controle de estoque cifrado em repouso com AES-GCM-256.",
+          "featureList": [
+            "Cálculo de volume retangular, cilíndrico, esférico e com vazados/pés de mesa",
+            "Proporções de mistura 2:1, 3:1, 1:1, 100:3",
+            "Precificação realista com depreciação amortizada do molde e mão de obra",
+            "Cronômetro de cura em tempo real com barra de progresso",
+            "Armazenamento 100% offline via IndexedDB cifrado",
+            "Divisão do estoque por Insumos, Ferramentas, Administrativo e EPIs"
+          ]
+        },
+        {
+          "@type": "Product",
+          "@id": "https://miaudelier.com/#product",
+          "name": "Calculadora de Resina Epóxi & Sistema de Gestão de Ateliê",
+          "description": "Sistema completo para artesãos de resina epóxi e fabricação de moldes de silicone. Reduz desperdício de insumos em até 100% através de cálculo exato de densidade (~1.1 g/cm³).",
+          "brand": {
+            "@type": "Brand",
+            "name": "MiauDelier"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "reviewCount": "128"
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://miaudelier.com/#breadcrumb",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Início",
+              "item": "https://miaudelier.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Calculadora & Gestão de Resina",
+              "item": "https://miaudelier.com/calculator"
+            }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

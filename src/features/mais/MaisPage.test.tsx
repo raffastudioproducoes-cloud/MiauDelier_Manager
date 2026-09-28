@@ -10,35 +10,16 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 describe('MaisPage', () => {
-  it('renderiza a página com o título', () => {
+  it('renderiza a página com o título e aviso de menu unificado', () => {
     render(<MaisPage />)
     expect(screen.getByText('Mais')).toBeInTheDocument()
-    expect(screen.getByText(/Hub central com atalhos/)).toBeInTheDocument()
+    expect(screen.getByText(/Atalhos Unificados no Menu Principal/i)).toBeInTheDocument()
   })
 
-  it('renderiza todas as seções', () => {
+  it('renderiza botão/link para ir ao início', () => {
     render(<MaisPage />)
-    expect(screen.getByText('Produção')).toBeInTheDocument()
-    expect(screen.getByText('Vendas')).toBeInTheDocument()
-    expect(screen.getByText('Financeiro')).toBeInTheDocument()
-    expect(screen.getByText('Sistema')).toBeInTheDocument()
-  })
-
-  it('renderiza links-chave com href correto', () => {
-    render(<MaisPage />)
-
-    const rotasEsperadas = [
-      '/materiais',
-      '/pedidos',
-      '/analytics',
-      '/agenda',
-      '/assistente',
-    ]
-
-    rotasEsperadas.forEach((rota) => {
-      const links = screen.getAllByRole('link')
-      const encontrado = links.some((link) => link.getAttribute('href') === rota)
-      expect(encontrado).toBe(true)
-    })
+    const link = screen.getByRole('link', { name: /ir para o início/i })
+    expect(link.getAttribute('href')).toBe('/')
   })
 })
+

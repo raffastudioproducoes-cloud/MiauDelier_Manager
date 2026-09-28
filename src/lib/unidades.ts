@@ -80,3 +80,66 @@ export function obterOpcoesUnidadeCompativeis(unidadeBase: string): string[] {
   if (info.grupo === 'comprimento') return ['cm', 'm']
   return [unidadeBase]
 }
+
+/**
+ * Converte e formata um volume em ml e sua massa estimada em resina (~1.1 g/ml).
+ * Se o volume for >= 1000 ml, formata em Litros (ex: 2,5 L, 10,9 L).
+ * Se o volume for < 1000 ml, formata em ml (ex: 500 ml, 250 ml).
+ * Da mesma forma, se a massa for >= 1 kg, formata em kg (ex: ~2,75 kg resina).
+ * Se a massa for < 1 kg, formata em g (ex: ~550 g resina).
+ */
+export function formatarVolumeEMassaLegivel(volumeMl: number): {
+  volumeLegivel: string
+  massaLegivel: string
+  resumoExtenso: string
+} {
+  if (!Number.isFinite(volumeMl) || volumeMl <= 0) {
+    return {
+      volumeLegivel: '0 ml',
+      massaLegivel: '~0 g resina',
+      resumoExtenso: '0 ml de resina/mistura (~0 g resina)',
+    }
+  }
+
+  let volumeLegivel = ''
+  if (volumeMl >= 1000) {
+    const litros = volumeMl / 1000
+    const litrosFmt = litros.toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
+    })
+    volumeLegivel = `${litrosFmt} L`
+  } else {
+    const mlFmt = volumeMl.toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    })
+    volumeLegivel = `${mlFmt} ml`
+  }
+
+  const massaKg = (volumeMl * 1.1) / 1000
+  let massaLegivel = ''
+  if (massaKg >= 1) {
+    const kgFmt = massaKg.toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
+    })
+    massaLegivel = `~${kgFmt} kg resina`
+  } else {
+    const gramas = volumeMl * 1.1
+    const gFmt = gramas.toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    })
+    massaLegivel = `~${gFmt} g resina`
+  }
+
+  const resumoExtenso = `${volumeLegivel} de resina/mistura (${massaLegivel})`
+
+  return {
+    volumeLegivel,
+    massaLegivel,
+    resumoExtenso,
+  }
+}
+

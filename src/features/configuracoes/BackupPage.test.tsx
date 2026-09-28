@@ -34,4 +34,21 @@ describe('BackupPage', () => {
 
     expect(await screen.findByRole('alert')).toBeInTheDocument()
   })
+
+  it('abre modal de confirmação e apaga os dados ao confirmar', async () => {
+    await db.materiais.add({ nome: 'Resina Teste', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 100, custoUnitario: 0.1 })
+    expect(await db.materiais.count()).toBe(1)
+
+    render(<ToastProvider><BackupPage /></ToastProvider>)
+
+    fireEvent.click(screen.getByRole('button', { name: /apagar dados \(manter perfil\)/i }))
+    expect(await screen.findByText(/apagar todos os dados do ateliê\?/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
+
+    await waitFor(async () => {
+      expect(await db.materiais.count()).toBe(0)
+    })
+  })
 })
+

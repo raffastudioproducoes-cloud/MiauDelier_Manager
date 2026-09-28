@@ -20,6 +20,21 @@ export interface NovaPeca {
   nome: string
   formaId: number
   consumos: NovoConsumo[]
+  imagemUrl?: string
+  volumeResinaMl?: number
+  curaMinutos?: number
+  horasMaoDeObra?: number
+  usosEnergia?: Peca['usosEnergia']
+  litrosAgua?: number
+  custoAgua?: number
+  custoEpiInsumos?: number
+  valorPropagandaTotal?: number
+  diasPropaganda?: number
+  custoPropagandaCalculado?: number
+  valorFrete?: number
+  precoVenda?: number
+  percentualTaxas?: number
+  margemDesejada?: number
 }
 
 export interface PecaComForma extends Peca {
@@ -38,6 +53,21 @@ export async function criarPeca(nova: NovaPeca): Promise<number> {
       formaId: nova.formaId,
       status: 'planejada',
       criadaEm: agora,
+      imagemUrl: nova.imagemUrl,
+      volumeResinaMl: nova.volumeResinaMl,
+      curaMinutos: nova.curaMinutos,
+      horasMaoDeObra: nova.horasMaoDeObra,
+      usosEnergia: nova.usosEnergia,
+      litrosAgua: nova.litrosAgua,
+      custoAgua: nova.custoAgua,
+      custoEpiInsumos: nova.custoEpiInsumos,
+      valorPropagandaTotal: nova.valorPropagandaTotal,
+      diasPropaganda: nova.diasPropaganda,
+      custoPropagandaCalculado: nova.custoPropagandaCalculado,
+      valorFrete: nova.valorFrete,
+      precoVenda: nova.precoVenda,
+      percentualTaxas: nova.percentualTaxas,
+      margemDesejada: nova.margemDesejada,
     })) as number
 
     for (const consumo of nova.consumos) {
@@ -285,3 +315,19 @@ export async function excluirPeca(pecaId: number): Promise<void> {
     await registrarAuditoria('peca', pecaId, 'exclusao')
   })
 }
+
+export async function atualizarImagemPeca(pecaId: number, imagemUrl?: string): Promise<void> {
+  await db.pecas.update(pecaId, { imagemUrl })
+}
+
+export async function atualizarDadosProducaoPeca(pecaId: number, dados: Partial<Peca>): Promise<void> {
+  await db.pecas.update(pecaId, dados)
+  await db.eventosPeca.add({
+    pecaId,
+    tipo: 'atualizacao_dados',
+    descricao: 'Etapas e dados técnicos de produção/precificação da peça atualizados',
+    criadoEm: new Date().toISOString(),
+  })
+}
+
+

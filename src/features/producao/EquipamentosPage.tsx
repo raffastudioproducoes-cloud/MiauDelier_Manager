@@ -171,41 +171,50 @@ export function EquipamentosPage() {
             descricao="Cadastre suas lâmpadas, furadeiras, secadores, sopradores e politrizes para calcular o uso elétrico na precificação."
           />
         ) : (
-          <ul className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             {equipamentos.map((eq) => {
               const tarifa = Number(custoKwh) || 0.85
               const custoHora = (eq.potenciaWatts / 1000) * tarifa
               return (
-                <Card key={eq.id} className="glow-hover">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="font-medium text-on-surface">{eq.nome}</h3>
+                <Card key={eq.id} className="glow-hover flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+                  <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary text-base font-bold">
+                      ⚡
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-on-surface text-base truncate">{eq.nome}</h3>
+                        <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                          {eq.potenciaWatts} W
+                        </span>
+                      </div>
                       {eq.descricao && (
-                        <p className="text-xs text-on-surface-variant">
-                          <strong>Função:</strong> {eq.descricao}
+                        <p className="text-xs text-on-surface-variant mt-0.5">
+                          {eq.descricao}
                         </p>
                       )}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-label-sm text-on-surface-variant mt-1">
-                        <span>Potência: <strong>{eq.potenciaWatts} W</strong> ({eq.potenciaWatts / 1000} kW)</span>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-on-surface-variant mt-1">
                         {eq.valorCompra !== undefined && eq.valorCompra > 0 && (
-                          <span>Custo de Aquisição: <strong>R$ {eq.valorCompra.toFixed(2)}</strong></span>
+                          <span>Aquisição: <strong>R$ {eq.valorCompra.toFixed(2)}</strong></span>
                         )}
                         {eq.vidaUtilHoras !== undefined && eq.vidaUtilHoras > 0 && (
                           <span>Vida Útil: <strong>{eq.vidaUtilHoras}h</strong></span>
                         )}
+                        <span className="text-primary font-medium">
+                          ⚡ R$ {custoHora.toFixed(2)}/h
+                        </span>
                       </div>
-                      <p className="text-xs text-primary font-medium mt-1">
-                        Custo elétrico por hora de uso: R$ {custoHora.toFixed(2)}/h (à tarifa de R$ {tarifa.toFixed(2)}/kWh)
-                      </p>
                     </div>
-                    <Button variante="ghost" onClick={() => setEquipamentoExcluindoId(eq.id ?? null)}>
+                  </div>
+                  <div className="flex items-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-outline-variant/30 justify-end">
+                    <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setEquipamentoExcluindoId(eq.id ?? null)}>
                       Excluir
                     </Button>
                   </div>
                 </Card>
               )
             })}
-          </ul>
+          </div>
         )}
       </section>
 

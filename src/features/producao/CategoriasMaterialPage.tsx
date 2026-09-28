@@ -12,7 +12,7 @@ import {
   atualizarCategoriaMaterial,
   excluirCategoriaMaterial,
 } from './categoriasMaterialRepo'
-import type { CategoriaMaterial } from '../../db/schema'
+import type { CategoriaMaterial, TipoClassificacaoMaterial } from '../../db/schema'
 
 const schemaCategoria = z.object({
   nome: z.string().trim().min(1, 'Informe o nome da categoria').max(120),
@@ -24,6 +24,7 @@ export function CategoriasMaterialPage() {
   const [nome, setNome] = useState('')
   const [tipo, setTipo] = useState<'principal' | 'subcategoria'>('principal')
   const [categoriaPaiId, setCategoriaPaiId] = useState<string>('')
+  const [tipoClassificacao, setTipoClassificacao] = useState<TipoClassificacaoMaterial>('consumivel')
   const [erro, setErro] = useState<string | null>(null)
   const [categoriaEmEdicaoId, setCategoriaEmEdicaoId] = useState<number | null>(null)
   const [categoriaExcluindoId, setCategoriaExcluindoId] = useState<number | null>(null)
@@ -51,6 +52,7 @@ export function CategoriasMaterialPage() {
     setNome('')
     setTipo('principal')
     setCategoriaPaiId('')
+    setTipoClassificacao('consumivel')
     setCategoriaEmEdicaoId(null)
     setErro(null)
   }
@@ -58,6 +60,7 @@ export function CategoriasMaterialPage() {
   function iniciarEdicao(categoria: CategoriaMaterial) {
     setCategoriaEmEdicaoId(categoria.id ?? null)
     setNome(categoria.nome)
+    setTipoClassificacao(categoria.tipoClassificacao ?? 'consumivel')
     if (categoria.categoriaPaiId) {
       setTipo('subcategoria')
       setCategoriaPaiId(String(categoria.categoriaPaiId))
@@ -95,9 +98,18 @@ export function CategoriasMaterialPage() {
 
     try {
       if (categoriaEmEdicaoId !== null) {
-        await atualizarCategoriaMaterial(categoriaEmEdicaoId, resultado.data.nome, parentIdFinal)
+        await atualizarCategoriaMaterial(
+          categoriaEmEdicaoId,
+          resultado.data.nome,
+          parentIdFinal,
+          tipo === 'principal' ? tipoClassificacao : undefined,
+        )
       } else {
-        await criarCategoriaMaterial(resultado.data.nome, parentIdFinal)
+        await criarCategoriaMaterial(
+          resultado.data.nome,
+          parentIdFinal,
+          tipo === 'principal' ? tipoClassificacao : undefined,
+        )
       }
     } catch (falha) {
       if (!montado.current) return
@@ -175,6 +187,25 @@ export function CategoriasMaterialPage() {
               ↳ Subcategoria (ex: Resinas, Folhas)
             </label>
           </div>
+
+          {tipo === 'principal' && (
+            <div className="flex flex-col gap-1">
+              <label htmlFor="tipo-classificacao" className="text-sm font-medium text-on-surface">
+                Classificação Padrão (Divisão do Estoque)
+              </label>
+              <select
+                id="tipo-classificacao"
+                value={tipoClassificacao}
+                onChange={(e) => setTipoClassificacao(e.target.value as TipoClassificacaoMaterial)}
+                className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              >
+                <option value="consumivel">🧪 Insumo / Consumível (Resina, silicone, enfeites...)</option>
+                <option value="ferramenta">🛠️ Ferramenta / Equipamento (Estufa, incubadora, soprador...)</option>
+                <option value="administrativo">📦 Administrativo / Embalagem (Papel, etiquetas, caixas...)</option>
+                <option value="epi">🥽 EPI / Proteção (Luvas, máscara, touca, refil...)</option>
+              </select>
+            </div>
+          )}
 
           {tipo === 'subcategoria' && (
             <div className="flex flex-col gap-1">

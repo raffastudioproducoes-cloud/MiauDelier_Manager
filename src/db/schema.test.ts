@@ -34,6 +34,7 @@ describe('MiauDelierDB schema', () => {
         'equipamentos',
         'eventosPeca',
         'formas',
+        'logs',
         'materiais',
         'mensagensIA',
         'notificacoes',
