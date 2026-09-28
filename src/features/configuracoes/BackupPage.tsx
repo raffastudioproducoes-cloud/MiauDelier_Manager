@@ -5,6 +5,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
 import { exportarBackup, importarBackup, zerarDadosManterPerfil } from '../../lib/backup'
 import { ehBackupGestoraX, importarBackupGestoraX, type RelatorioImportacaoGestoraX } from '../../lib/gestoraxImport'
+import { logError } from '../../lib/logger'
 
 export function BackupPage() {
   const { mostrarToast } = useToast()
@@ -37,6 +38,7 @@ export function BackupPage() {
       setTimeout(() => URL.revokeObjectURL(url), 0)
       mostrarToast('Backup exportado com sucesso')
     } catch (falha) {
+      logError('backup', 'Erro ao exportar backup na interface', falha)
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao exportar backup.', 'erro')
     }
   }
@@ -45,10 +47,20 @@ export function BackupPage() {
     setErro(null)
     const arquivo = evento.target.files?.[0]
     if (!arquivo) return
-    const conteudo = await arquivo.text()
-    if (!montado.current) return
-    setConteudoSelecionado(conteudo)
-    setEhGestoraX(ehBackupGestoraX(conteudo))
+    try {
+      const conteudo = await arquivo.text()
+      if (!montado.current) return
+      setConteudoSelecionado(conteudo)
+      setEhGestoraX(ehBackupGestoraX(conteudo))
+    } catch (falha) {
+      logError('backup', 'Erro ao carregar o conteúdo do arquivo selecionado', {
+        nome: arquivo.name,
+        tamanho: arquivo.size,
+        tipo: arquivo.type,
+        falha,
+      })
+      setErro('Erro ao ler o arquivo selecionado.')
+    }
   }
 
   function limparSelecao() {
@@ -73,7 +85,9 @@ export function BackupPage() {
       }
     } catch (falha) {
       if (!montado.current) return
-      setErro(falha instanceof Error ? falha.message : 'Arquivo de backup inválido.')
+      const mensagem = falha instanceof Error ? falha.message : 'Arquivo de backup inválido.'
+      logError('backup', `Erro ao importar arquivo JSON: ${mensagem}`, falha)
+      setErro(mensagem)
       limparSelecao()
     }
   }

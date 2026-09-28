@@ -1,5 +1,6 @@
 import { db, type StatusPeca, type TipoTransacao, type CavidadeForma } from '../db/schema'
 import { cifrarCampo } from './camposCifrados'
+import { logInfo, logWarn, logError } from './logger'
 
 export interface RelatorioImportacaoGestoraX {
   categorias: number
@@ -69,13 +70,19 @@ export function ehBackupGestoraX(json: string): boolean {
  * diferentes do MiauDelier, convertendo tabela por tabela com mapeamento completo dos campos.
  */
 export async function importarBackupGestoraX(json: string): Promise<RelatorioImportacaoGestoraX> {
+  await logInfo('backup', 'Iniciando importação e mesclagem de backup GestoraX', { tamanhoString: json.length })
+
   let parsed: unknown
   try {
     parsed = JSON.parse(json)
-  } catch {
+  } catch (err) {
+    const msg = 'Arquivo de backup GestoraX inválido: não é um JSON válido.'
+    await logError('backup', msg, err)
     throw new Error('Arquivo inválido: não é um JSON válido.')
   }
   if (!ehObjeto(parsed) || !ehObjeto(parsed.dados)) {
+    const msg = 'Arquivo inválido: formato incompatível ou chave "dados" ausente no GestoraX.'
+    await logError('backup', msg, { estrutura: Object.keys(parsed || {}) })
     throw new Error('Arquivo inválido: não parece um backup do GestoraX.')
   }
   const dados = parsed.dados as Record<string, Record<string, unknown>[]>
@@ -395,6 +402,17 @@ function resolverNomeCategoriaMaterial(material: Record<string, unknown>): strin
     },
   )
 
+  if (relatorio.ignorados.length > 0) {
+    await logWarn(
+      'backup',
+      `Importação GestoraX concluída com ${relatorio.ignorados.length} aviso(s)/item(ns) ignorado(s)`,
+      { relatorio },
+    )
+  } else {
+    await logInfo('backup', 'Importação GestoraX concluída com sucesso', { relatorio })
+  }
+
   return relatorio
 }
+
 

@@ -177,6 +177,23 @@ describe('backup JSON', () => {
     expect(await db.materiais.count()).toBe(0)
     expect(await db.configuracoes.count()).toBe(2)
   })
+
+  it('registra erros no log do sistema (logger) quando a importação de JSON falha', async () => {
+    await setupAccount('senha-qualquer')
+    const { listarLogsSistema } = await import('./logger')
+
+    // Tenta importar string que não é JSON
+    await expect(importarBackup('conteudo-invalido-que-nao-e-json')).rejects.toThrow()
+
+    // Tenta importar JSON sem envelope correto
+    await expect(importarBackup('{"chaves_erradas": true}')).rejects.toThrow()
+
+    const logs = await listarLogsSistema({ origem: 'backup' } as any)
+    const logsDeErro = logs.filter((l) => l.nivel === 'error' && l.origem === 'backup')
+
+    expect(logsDeErro.length).toBeGreaterThan(0)
+    expect(logsDeErro[0].mensagem).toMatch(/inválido|erro/i)
+  })
 })
 
 
