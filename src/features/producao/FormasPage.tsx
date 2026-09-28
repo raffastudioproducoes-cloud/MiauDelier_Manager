@@ -801,7 +801,7 @@ export function FormasPage() {
                       <div>
                         <h3 className="font-semibold text-base text-on-surface">{forma.nome}</h3>
                         <p className="mt-0.5 text-xs text-on-surface-variant">
-                          {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
+                          {ROTULOS_GEOMETRIA[forma.geometria]} · {resumoDimensoes(forma)} · {forma.volumeDiretoMl?.toFixed(1) ?? '—'} ml
                           {forma.litrosResina ? ` (${forma.litrosResina.toFixed(2)} L / ${forma.massaResinaKg?.toFixed(2)} kg)` : ''}
                         </p>
                         {forma.custoFabricacao !== undefined && (

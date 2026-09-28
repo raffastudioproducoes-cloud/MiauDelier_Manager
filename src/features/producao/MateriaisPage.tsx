@@ -693,7 +693,7 @@ export function MateriaisPage() {
                                 <div>
                                   <h3 className="font-semibold text-base text-on-surface">{material.nome}</h3>
                                   <p className="text-xs text-on-surface-variant mt-0.5">
-                                    <strong>{material.quantidadeEstoque} {material.unidade}</strong> em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade} {material.valorFrete !== undefined && material.valorFrete > 0 ? `(Frete: ${formatarMoeda(material.valorFrete)})` : ''}
+                                    {material.quantidadeEstoque} {material.unidade} em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade} {material.valorFrete !== undefined && material.valorFrete > 0 ? `(Frete: ${formatarMoeda(material.valorFrete)})` : ''} · Categoria: {nomeCategoria(material.categoriaId, material.subcategoriaId)}
                                   </p>
                                 </div>
 
