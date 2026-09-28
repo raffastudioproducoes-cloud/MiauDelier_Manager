@@ -161,7 +161,7 @@ const SECOES_MENU: SecaoMenu[] = [
         ),
       },
       {
-        rotulo: 'Taxas & Canais',
+        rotulo: 'Taxas de Vendedor',
         rota: '/taxas',
         icone: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

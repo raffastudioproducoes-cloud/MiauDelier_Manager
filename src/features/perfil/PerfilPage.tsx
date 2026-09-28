@@ -5,6 +5,7 @@ import { TextField } from '../../components/ui/TextField'
 import { Badge } from '../../components/ui/Badge'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
+import { db } from '../../db/schema'
 import {
   listarPerfis,
   getPerfilAtivo,
@@ -122,10 +123,35 @@ export function PerfilPage() {
   async function handleConfirmarExclusao() {
     if (!perfilExcluindoId) return
     try {
+      if (perfilExcluindoId === RESERVED_DEFAULT_PROFILE_ID) {
+        atualizarPerfil(RESERVED_DEFAULT_PROFILE_ID, {
+          nome: 'Ateliê Principal',
+          nomeDono: '',
+          emailDono: '',
+          endereco: '',
+          documento: '',
+          telefone: '',
+        })
+        try {
+          await db.delete()
+          await db.open()
+        } catch (err) {
+          console.error('Erro ao limpar banco de dados principal:', err)
+        }
+        mostrarToast('Perfil principal restaurado e dados apagados com sucesso.', 'sucesso')
+        setPerfilExcluindoId(null)
+        if (exibindoFormulario) handleCancelarForm()
+        setTimeout(() => window.location.reload(), 400)
+        return
+      }
+
       const eraAtivo = perfilExcluindoId === perfilAtivo.id
       await excluirPerfil(perfilExcluindoId)
       mostrarToast('Perfil de ateliê e dados isolados excluídos com sucesso.', 'sucesso')
       setPerfilExcluindoId(null)
+      if (exibindoFormulario && perfilEmEdicaoId === perfilExcluindoId) {
+        handleCancelarForm()
+      }
       if (eraAtivo) {
         setTimeout(() => window.location.reload(), 400)
       } else {
@@ -136,6 +162,8 @@ export function PerfilPage() {
       setPerfilExcluindoId(null)
     }
   }
+
+  const perfilSendoExcluido = perfis.find((p) => p.id === perfilExcluindoId)
 
   return (
     <div className="flex flex-col gap-6">
@@ -176,6 +204,25 @@ export function PerfilPage() {
           <div>
             📞 <strong>Contato:</strong> {perfilAtivo.telefone || perfilAtivo.emailDono || 'Não informado'}
           </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-primary/20">
+          <Button
+            type="button"
+            variante="ghost"
+            className="text-xs"
+            onClick={() => handleEditarPerfil(perfilAtivo)}
+          >
+            ✏️ Editar Perfil
+          </Button>
+          <Button
+            type="button"
+            variante="ghost"
+            className="text-xs text-error hover:bg-error/10"
+            onClick={() => setPerfilExcluindoId(perfilAtivo.id)}
+          >
+            🗑️ Excluir Perfil
+          </Button>
         </div>
       </Card>
 
@@ -234,13 +281,27 @@ export function PerfilPage() {
 
             {erroForm && <p role="alert" className="text-xs text-error font-medium">{erroForm}</p>}
 
-            <div className="flex gap-2 justify-end mt-2">
-              <Button type="button" variante="ghost" onClick={handleCancelarForm}>
-                Cancelar
-              </Button>
-              <Button type="submit">
-                {perfilEmEdicaoId ? 'Salvar Alterações' : 'Cadastrar Ateliê'}
-              </Button>
+            <div className="flex items-center justify-between mt-2">
+              {perfilEmEdicaoId ? (
+                <Button
+                  type="button"
+                  variante="ghost"
+                  className="text-error hover:bg-error/10 text-xs"
+                  onClick={() => setPerfilExcluindoId(perfilEmEdicaoId)}
+                >
+                  🗑️ Excluir este perfil
+                </Button>
+              ) : (
+                <div />
+              )}
+              <div className="flex gap-2">
+                <Button type="button" variante="ghost" onClick={handleCancelarForm}>
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {perfilEmEdicaoId ? 'Salvar Alterações' : 'Cadastrar Ateliê'}
+                </Button>
+              </div>
             </div>
           </form>
         </Card>
@@ -298,16 +359,14 @@ export function PerfilPage() {
                     <Button type="button" variante="ghost" className="px-3 py-1 text-xs" onClick={() => handleEditarPerfil(p)}>
                       Editar
                     </Button>
-                    {!ehPadrao && (
-                      <Button
-                        type="button"
-                        variante="ghost"
-                        className="px-3 py-1 text-xs text-error hover:bg-error/10"
-                        onClick={() => setPerfilExcluindoId(p.id)}
-                      >
-                        Excluir
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      variante="ghost"
+                      className="px-3 py-1 text-xs text-error hover:bg-error/10"
+                      onClick={() => setPerfilExcluindoId(p.id)}
+                    >
+                      Excluir
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -318,8 +377,16 @@ export function PerfilPage() {
 
       <ConfirmModal
         aberto={perfilExcluindoId !== null}
-        titulo="Excluir Perfil de Ateliê?"
-        descricao="Esta ação excluirá o perfil e todo o seu banco de dados isolado (estoque, faturas, peças, clientes). Esta ação não pode ser desfeita."
+        titulo={
+          perfilExcluindoId === RESERVED_DEFAULT_PROFILE_ID
+            ? 'Limpar e Restaurar Perfil Principal?'
+            : 'Excluir Perfil de Ateliê?'
+        }
+        descricao={
+          perfilExcluindoId === RESERVED_DEFAULT_PROFILE_ID
+            ? 'Como este é o perfil principal do sistema, esta ação irá apagar todos os dados cadastrados (estoque, peças, vendas e clientes) e resetar os dados do ateliê para o padrão inicial. Deseja continuar?'
+            : `Esta ação excluirá o perfil "${perfilSendoExcluido?.nome || 'selecionado'}" e todo o seu banco de dados isolado (estoque, faturas, peças, clientes). Esta ação não pode ser desfeita.`
+        }
         onConfirmar={handleConfirmarExclusao}
         onCancelar={() => setPerfilExcluindoId(null)}
       />

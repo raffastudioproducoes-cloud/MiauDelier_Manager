@@ -34,4 +34,33 @@ describe('PerfilPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /\+ novo ateliê/i }))
     expect(screen.getByText('Cadastrar Novo Perfil de Ateliê')).toBeInTheDocument()
   })
+
+  it('exibe opção de excluir perfil e abre modal de confirmação ao clicar', async () => {
+    render(
+      <ToastProvider>
+        <PerfilPage />
+      </ToastProvider>,
+    )
+
+    const botoesExcluir = screen.getAllByRole('button', { name: /excluir perfil/i })
+    expect(botoesExcluir.length).toBeGreaterThan(0)
+
+    fireEvent.click(botoesExcluir[0])
+    expect(screen.getByText(/Limpar e Restaurar Perfil Principal\?/i)).toBeInTheDocument()
+  })
+
+  it('exibe botão de excluir perfil ao editar um perfil existente', async () => {
+    render(
+      <ToastProvider>
+        <PerfilPage />
+      </ToastProvider>,
+    )
+
+    const botaoEditar = screen.getByRole('button', { name: /editar perfil/i })
+    fireEvent.click(botaoEditar)
+
+    expect(screen.getByText('Editar Perfil do Ateliê')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /excluir este perfil/i })).toBeInTheDocument()
+  })
 })
+
