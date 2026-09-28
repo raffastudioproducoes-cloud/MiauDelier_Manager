@@ -104,6 +104,14 @@ export interface Peca {
   percentualTaxas?: number
   margemDesejada?: number
   imagemUrl?: string
+  volumeResinaMl?: number
+  litrosAgua?: number
+  custoAgua?: number
+  custoEpiInsumos?: number
+  valorPropagandaTotal?: number
+  diasPropaganda?: number
+  custoPropagandaCalculado?: number
+  valorFrete?: number
 }
 
 export interface ConsumoPeca {
@@ -217,6 +225,18 @@ export interface Taxa {
   criadoEm: string
 }
 
+export type NivelLog = 'info' | 'warn' | 'error' | 'debug'
+
+export interface LogSistema {
+  id?: number
+  timestamp: string
+  nivel: NivelLog
+  origem: string
+  mensagem: string
+  detalhes?: Record<string, unknown> | string
+  stack?: string
+}
+
 class MiauDelierDB extends Dexie {
   categoriasMaterial!: EntityTable<CategoriaMaterial, 'id'>
   materiais!: EntityTable<Material, 'id'>
@@ -235,6 +255,7 @@ class MiauDelierDB extends Dexie {
   notificacoes!: EntityTable<Notificacao, 'id'>
   equipamentos!: EntityTable<Equipamento, 'id'>
   taxas!: EntityTable<Taxa, 'id'>
+  logs!: EntityTable<LogSistema, 'id'>
 
   constructor() {
     super(getDbNameForPerfil())
@@ -264,6 +285,9 @@ class MiauDelierDB extends Dexie {
     this.version(4).stores({
       categoriasMaterial: '++id, nome, categoriaPaiId',
       materiais: '++id, nome, categoriaId, subcategoriaId',
+    })
+    this.version(5).stores({
+      logs: '++id, nivel, timestamp, origem',
     })
   }
 }

@@ -23,6 +23,7 @@ import { Route as DiagnosticoRouteImport } from './routes/diagnostico'
 import { Route as EquipamentosRouteImport } from './routes/equipamentos'
 import { Route as FormasRouteImport } from './routes/formas'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogsRouteImport } from './routes/logs'
 import { Route as MaisRouteImport } from './routes/mais'
 import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as PecasRouteImport } from './routes/pecas'
@@ -102,6 +103,11 @@ const FormasRoute = FormasRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogsRoute = LogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MaisRoute = MaisRouteImport.update({
@@ -330,6 +336,7 @@ export interface RootRouteChildren {
   EquipamentosRoute: typeof EquipamentosRoute
   FormasRoute: typeof FormasRoute
   LoginRoute: typeof LoginRoute
+  LogsRoute: typeof LogsRoute
   MaisRoute: typeof MaisRoute
   MateriaisRoute: typeof MateriaisRoute
   PecasRoute: typeof PecasRouteWithChildren
@@ -437,6 +444,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logs': {
+      id: '/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof LogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mais': {

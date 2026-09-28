@@ -39,6 +39,7 @@ const SECOES = [
       { rotulo: 'Configurações', rota: '/configuracoes' },
       { rotulo: 'Backup', rota: '/backup' },
       { rotulo: 'Auditoria', rota: '/auditoria' },
+      { rotulo: 'Logs do Sistema', rota: '/logs' },
       { rotulo: 'Assistente', rota: '/assistente' },
     ],
   },
