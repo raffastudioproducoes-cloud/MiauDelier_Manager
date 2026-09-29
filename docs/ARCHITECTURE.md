@@ -5,45 +5,50 @@ Este documento descreve a estrutura técnica, os componentes de software, o mode
 ---
 
 ## 1. Arquitetura de Alto Nível
-
-O **MiauDelier Manager** é construído sob uma arquitetura **Local-First SPA (Single-Page Application)**. Não existe backend próprio de aplicação, banco de dados remoto centralizado ou servidor de sessão na versão inicial. Todas as operações de leitura, escrita, cálculo e relatórios ocorrem diretamente no navegador do usuário utilizando **IndexedDB** gerenciado pelo **Dexie.js**. A partir da **Fase 7**, a arquitetura evoluirá para um modelo **Híbrido**, utilizando o **Supabase (PostgreSQL + Auth)** para sincronização em nuvem e login multiplataforma (Google, Email, Apple).
+O **MiauDelier Manager** é construído sob uma arquitetura **Híbrida (Local-First + Cloud Sync)**. As operações de leitura e escrita locais são otimizadas via **IndexedDB/Dexie.js**. A sincronização em nuvem e a identidade do usuário são gerenciadas pelo **Supabase (PostgreSQL + Auth)**, enquanto a criptografia E2EE (Zero-Knowledge) é mantida ativamente local.
 
 ```mermaid
 flowchart TD
-    subgraph Browser ["Navegador / Cliente PWA (Local-First)"]
+    subgraph Browser ["Navegador / Cliente PWA (Híbrido)"]
         UI["Interface React 19 / Tailwind CSS v4"]
         Router["TanStack Router (File-based Routes)"]
         Store["Zustand Session Store (authStore)"]
 
-        subgraph SecurityLayer ["Camada de Segurança WebCrypto"]
-          PBKDF2["Derivação de Chave (PBKDF2-SHA256, 600k iter)"]
+        subgraph AuthLayer ["Supabase Auth"]
+          Social["OAuth (Google/Apple)"]
+          EmailOTP["Email + OTP (5 minutos)"]
+        end
+
+        subgraph SecurityLayer ["Camada de Segurança Zero-Knowledge"]
+          PBKDF2["Derivação de Chave (Senha do Cofre)"]
           AESGCM["Criptografia de Campos (AES-GCM-256)"]
         end
 
         subgraph StorageLayer ["Camada de Persistência Local"]
           Dexie["Dexie.js (IndexedDB wrapper)"]
-          DB[("IndexedDB Local\n(Perfil DB: miaudelier_*)")]
-        end
-
-        subgraph ExternalServices ["Serviços Externos Opcionais"]
-          GeminiAPI["Google Gemini API (Restrito ao Domínio)"]
-          WhatsApp["WhatsApp Web/App (wa.me)"]
+          DB[("IndexedDB Local\n(Isolado por perfil_id)")]
         end
     end
 
-    UI --> Router
-    UI --> Store
+    subgraph Cloud ["Supabase Cloud"]
+        CloudAuth["Gestão de Identidade"]
+        Postgres[("PostgreSQL\n(RLS por user_id + perfil_id)")]
+    end
+
+    UI --> AuthLayer
+    AuthLayer --> CloudAuth
     UI --> SecurityLayer
     SecurityLayer --> Dexie
+    Dexie <--> Postgres
     Dexie --> DB
-    UI --> ExternalServices
 ```
 
-### Fluxo de Dados Cifrados
+### Fluxo de Autenticação e Dados Cifrados (Login de 2 Passos)
 
-1. **Login e Derivação**: Quando a usuária efetua login com a senha, o WebCrypto deriva uma chave simétrica AES-GCM em memória usando PBKDF2 com 600.000 iterações. A senha em texto claro e a chave derivada **nunca** são salvas no disco.
-2. **Escrita Cifrada**: Operações financeiras (saldos de contas e valores de transações) passam obrigatoriamente pelo helper `cifrarCampo()` em `src/lib/camposCifrados.ts`. O valor em texto claro é convertido em payload cifrado Base64 antes de ser gravado no IndexedDB.
-3. **Leitura Cifrada**: Na leitura, `decifrarCampo()` decodifica o payload usando a chave mantida na sessão reativa do Zustand. Se a sessão for encerrada, o banco torna-se ilegível para os campos protegidos.
+1. **Autenticação de Identidade (Supabase):** O usuário efetua login com Google, Apple, ou Email + OTP (5 min). O Supabase valida a identidade e emite um JWT de sessão. Isso garante acesso à sincronização e respeita o RLS (`auth.uid() = user_id`).
+2. **Desbloqueio do Cofre (Zero-Knowledge):** Mesmo logado com OAuth, o usuário **deve** informar a sua **Senha do Cofre** localmente. O WebCrypto deriva a chave AES-GCM usando PBKDF2 (600.000 iterações) baseada exclusivamente nesta senha. A senha e a chave nunca são salvas.
+3. **Múltiplos Perfis (10 perfis/conta):** Um único `user_id` pode possuir até 10 perfis isolados. Cada registro possui um `perfil_id`. Na nuvem, o RLS permite que o usuário gerencie seus perfis, e localmente o Dexie isola o roteamento de dados por perfil. O recurso de **Mesclar Conta** (para migrar de um perfil puramente local/senha para uma conta Google) é feito de forma segura mediante confirmação com a Senha do Cofre, estando obrigatoriamente logado na tela de gestão de Perfis.
+4. **Escrita/Leitura Cifrada**: Dados financeiros passam pelo helper `cifrarCampo()`/`decifrarCampo()` usando a chave em memória. O banco remoto armazena apenas as strings base64 do payload cifrado.na-se ilegível para os campos protegidos.
 
 ---
 

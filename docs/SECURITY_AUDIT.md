@@ -48,6 +48,7 @@ Este documento apresenta a auditoria estática de segurança do **MiauDelier Man
 
 ### Resumo do Plano de Ação para a Fase 7
 Para garantir que a transição para a nuvem não introduza falhas, a engenharia de segurança determina os seguintes requisitos para a Fase 7:
-1. **Regras de Segurança Estritas (RLS):** Nenhuma tabela do PostgreSQL no Supabase pode ficar pública sem RLS ativado. O deploy das regras deve verificar sempre `auth.uid() = user_id`.
-2. **Manutenção do AES-GCM (Zero-Knowledge):** A funcionalidade do `camposCifrados.ts` deve ser integrada ao conector de nuvem, para que dados sensíveis (preços, contatos) subam criptografados pelo cliente para o banco.
-3. **Migração Segura de Contas:** Ao adicionar logins sociais (Google/Apple), o ID da conta social (`uid` do Supabase) deve ser a chave de amarração com a conta offline anterior para não expor os dados para um ID incorreto.
+1. **Regras de Segurança Estritas (RLS multi-tenant):** Nenhuma tabela do PostgreSQL no Supabase pode ficar pública. O RLS deve verificar `auth.uid() = user_id` E o aplicativo deve isolar as visões pelo `perfil_id`, garantindo suporte seguro para até 10 perfis por usuário.
+2. **Manutenção do AES-GCM (Zero-Knowledge):** A funcionalidade do `camposCifrados.ts` não deve ser substituída. A **Senha do Cofre** não é a senha da conta na nuvem, mas a semente local. O usuário fará login com Google/Email para provar identidade, mas obrigatoriamente precisará inserir sua Senha do Cofre para decifrar os perfis offline.
+3. **Mesclagem Segura de Contas:** Ao vincular um login social (Google/Apple) a uma conta puramente local/offline anterior, a mesclagem deve ocorrer **apenas** quando o usuário já estiver atestado pela senha local atual.
+4. **Email Verificado (OTP):** Contas novas criadas sem provedores OAuth devem utilizar e-mail válido com verificação de posse por OTP de 5 minutos, sem usar senhas em claro trafegadas ao backend.
