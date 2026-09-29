@@ -1,5 +1,5 @@
 import { db, type MiauDelierDB } from '../db/schema'
-import { CHAVE_SALT, CHAVE_VERIFICADOR } from './auth'
+import { CHAVE_SALT, CHAVE_VERIFICADOR, deleteUserData } from './auth'
 import { useAuthStore } from '../stores/authStore'
 import { logInfo, logError } from './logger'
 
@@ -183,12 +183,14 @@ export async function zerarDadosManterPerfil(): Promise<void> {
   ] as const
 
   try {
+    await deleteUserData()
+    
     await db.transaction('rw', TABELAS_PARA_ZERAR.map((nome) => db.table(nome)), async () => {
       for (const nomeTabela of TABELAS_PARA_ZERAR) {
         await db.table(nomeTabela).clear()
       }
     })
-    await logInfo('backup', 'Dados do ateliê zerados com sucesso (perfil do ateliê mantido)')
+    await logInfo('backup', 'Dados do ateliê zerados no local e na nuvem com sucesso')
   } catch (err) {
     await logError('backup', 'Erro ao apagar dados do ateliê', err)
     throw err

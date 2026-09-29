@@ -5,7 +5,7 @@ import { TextField } from '../../components/ui/TextField'
 import { Badge } from '../../components/ui/Badge'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { db } from '../../db/schema'
+// import removido
 import {
   listarPerfis,
   getPerfilAtivo,
@@ -17,6 +17,8 @@ import {
   type PerfilAtelie,
 } from '../../lib/perfisRepo'
 import { CloudIdentityManager } from './CloudIdentityManager'
+import { deleteUserAccount } from '../../lib/auth'
+import Dexie from 'dexie'
 
 function formatarDocumento(valor: string) {
   const v = valor.replace(/\D/g, '')
@@ -156,21 +158,21 @@ export function PerfilPage() {
     if (!perfilExcluindoId) return
     try {
       if (perfilExcluindoId === RESERVED_DEFAULT_PROFILE_ID) {
-        atualizarPerfil(RESERVED_DEFAULT_PROFILE_ID, {
-          nome: 'Ateliê Principal',
-          nomeDono: '',
-          emailDono: '',
-          endereco: '',
-          documento: '',
-          telefone: '',
-        })
         try {
-          await db.delete()
-          await db.open()
+          await deleteUserAccount()
         } catch (err) {
-          console.error('Erro ao limpar banco de dados principal:', err)
+          console.error('Erro ao excluir conta na nuvem:', err)
         }
-        mostrarToast('Perfil principal restaurado e dados apagados com sucesso.', 'sucesso')
+        try {
+          for (const p of perfis) {
+            const dbName = p.id === RESERVED_DEFAULT_PROFILE_ID ? 'MiauDelierManager' : `MiauDelierManager__${p.id}`
+            await Dexie.delete(dbName)
+          }
+          localStorage.clear()
+        } catch (err) {
+          console.error('Erro ao limpar dados locais:', err)
+        }
+        mostrarToast('Conta, perfis e dados excluídos com sucesso.', 'sucesso')
         setPerfilExcluindoId(null)
         if (exibindoFormulario) handleCancelarForm()
         setTimeout(() => window.location.reload(), 400)
@@ -253,7 +255,7 @@ export function PerfilPage() {
             className="text-xs text-error hover:bg-error/10"
             onClick={() => setPerfilExcluindoId(perfilAtivo.id)}
           >
-            🗑️ Excluir Perfil
+            {perfilAtivo.id === RESERVED_DEFAULT_PROFILE_ID ? '🗑️ Excluir Conta' : '🗑️ Excluir Perfil'}
           </Button>
         </div>
       </Card>
@@ -400,7 +402,7 @@ export function PerfilPage() {
                       className="px-3 py-1 text-xs text-error hover:bg-error/10"
                       onClick={() => setPerfilExcluindoId(p.id)}
                     >
-                      Excluir
+                      {ehPadrao ? 'Excluir Conta' : 'Excluir'}
                     </Button>
                   </div>
                 </div>
@@ -414,12 +416,12 @@ export function PerfilPage() {
         aberto={perfilExcluindoId !== null}
         titulo={
           perfilExcluindoId === RESERVED_DEFAULT_PROFILE_ID
-            ? 'Limpar e Restaurar Perfil Principal?'
+            ? 'Excluir Conta e Dados Definitivamente?'
             : 'Excluir Perfil de Ateliê?'
         }
         descricao={
           perfilExcluindoId === RESERVED_DEFAULT_PROFILE_ID
-            ? 'Como este é o perfil principal do sistema, esta ação irá apagar todos os dados cadastrados (estoque, peças, vendas e clientes) e resetar os dados do ateliê para o padrão inicial. Deseja continuar?'
+            ? 'Esta ação irá EXCLUIR SUA CONTA INTEIRA, removendo todos os perfis, peças, estoques e vínculos com Google/Apple do seu aparelho e do servidor. Esta ação não pode ser desfeita. Deseja continuar?'
             : `Esta ação excluirá o perfil "${perfilSendoExcluido?.nome || 'selecionado'}" e todo o seu banco de dados isolado (estoque, faturas, peças, clientes). Esta ação não pode ser desfeita.`
         }
         onConfirmar={handleConfirmarExclusao}

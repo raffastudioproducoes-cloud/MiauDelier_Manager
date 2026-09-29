@@ -166,7 +166,7 @@ Gera o bundle de produção em `dist/`. O app é uma SPA estática — qualquer 
 - Backup exportado/importado valida checksum e formato do envelope antes de qualquer escrita no banco; um arquivo corrompido ou incompleto nunca é aplicado parcialmente.
 - Não existe fluxo de recuperação da senha-mestre local (Cofre), que é responsável por cifrar os dados. A plataforma usa autenticação na nuvem (Google/Email), mas a senha do Cofre local não pode ser recuperada remotamente (decisão Zero-Knowledge).
 - Os dados do ateliê são sincronizados, porém cifrados localmente antes do envio, garantindo privacidade ponta a ponta. O assistente de IA usa uma conexão direta protegida.
-
+- **Exclusão de Conta e Dados (LGPD/GDPR)**: O usuário possui total autonomia para excluir todos os seus dados em nuvem, expurgar seus bancos de dados locais e realizar a exclusão irreversível da sua conta (Supabase Auth, vínculos Google/Apple e chaves) com um único clique.
 ## Sincronização em Nuvem e Event Sourcing (Fase 7)
 
 A partir da versão que inclui suporte à nuvem, a sincronização de dados funciona com base em um **Ledger (Event Sourcing) local-first**:

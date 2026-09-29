@@ -343,3 +343,24 @@ export function clearSession(): void {
     // ignore
   }
 }
+
+export async function deleteUserAccount(): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.user) {
+    const { error } = await supabase.rpc('delete_user_account')
+    if (error) {
+      throw new Error('Falha ao excluir conta no servidor: ' + error.message)
+    }
+    await supabase.auth.signOut()
+  }
+}
+
+export async function deleteUserData(): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.user) {
+    const { error } = await supabase.rpc('delete_user_data')
+    if (error) {
+      throw new Error('Falha ao excluir dados no servidor: ' + error.message)
+    }
+  }
+}

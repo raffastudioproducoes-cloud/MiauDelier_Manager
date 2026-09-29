@@ -57,7 +57,7 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
   - Arquitetura Híbrida: Login Social (Google/Apple) e Email+OTP (5 min) via Supabase Auth.
   - Multi-tenancy isolado: Suporte a até 10 perfis independentes por Conta de Usuário (`user_id`).
   - Segurança Zero-Knowledge: Cofre cifrado com PBKDF2 e AES-GCM-256. Mesmo logado via OAuth, o usuário deve informar a **Senha do Cofre** para descriptografar os dados locais.
-  - Recuperação de Conta (Cloud DEK/KEK): A chave dos dados (DEK) é envelopada por uma KEK de recuperação derivada do `user_id` e armazenada com segurança na nuvem (Supabase). Caso o usuário esqueça a senha local, ele pode reautenticar via E-mail (OTP), recuperar a DEK e definir uma nova senha, mantendo a integridade e o isolamento dos dados.
+  - Recuperação de Conta (Cloud DEK/KEK): A chave dos dados (DEK) é envelopada por uma KEK de recuperação (derivada do `user_id` + _pepper_ local) e armazenada com segurança na nuvem na tabela `user_keys` (Supabase). Caso o usuário esqueça a senha local, ele recebe um código OTP por E-mail, recupera a DEK e define uma nova senha na tela de recuperação, mantendo a integridade e o isolamento dos dados sem senhas de backup complexas.
   - Mesclagem de Contas: Permite unificar conta local/senha com identidade Google/Apple, confirmando a senha do cofre atual na área restrita.
 - **Calculadora de Volume & Proporção de Mistura**:
   - Suporte a geometrias: Retangular, Cilíndrica, Esférica e Medida Direta.
@@ -112,6 +112,7 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 - **Segurança, Backup & Registro de Auditoria**:
   - Exportação e importação de arquivo de backup JSON com verificação de checksum SHA-256.
   - Registro de auditoria imutável para exclusões, alterações de preço e vendas.
+  - **Direito ao Esquecimento (GDPR/LGPD)**: Funções explícitas de exclusão definitiva de dados sincronizados e de exclusão completa da conta (incluindo perfis e vinculações OAuth) nos níveis cliente e nuvem (Supabase).
 
 ### 5.2. Funcionalidades Futuras (Roadmap)
 
