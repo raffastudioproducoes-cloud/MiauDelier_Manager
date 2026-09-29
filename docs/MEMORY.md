@@ -6,14 +6,14 @@ Este documento atua como a memória operacional viva do projeto **MiauDelier Man
 
 ## 1. Última Atualização
 
-- **Data**: 28/09/2026
-- **Horário**: 04:30 (BRT)
+- **Data**: 29/09/2026
+- **Horário**: 02:20 (BRT)
 
 ---
 
 ## 2. Fase Atual
 
-- **Fase Atual**: **Fase 6 — Infraestrutura, PWA e CI/CD**
+- **Fase Atual**: **Concluído — Fase 6 finalizada.**
 
 ---
 
@@ -31,6 +31,7 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 
 | ID | Tarefa | Concluída em |
 | --- | --- | --- |
+| 6.1 | Refinamento de PWA Service Worker para cache avançado offline e execução PWA 100% | 29/09/2026 |
 | 3.9 | Implementação de abas de divisão do estoque por tipo de material (`INSUMO`, `FERRAMENTA`, `ADMINISTRATIVO`, `EPI`) mantendo subcategorias flexíveis | 28/09/2026 |
 | 3.8 | Implementação do cronômetro de cura em tempo real com contagem regressiva viva, barra de progresso, notificação ao finalizar sem alteração forçada de status e extensão de tempo ("➕ Adicionar Tempo de Cura") | 28/09/2026 |
 | 2.4 | Criação da função de formatação de volume e massa legível (`formatarVolumeEMassaLegivel`) convertendo volumes >= 1L para `L` e `kg resina` (ex: `10,9 L (~12,0 kg resina)`), e unidades flexíveis para tempo de cura e equipamentos (Dias/Horas/Minutos) | 28/09/2026 |
@@ -44,9 +45,7 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 
 ## 5. Tarefas em Andamento
 
-| ID | Tarefa | Iniciada em | Previsão |
-| --- | --- | --- | --- |
-| 6.1 | Refinamento de PWA Service Worker para cache avançado offline | 28/09/2026 | Em breve |
+*Nenhuma tarefa em andamento. Todas as fases do projeto foram concluídas.*
 
 ---
 
