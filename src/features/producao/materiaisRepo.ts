@@ -61,9 +61,13 @@ export async function registrarCompraMaterial(params: RegistrarCompraParams): Pr
 
       if (!targetMaterialId) {
         if (!params.novoMaterial) throw new Error('Dados do novo material são obrigatórios')
-        targetMaterialId = (await db.materiais.add(params.novoMaterial)) as number
-        nomeMaterial = params.novoMaterial.nome
-        unidadeMaterial = params.novoMaterial.unidade
+        const matParaAdd = {
+          ...params.novoMaterial,
+          quantidadeEstoque: (params.novoMaterial.quantidadeEstoque || 0) + params.quantidadeComprada
+        }
+        targetMaterialId = (await db.materiais.add(matParaAdd)) as number
+        nomeMaterial = matParaAdd.nome
+        unidadeMaterial = matParaAdd.unidade
       } else {
         const mat = await db.materiais.get(targetMaterialId)
         if (!mat) throw new Error('Material não encontrado')

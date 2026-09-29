@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 import { db } from '../../db/schema'
@@ -51,9 +51,15 @@ describe('AssistenteIAPage', () => {
 
     mockChat.mockResolvedValue('Resposta 2')
     await waitFor(() => expect(screen.getByRole('button', { name: /^enviar$/i })).toBeEnabled())
+    
+    // Avança o tempo para evitar o bloqueio de 5 segundos do anti-spam
+    const mockDateNow = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 6000)
+
     fireEvent.change(screen.getByLabelText(/sua pergunta/i), { target: { value: 'Segunda pergunta' } })
     fireEvent.click(screen.getByRole('button', { name: /enviar/i }))
     await waitFor(() => expect(screen.getByText(/resposta 2/i)).toBeInTheDocument())
+
+    mockDateNow.mockRestore()
 
     // Segunda chamada: histórico deve conter só a pergunta 1 + resposta 1, NUNCA a "Segunda pergunta"
     const [historicoChamada2, perguntaChamada2] = mockChat.mock.calls[1]

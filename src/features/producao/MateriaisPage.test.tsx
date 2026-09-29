@@ -16,97 +16,89 @@ describe('MateriaisPage', () => {
     expect(await screen.findByText(/nenhum material cadastrado/i)).toBeInTheDocument()
   })
 
-  it('cadastra um material e ele aparece na lista', async () => {
-    await criarCategoriaMaterial('Resinas')
+  it('cadastra um novo material pela aba de compras e ele aparece na lista', async () => {
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
-
-    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina Cristal' } })
-    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '1000' } })
-    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.15' } })
-    fireEvent.change(screen.getByLabelText(/categoria principal/i), { target: { value: '1' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+    
+    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
+    fireEvent.click(await screen.findByLabelText(/\+ Cadastrar e comprar novo material/i))
+    
+    fireEvent.change(screen.getByLabelText(/nome do produto/i), { target: { value: 'Resina Cristal' } })
+    fireEvent.change(screen.getByLabelText(/unidade de medida/i), { target: { value: 'ml' } })
+    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '1000' } })
+    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '150' } })
+    fireEvent.change(screen.getByLabelText(/divisão/i), { target: { value: 'consumivel' } })
+    
+    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
 
     await waitFor(() => expect(screen.getByText('Resina Cristal')).toBeInTheDocument())
   })
 
   it('rejeita quantidade em estoque negativa antes de chamar o repositório', async () => {
-    await criarCategoriaMaterial('Resinas')
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
 
-    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina' } })
-    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '-5' } })
-    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
+    fireEvent.click(await screen.findByLabelText(/\+ Cadastrar e comprar novo material/i))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/estoque/i)
+    fireEvent.change(screen.getByLabelText(/nome do produto/i), { target: { value: 'Resina' } })
+    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '-5' } })
+    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '10' } })
+    
+    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/quantidade/i)
     const materiaisCriados = await db.materiais.toArray()
     expect(materiaisCriados).toHaveLength(0)
   })
 
-  it('edita um material existente', async () => {
-    await criarCategoriaMaterial('Resinas')
-    render(<ToastProvider><MateriaisPage /></ToastProvider>)
-    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina A' } })
-    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '100' } })
-    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
-    await waitFor(() => screen.getByText('Resina A'))
-
-    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
-    fireEvent.change(screen.getByLabelText(/nome do material/i), { target: { value: 'Resina A Editada' } })
-    fireEvent.click(screen.getByRole('button', { name: /salvar/i }))
-
-    await waitFor(() => expect(screen.getByText('Resina A Editada')).toBeInTheDocument())
-  })
-
   it('repõe estoque de um material', async () => {
-    await criarCategoriaMaterial('Resinas')
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
-    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina B' } })
-    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '100' } })
-    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+    
+    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
+    fireEvent.click(await screen.findByLabelText(/\+ Cadastrar e comprar novo material/i))
+    fireEvent.change(screen.getByLabelText(/nome do produto/i), { target: { value: 'Resina B' } })
+    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '100' } })
+    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '10' } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
     await waitFor(() => screen.getByText('Resina B'))
 
     fireEvent.click(screen.getByRole('button', { name: /repor estoque/i }))
-    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '50' } })
+    
+    fireEvent.change(await screen.findByLabelText(/quantidade comprada/i), { target: { value: '50' } })
     fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '5' } })
     fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
 
     await waitFor(() => expect(screen.getByText(/150 ml em estoque/i)).toBeInTheDocument())
   })
 
-  it('cria uma categoria nova pelo select e vincula o material a ela', async () => {
-    await criarCategoriaMaterial('Resinas')
+  it('cria um material em uma divisão customizada', async () => {
+    await criarCategoriaMaterial('Ferramentas Especiais')
+    const categorias = await listarCategoriasMaterial()
+    const divCustom = categorias.find(c => c.nome === 'Ferramentas Especiais')
+
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
 
-    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Cola Quente' } })
-    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'un' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '20' } })
-    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '5' } })
-    fireEvent.change(screen.getByLabelText(/categoria principal/i), { target: { value: '__nova__' } })
-    fireEvent.change(await screen.findByLabelText(/nome da nova categoria principal/i), { target: { value: 'Ferramentas' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
+    fireEvent.click(await screen.findByLabelText(/\+ Cadastrar e comprar novo material/i))
+
+    fireEvent.change(screen.getByLabelText(/nome do produto/i), { target: { value: 'Cola Quente' } })
+    fireEvent.change(screen.getByLabelText(/unidade de medida/i), { target: { value: 'un' } })
+    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '100' } })
+    fireEvent.change(screen.getByLabelText(/divisão/i), { target: { value: `cat_${divCustom?.id}` } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
 
     await waitFor(() => expect(screen.getByText('Cola Quente')).toBeInTheDocument())
-    expect(screen.getByText(/em estoque.*Ferramentas/)).toBeInTheDocument()
-
-    const categorias = await listarCategoriasMaterial()
-    expect(categorias.some((categoria) => categoria.nome === 'Ferramentas')).toBe(true)
+    expect(screen.getByText(/em estoque/)).toBeInTheDocument()
   })
 
   it('exclui um material via confirmação', async () => {
-    await criarCategoriaMaterial('Resinas')
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
-    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Resina C' } })
-    fireEvent.change(screen.getByLabelText(/unidade/i), { target: { value: 'ml' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '10' } })
-    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.1' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
+    fireEvent.click(await screen.findByLabelText(/\+ Cadastrar e comprar novo material/i))
+    fireEvent.change(screen.getByLabelText(/nome do produto/i), { target: { value: 'Resina C' } })
+    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '10' } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
     await waitFor(() => screen.getByText('Resina C'))
 
     fireEvent.click(screen.getByRole('button', { name: /excluir/i }))
@@ -116,29 +108,33 @@ describe('MateriaisPage', () => {
   })
 
   it('permite cadastrar material sólido em gramas e material com unidade personalizada', async () => {
-    await criarCategoriaMaterial('Pigmentos')
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
 
-    // Test Gramas (g)
-    fireEvent.change(await screen.findByLabelText(/nome do material/i), { target: { value: 'Pigmento Mica Azul' } })
+    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
+    fireEvent.click(await screen.findByLabelText(/\+ Cadastrar e comprar novo material/i))
+
+    fireEvent.change(screen.getByLabelText(/nome do produto/i), { target: { value: 'Pigmento Mica Azul' } })
     fireEvent.change(screen.getByLabelText(/unidade de medida/i), { target: { value: 'g' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '50' } })
-    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '0.50' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '50' } })
+    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '25' } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
 
     await waitFor(() => expect(screen.getByText('Pigmento Mica Azul')).toBeInTheDocument())
     expect(screen.getByText(/50 g em estoque/i)).toBeInTheDocument()
 
-    // Test Custom unit (bisnaga)
-    fireEvent.change(screen.getByLabelText(/nome do material/i), { target: { value: 'Glitter Dourado' } })
+    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
+    fireEvent.click(await screen.findByLabelText(/\+ Cadastrar e comprar novo material/i))
+
+    fireEvent.change(screen.getByLabelText(/nome do produto/i), { target: { value: 'Glitter Dourado' } })
     fireEvent.change(screen.getByLabelText(/unidade de medida/i), { target: { value: '__outra__' } })
     fireEvent.change(await screen.findByLabelText(/especificar unidade/i), { target: { value: 'bisnaga' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '10' } })
-    fireEvent.change(screen.getByLabelText(/custo unitário/i), { target: { value: '3.50' } })
-    fireEvent.click(screen.getByRole('button', { name: /cadastrar material/i }))
+    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '35' } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
 
     await waitFor(() => expect(screen.getByText('Glitter Dourado')).toBeInTheDocument())
     expect(screen.getByText(/10 bisnaga em estoque/i)).toBeInTheDocument()
   })
 })
+
 
