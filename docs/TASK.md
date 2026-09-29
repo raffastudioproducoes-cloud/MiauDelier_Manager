@@ -107,8 +107,8 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | ID | Tarefa | Prioridade | Status |
 | --- | --- | --- | --- |
 | 7.1 | Configurar Supabase CLI, Schema (PostgreSQL + RLS) e estrutura de 10 perfis isolados por usuário | Alta | Concluída |
-| 7.2 | Implementar Autenticação 2-passos via Google (Auth Nuvem + Desbloqueio do Cofre Local) | Alta | Não iniciada |
-| 7.3 | Implementar Autenticação via Email com confirmação OTP de 5 minutos | Alta | Não iniciada |
+| 7.2 | Implementar Autenticação 2-passos via Google (Auth Nuvem + Desbloqueio do Cofre Local) | Alta | Concluída |
+| 7.3 | Implementar Autenticação via Email com confirmação OTP de 5 minutos | Alta | Concluída |
 | 7.4 | Implementar funcionalidade de "Mesclar Conta" na aba de Gestão de Perfis | Alta | Não iniciada |
 | 7.5 | Desenvolver mecanismo de sincronização bidirecional em tempo real (Dexie ↔ Supabase) | Alta | Não iniciada |
 | 7.6 | Implementar autenticação via Apple | Baixa | Futuramente |

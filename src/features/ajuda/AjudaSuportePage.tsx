@@ -27,8 +27,8 @@ const FAQ_LISTA: PerguntaFAQ[] = [
     categoria: 'basica',
     pergunta: 'Meus dados ficam salvos na internet ou no meu próprio dispositivo?',
     resposta:
-      'Em total respeito à sua privacidade e conformidade com a LGPD, o MiauDelier Manager opera sob o conceito de "Local-First". Todos os seus dados (clientes, peças, valores e contas) ficam armazenados exclusivamente no banco de dados local criptografado (IndexedDB) do seu navegador. Nenhum dado financeiro ou pessoal é enviado para servidores externos.',
-    tags: ['dados', 'privacidade', 'local-first', 'armazenamento', 'lgpd'],
+      'Em total respeito à sua privacidade e conformidade com a LGPD, o MiauDelier Manager opera sob o conceito Híbrido "Nuvem + Local-First". O seu login (E-mail ou Google/Apple) é processado com segurança pela nuvem para autenticar você, mas TODOS os seus dados do ateliê (clientes, peças, valores e contas) ficam armazenados exclusivamente no banco de dados local criptografado do seu navegador usando sua Senha do Cofre. Nenhum dado financeiro ou pessoal é enviado em formato legível para servidores externos.',
+    tags: ['dados', 'privacidade', 'local-first', 'armazenamento', 'lgpd', 'login'],
   },
   {
     id: 'faq-3',
@@ -103,10 +103,10 @@ const FAQ_LISTA: PerguntaFAQ[] = [
   {
     id: 'faq-11',
     categoria: 'seguranca',
-    pergunta: 'Como funciona a criptografia AES no banco de dados local?',
+    pergunta: 'Como funciona a autenticação e a Senha do Cofre?',
     resposta:
-      'O MiauDelier Manager utiliza a API nativa Web Crypto (`SubtleCrypto`) do navegador com o algoritmo AES-GCM (Advanced Encryption Standard com chave de 256 bits). Campos sensíveis (como valores financeiros, contatos de clientes e chaves de API) são cifrados usando uma chave mestre derivada da sua senha antes de serem gravados no IndexedDB. Nem mesmo extensões maliciosas ou inspeções brutas do navegador conseguem ler seus dados em texto claro.',
-    tags: ['criptografia', 'aes-gcm', 'segurança', 'indexeddb', 'webcrypto'],
+      'Para garantir o máximo de segurança, o MiauDelier usa duas etapas: 1. Login na nuvem (Google, Apple ou E-mail com código OTP) que identifica quem você é. 2. A Senha do Cofre (Zero-Knowledge): esta senha NUNCA é enviada para a internet. Ela é usada exclusivamente no seu navegador para criptografar/descriptografar (usando AES-GCM 256 bits) seus dados reais antes que eles sejam salvos no dispositivo. Sem a Senha do Cofre, ninguém pode ler seus dados!',
+    tags: ['criptografia', 'aes-gcm', 'segurança', 'login', 'google', 'cofre', 'zero-knowledge'],
   },
   {
     id: 'faq-12',
@@ -286,9 +286,9 @@ export function AjudaSuportePage() {
                 <span className="text-xs font-bold uppercase tracking-wider text-primary">Passo 1</span>
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-semibold">Configuração Inicial</span>
               </div>
-              <h3 className="text-base font-bold text-on-surface">1. Defina o Perfil do seu Ateliê & Chave da IA (Opcional)</h3>
+              <h3 className="text-base font-bold text-on-surface">1. Faça Login e Crie seu Cofre Seguro</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Acesse o menu <strong>Perfil do Ateliê</strong> para personalizar a identidade do seu ateliê. Se quiser tirar dúvidas técnicas via inteligência artificial, vá até <strong>Configurações</strong> e insira sua chave gratuita do Google Gemini.
+                Acesse o aplicativo utilizando sua conta Google, Apple ou E-mail. Na primeira vez, você criará a sua <strong>Senha do Cofre</strong> (guarde bem, ela é irrecuperável!). Depois, no menu <strong>Perfil do Ateliê</strong> você pode personalizar sua identidade e, se quiser tirar dúvidas técnicas via inteligência artificial, vá em <strong>Configurações</strong> e insira sua chave gratuita do Google Gemini.
               </p>
             </Card>
 

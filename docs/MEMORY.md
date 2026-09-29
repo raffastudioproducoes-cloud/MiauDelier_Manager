@@ -31,6 +31,9 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 
 | ID | Tarefa | Concluída em |
 | --- | --- | --- |
+| 7.1 | Configuração do Supabase CLI, Schema (PostgreSQL + RLS) e adição da coluna `perfil_id` em todo o DB para multi-tenancy | 29/09/2026 |
+| 7.2 | Implementação de Autenticação 2-passos via Google (Auth Nuvem + Desbloqueio do Cofre Local) | 29/09/2026 |
+| 7.3 | Implementação de Autenticação via Email com confirmação OTP de 5 minutos | 29/09/2026 |
 | 6.1 | Refinamento de PWA Service Worker para cache avançado offline e execução PWA 100% | 29/09/2026 |
 | 3.9 | Implementação de abas de divisão do estoque por tipo de material (`INSUMO`, `FERRAMENTA`, `ADMINISTRATIVO`, `EPI`) mantendo subcategorias flexíveis | 28/09/2026 |
 | 3.8 | Implementação do cronômetro de cura em tempo real com contagem regressiva viva, barra de progresso, notificação ao finalizar sem alteração forçada de status e extensão de tempo ("➕ Adicionar Tempo de Cura") | 28/09/2026 |

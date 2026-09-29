@@ -31,14 +31,14 @@ export function PoliticaPrivacidadePage() {
         </section>
 
         <section className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
-          <h2 className="text-base font-bold text-primary">2. Princípio "Local-First" e Coleta de Dados</h2>
+          <h2 className="text-base font-bold text-primary">2. Autenticação e Arquitetura "Local-First"</h2>
           <p className="text-xs text-on-surface-variant">
-            Diferente dos softwares tradicionais em nuvem, o MiauDelier Manager foi projetado no conceito <strong>Local-First</strong> (Local Primeiro). Isso significa que:
+            O MiauDelier Manager adota um modelo híbrido focado em segurança <strong>Zero-Knowledge</strong> e <strong>Local-First</strong> (Local Primeiro). Isso significa que:
           </p>
           <ul className="list-disc pl-5 text-xs text-on-surface-variant flex flex-col gap-1.5 mt-1">
-            <li><strong>Não possuímos servidores centrais de banco de dados:</strong> Seus dados de clientes, transações financeiras, cadastros de peças e valores ficam gravados <em>exclusivamente</em> no armazenamento local (IndexedDB) do seu próprio dispositivo.</li>
-            <li><strong>Não rastreamos nem vendemos dados:</strong> Não utilizamos cookies de rastreamento, pixels de publicidade ou ferramentas de perfilamento comercial de terceiros.</li>
-            <li><strong>Autonomia do Titular:</strong> Você possui controle soberano e exclusivo sobre as informações armazenadas no seu dispositivo.</li>
+            <li><strong>Gestão de Identidade Segura:</strong> Utilizamos serviços de autenticação padrão de mercado (via Google, Apple ou Código por E-mail OTP) para criar sua conta. Não salvamos senhas de acesso.</li>
+            <li><strong>Armazenamento 100% Local:</strong> Seus dados de negócio (clientes, transações, peças e valores) ficam gravados <em>exclusivamente</em> no armazenamento local (IndexedDB) do seu próprio dispositivo, nunca em nossos servidores.</li>
+            <li><strong>Autonomia do Titular:</strong> Você possui controle soberano e exclusivo sobre as informações armazenadas no seu dispositivo, com a chave nas suas mãos.</li>
           </ul>
         </section>
 

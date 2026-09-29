@@ -37,13 +37,15 @@ export function TermosUsoPage() {
         </section>
 
         <section className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
-          <h2 className="text-base font-bold text-primary">3. Armazenamento Local e Responsabilidade sobre Backups</h2>
+          <h2 className="text-base font-bold text-primary">3. Autenticação, Armazenamento Local e Responsabilidade</h2>
           <p className="text-xs text-on-surface-variant">
-            Como o MiauDelier Manager é uma aplicação <strong>Local-First</strong> e não armazena cópias das suas informações em servidores externos, o usuário reconhece que:
+            Ao utilizar nossos serviços, o usuário compreende a nossa arquitetura híbrida de segurança:
           </p>
           <ul className="list-disc pl-5 text-xs text-on-surface-variant flex flex-col gap-1.5 mt-1">
-            <li>É de responsabilidade exclusiva do usuário manter cópias de segurança (backups) periódicas dos seus dados utilizando a ferramenta de exportação em JSON na aba "Backup".</li>
-            <li>A exclusão do histórico do navegador pelo usuário sem backup prévio pode resultar na perda irreversível dos dados locais.</li>
+            <li><strong>Login e Identificação:</strong> O acesso é feito vinculando uma conta do Google, Apple ou via E-mail OTP. Essa etapa gerencia seu acesso e perfil na nuvem.</li>
+            <li><strong>Cofre Local (Zero-Knowledge):</strong> Seus dados comerciais não vão para a internet de forma legível. Eles ficam salvos no seu aparelho e são criptografados localmente por uma "Senha do Cofre".</li>
+            <li><strong>Perda da Senha do Cofre:</strong> Como a nossa arquitetura é de Zero-Knowledge, não temos acesso a essa senha e é impossível recuperá-la por nós. A perda da Senha do Cofre resultará na perda irreversível do acesso aos seus dados locais que foram cifrados com ela.</li>
+            <li><strong>Backup:</strong> É de responsabilidade exclusiva do usuário manter cópias de segurança periódicas exportando seus dados na aba "Backup". A exclusão do histórico e dados do navegador pode apagar o banco de dados.</li>
           </ul>
         </section>
 
