@@ -69,11 +69,11 @@ Transformar o controle manual do ofício de resina em decisões de produção e 
 | **Calculadora de volume** | Geometria retangular, cilíndrica, esférica e medida direta; proporções 2:1, 3:1, 1:1 e 100:3; margem de segurança | ✅ Disponível (motor) |
 | **Precificação** | Custo direto + mão de obra + rateio fixo + margem → preço sugerido | ✅ Disponível (motor) |
 | **Backup** | Exportação/importação em JSON com checksum validado antes de qualquer escrita | ✅ Disponível |
-| **Design system e navegação** | Componentes visuais e shell de navegação responsivo | 🔜 Em desenvolvimento |
-| **Produção e estoque** | Materiais, formas, peças e ledger de eventos | 🔜 Planejado |
-| **Vendas** | Clientes, pedidos e precificação na tela | 🔜 Planejado |
-| **Financeiro** | Contas, transações e tela de backup | 🔜 Planejado |
-| **Assistente de IA** | Dicas e apoio contextual sobre o ofício (opcional, online-only) | 🔜 Planejado |
+| **Design system e navegação** | Componentes visuais e shell de navegação responsivo | ✅ Disponível |
+| **Produção e estoque** | Materiais, formas, peças e ledger de eventos | ✅ Disponível |
+| **Vendas** | Clientes, pedidos e precificação na tela | ✅ Disponível |
+| **Financeiro** | Contas, transações e tela de backup | ✅ Disponível |
+| **Assistente de IA** | Dicas e apoio contextual sobre o ofício (opcional, online-only) | ✅ Disponível |
 
 ## Tecnologias
 
@@ -181,12 +181,18 @@ Este README é a fonte pública de verdade sobre o projeto. A documentação de 
 
 - [x] Fundação: schema, criptografia, login, motores de cálculo, backup
 - [x] Segurança de dados: cifra de campo financeiro, sessão reativa, guard de rota
-- [ ] Design system e shell de navegação
-- [ ] Produção e estoque (materiais, formas, peças)
-- [ ] Vendas (precificação na tela, clientes, pedidos)
+- [x] Design system e shell de navegação
+- [x] Produção e estoque (materiais, formas, peças)
+- [x] Vendas (precificação na tela, clientes, pedidos)
 - [x] Financeiro, tela de backup e PWA instalável
-- [ ] Assistente de IA opcional (Gemini)
-- [ ] CI de lint/test/build e deploy contínuo
+- [x] Assistente de IA opcional (Gemini)
+- [x] CI de lint/test/build e deploy contínuo
+
+**Fase 7 — Nuvem e Sincronização (Planejado)**
+- [ ] Banco de dados no Firestore (sincronização cloud híbrida)
+- [ ] Autenticação com conta Google
+- [ ] Autenticação com Email e Senha (Firebase Auth)
+- [ ] Autenticação com Apple (futuramente)
 
 ## Licença
 

@@ -6,14 +6,14 @@ Este documento atua como a memória operacional viva do projeto **MiauDelier Man
 
 ## 1. Última Atualização
 
-- **Data**: 28/09/2026
-- **Horário**: 04:30 (BRT)
+- **Data**: 29/09/2026
+- **Horário**: 02:20 (BRT)
 
 ---
 
 ## 2. Fase Atual
 
-- **Fase Atual**: **Fase 6 — Infraestrutura, PWA e CI/CD**
+- **Fase Atual**: **Concluído — Fase 6 finalizada. Planejamento da Fase 7.**
 
 ---
 
@@ -31,6 +31,7 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 
 | ID | Tarefa | Concluída em |
 | --- | --- | --- |
+| 6.1 | Refinamento de PWA Service Worker para cache avançado offline e execução PWA 100% | 29/09/2026 |
 | 3.9 | Implementação de abas de divisão do estoque por tipo de material (`INSUMO`, `FERRAMENTA`, `ADMINISTRATIVO`, `EPI`) mantendo subcategorias flexíveis | 28/09/2026 |
 | 3.8 | Implementação do cronômetro de cura em tempo real com contagem regressiva viva, barra de progresso, notificação ao finalizar sem alteração forçada de status e extensão de tempo ("➕ Adicionar Tempo de Cura") | 28/09/2026 |
 | 2.4 | Criação da função de formatação de volume e massa legível (`formatarVolumeEMassaLegivel`) convertendo volumes >= 1L para `L` e `kg resina` (ex: `10,9 L (~12,0 kg resina)`), e unidades flexíveis para tempo de cura e equipamentos (Dias/Horas/Minutos) | 28/09/2026 |
@@ -44,9 +45,7 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 
 ## 5. Tarefas em Andamento
 
-| ID | Tarefa | Iniciada em | Previsão |
-| --- | --- | --- | --- |
-| 6.1 | Refinamento de PWA Service Worker para cache avançado offline | 28/09/2026 | Em breve |
+*Nenhuma tarefa em andamento. Iniciaremos a Fase 7 (Firebase) em breve.*
 
 ---
 
@@ -56,6 +55,7 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 2. **Formatação Dinâmica de Volume e Massa**: Formatação pt-BR com vírgula decimal para volumes resinados: se `>= 1000 ml`, exibe em `L` e `kg resina` (densidade média ~1.1g/cm³); se `< 1000 ml`, exibe em `ml` e `g resina`.
 3. **Armazenamento de Imagens em Base64 Redimensionado**: As fotos de moldes e peças são comprimidas via Canvas offscreen para no máximo 800×800px a 80% de qualidade JPEG antes de serem armazenadas no IndexedDB (`imagemUrl?: string`). Isso preserva o suporte offline 100% local-first sem depender de buckets S3/Cloud Storage.
 4. **Criptografia Financeira Cifrada em Repouso**: Nenhum valor monetário de saldo ou transação é salvo em texto claro no IndexedDB. Apenas a camada `camposCifrados.ts` usando WebCrypto PBKDF2 + AES-GCM-256 tem autoridade para cifra/decifra durante uma sessão ativa.
+5. **Evolução Híbrida (Fase 7 - Firebase)**: Decidido integrar Firebase (Firestore) para armazenamento em nuvem e sincronização com o banco local-first. O sistema terá suporte a Autenticação por Google, Email/Senha e, futuramente, Apple.
 
 ---
 

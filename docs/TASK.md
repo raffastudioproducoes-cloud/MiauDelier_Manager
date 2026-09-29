@@ -6,10 +6,10 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 ## Resumo de Progresso
 
-- **Total de Tarefas**: 30
-- **Concluídas**: 29
+- **Total de Tarefas**: 35
+- **Concluídas**: 30
 - **Em Andamento**: 0
-- **Não Iniciadas**: 0
+- **Não Iniciadas**: 5
 
 ---
 
@@ -97,3 +97,17 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | 6.2 | Garantir suíte de testes (Vitest + Testing Library) com 100% de cobertura nos fluxos críticos | Alta | Concluída |
 | 6.3 | Configurar pipeline de CI/CD para lint, verificação de tipos (`tsc`) e build automatizado | Média | Concluída |
 | 6.4 | Implementar registrador de eventos e captura de falhas silenciosas (`src/lib/logger.ts`, `ErrorBoundary`, `/logs`) com sanitização de senhas/dados sensíveis | Alta | Concluída |
+
+---
+
+## Fase 7 — Cloud, Sincronização e Autenticação Social
+
+**Objetivo**: Evoluir o sistema local-first para um formato híbrido, permitindo sincronização em nuvem e login seguro via Firebase.
+
+| ID | Tarefa | Prioridade | Status |
+| --- | --- | --- | --- |
+| 7.1 | Configurar projeto Firebase e estrutura do banco de dados Firestore | Alta | Não iniciada |
+| 7.2 | Implementar autenticação via conta Google | Alta | Não iniciada |
+| 7.3 | Implementar autenticação via Email e Senha | Alta | Não iniciada |
+| 7.4 | Implementar autenticação via Apple | Baixa | Futuramente |
+| 7.5 | Desenvolver mecanismo de sincronização de dados (Dexie ↔ Firestore) | Alta | Não iniciada |
