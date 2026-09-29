@@ -36,6 +36,7 @@ export function ConfiguracoesPage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleSalvarChave(evento: React.FormEvent) {

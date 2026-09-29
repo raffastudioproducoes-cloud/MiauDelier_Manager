@@ -83,7 +83,7 @@ export async function importarBackupGestoraX(json: string): Promise<RelatorioImp
   } catch (err) {
     const msg = 'Arquivo de backup GestoraX inválido: não é um JSON válido.'
     await logError('backup', msg, err)
-    throw new Error('Arquivo inválido: não é um JSON válido.')
+    throw new Error('Arquivo inválido: não é um JSON válido.', { cause: err })
   }
   if (!ehObjeto(parsed) || !ehObjeto(parsed.dados)) {
     const msg = 'Arquivo inválido: formato incompatível ou chave "dados" ausente no GestoraX.'

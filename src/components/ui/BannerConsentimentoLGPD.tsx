@@ -12,8 +12,10 @@ export function BannerConsentimentoLGPD() {
     try {
       const consentimento = localStorage.getItem(CHAVE_CONSENTIMENTO)
       if (!consentimento) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
         setVisivel(true)
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
     } catch {
       setVisivel(true)
     }

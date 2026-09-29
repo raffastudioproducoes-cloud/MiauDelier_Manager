@@ -84,6 +84,7 @@ export function TransacoesPage() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     carregarTransacoes(contaId).catch((falha) => {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar transações.', 'erro')

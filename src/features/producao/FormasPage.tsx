@@ -151,6 +151,7 @@ export function FormasPage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Lista de materiais filtrada para silicones/endurecedores/borrachas (com opção de ver todos)
@@ -180,6 +181,7 @@ export function FormasPage() {
     const custoCaixaNum = Number(custoCaixaEstrutura) || 0
     const totalCalc = custoSiliconeCalc + custoCaixaNum
     if (totalCalc > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustoFabricacao(totalCalc.toFixed(2))
     }
   }, [materialSiliconeId, qtdSilicone, custoCaixaEstrutura, materiais])

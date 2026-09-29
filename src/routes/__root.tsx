@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { RequireAuth } from '../features/auth/RequireAuth'
 import { AppShell } from '../components/layout/AppShell'

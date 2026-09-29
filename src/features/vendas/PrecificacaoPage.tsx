@@ -16,7 +16,7 @@ function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export const LISTA_PAISES = [
+const LISTA_PAISES = [
   'Brasil',
   'Portugal',
   'Estados Unidos',
@@ -26,7 +26,7 @@ export const LISTA_PAISES = [
   'Outro País',
 ]
 
-export const ESTADOS_BRASIL = [
+const ESTADOS_BRASIL = [
   { uf: 'AC', nome: 'Acre (AC)' },
   { uf: 'AL', nome: 'Alagoas (AL)' },
   { uf: 'AM', nome: 'Amazonas (AM)' },
@@ -56,7 +56,7 @@ export const ESTADOS_BRASIL = [
   { uf: 'TO', nome: 'Tocantins (TO)' },
 ]
 
-export const CIDADES_BAIRROS_POR_ESTADO: Record<string, string[]> = {
+const CIDADES_BAIRROS_POR_ESTADO: Record<string, string[]> = {
   SP: ['São Paulo - Centro', 'São Paulo - Zona Sul', 'São Paulo - Zona Norte', 'São Paulo - Zona Leste', 'São Paulo - Zona Oeste', 'Campinas', 'Santos', 'Ribeirão Preto', 'São José dos Campos', 'Sorocaba', 'Outra Região/Bairro'],
   RJ: ['Rio de Janeiro - Centro', 'Rio de Janeiro - Zona Sul', 'Rio de Janeiro - Zona Norte', 'Rio de Janeiro - Zona Oeste', 'Niterói', 'Duque de Caxias', 'Nova Iguaçu', 'Outra Região/Bairro'],
   MG: ['Belo Horizonte - Centro', 'Belo Horizonte - Savassi', 'Belo Horizonte - Pampulha', 'Uberlândia', 'Juiz de Fora', 'Contagem', 'Outra Região/Bairro'],
@@ -225,6 +225,7 @@ export function PrecificacaoPage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Atualização automática do valor por hora ao modificar o valor do dia ou jornada

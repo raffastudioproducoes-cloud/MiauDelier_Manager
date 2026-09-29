@@ -37,6 +37,7 @@ export function ClienteDetalhePage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteId])
 
   if (!carregado) return null

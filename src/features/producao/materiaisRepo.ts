@@ -56,8 +56,8 @@ export async function registrarCompraMaterial(params: RegistrarCompraParams): Pr
     [db.materiais, db.categoriasMaterial, db.contas, db.transacoes, db.auditoria],
     async () => {
       let targetMaterialId = params.materialId
-      let nomeMaterial = ''
-      let unidadeMaterial = 'un'
+      let nomeMaterial: string
+      let unidadeMaterial: string
 
       if (!targetMaterialId) {
         if (!params.novoMaterial) throw new Error('Dados do novo material são obrigatórios')

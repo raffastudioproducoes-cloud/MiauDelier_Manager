@@ -101,7 +101,7 @@ export function formatarVolumeEMassaLegivel(volumeMl: number): {
     }
   }
 
-  let volumeLegivel = ''
+  let volumeLegivel: string
   if (volumeMl >= 1000) {
     const litros = volumeMl / 1000
     const litrosFmt = litros.toLocaleString('pt-BR', {
@@ -118,7 +118,7 @@ export function formatarVolumeEMassaLegivel(volumeMl: number): {
   }
 
   const massaKg = (volumeMl * 1.1) / 1000
-  let massaLegivel = ''
+  let massaLegivel: string
   if (massaKg >= 1) {
     const kgFmt = massaKg.toLocaleString('pt-BR', {
       minimumFractionDigits: 0,

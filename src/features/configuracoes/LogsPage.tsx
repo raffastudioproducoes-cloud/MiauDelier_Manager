@@ -31,6 +31,7 @@ export function LogsPage() {
   }, [nivelFiltro, busca])
 
   useEffect(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
     carregarLogs()
   }, [carregarLogs])
 

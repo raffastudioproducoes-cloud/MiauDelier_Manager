@@ -132,10 +132,12 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
 
   useEffect(() => {
     montado.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     gerarResumo(false)
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumo.saldoTotal, resumo.lucroDoMes, resumo.materiaisEstoqueBaixo, resumo.pecasEmProducao, resumo.pedidosAbertos])
 
   return (

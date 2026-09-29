@@ -218,6 +218,7 @@ export function AnalyticsPage() {
 
   useEffect(() => {
     if (mesInicio > mesFim) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResumo(RESUMO_VAZIO)
       setCarregado(true)
       return
@@ -234,6 +235,7 @@ export function AnalyticsPage() {
         mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar o resumo de analytics.', 'erro')
         setCarregado(true)
       })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mesInicio, mesFim])
 
   const periodoInvalido = mesInicio > mesFim

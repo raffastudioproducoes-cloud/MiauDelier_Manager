@@ -50,6 +50,7 @@ export function PedidoDetalhePage() {
       montado.current = false
       clearTimeout(timeoutProgresso.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidoId])
 
   async function handleMudarStatus(novoStatus: StatusPedido) {

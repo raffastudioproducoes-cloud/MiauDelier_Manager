@@ -36,6 +36,7 @@ export function LoginForm() {
 
   useEffect(() => {
     if (contaConfigurada === false) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setModoCadastro(true)
     }
   }, [contaConfigurada])

@@ -25,6 +25,47 @@ function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function CardKPI_Click({
+  label,
+  value,
+  icon,
+  destination,
+}: {
+  label: string
+  value: string | number
+  icon?: ReactNode
+  destination?: '/materiais' | '/pedidos'
+}) {
+  const navigate = useNavigate()
+
+  function navegarPara(modo: '/materiais' | '/pedidos') {
+    navigate({ to: modo })
+  }
+
+  return (
+    <Card
+      variant="kpi"
+      icon={icon}
+      label={label}
+      value={value}
+      className="glow-hover overflow-hidden"
+      role={destination ? 'button' : undefined}
+      tabIndex={destination ? 0 : undefined}
+      onClick={destination ? () => navegarPara(destination) : undefined}
+      onKeyDown={
+        destination
+          ? (evento) => {
+              if (evento.key === 'Enter' || evento.key === ' ') {
+                evento.preventDefault()
+                navegarPara(destination)
+              }
+            }
+          : undefined
+      }
+    />
+  )
+}
+
 export function DashboardPage() {
   const navigate = useNavigate()
   const { mostrarToast } = useToast()
@@ -50,50 +91,11 @@ export function DashboardPage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (!carregado) {
     return <p>Carregando...</p>
-  }
-
-  function navegarPara(modo: '/materiais' | '/pedidos') {
-    navigate({ to: modo })
-  }
-
-
-  function CardKPI_Click({
-    label,
-    value,
-    icon,
-    destination,
-  }: {
-    label: string
-    value: string | number
-    icon?: ReactNode
-    destination?: '/materiais' | '/pedidos'
-  }) {
-    return (
-      <Card
-        variant="kpi"
-        icon={icon}
-        label={label}
-        value={value}
-        className="glow-hover overflow-hidden"
-        role={destination ? 'button' : undefined}
-        tabIndex={destination ? 0 : undefined}
-        onClick={destination ? () => navegarPara(destination) : undefined}
-        onKeyDown={
-          destination
-            ? (evento) => {
-                if (evento.key === 'Enter' || evento.key === ' ') {
-                  evento.preventDefault()
-                  navegarPara(destination)
-                }
-              }
-            : undefined
-        }
-      />
-    )
   }
 
   return (

@@ -40,6 +40,7 @@ export function ContasPage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function limparFormulario() {

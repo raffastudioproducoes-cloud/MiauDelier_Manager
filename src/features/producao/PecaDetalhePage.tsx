@@ -65,7 +65,7 @@ export function PecaDetalhePage() {
   const [addCuraValor, setAddCuraValor] = useState('')
   const [addCuraUnidade, setAddCuraUnidade] = useState<'dias' | 'horas' | 'minutos'>('horas')
 
-  const [agora, setAgora] = useState(Date.now())
+  const [agora, setAgora] = useState(() => Date.now())
 
   const montado = useRef(true)
   const id = Number(pecaId)
@@ -108,6 +108,7 @@ export function PecaDetalhePage() {
 
   useEffect(() => {
     montado.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     recarregar().catch((falha) => {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar peça.', 'erro')
@@ -115,6 +116,7 @@ export function PecaDetalhePage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pecaId])
 
   const custoMateriaisTotal = useMemo(() => {

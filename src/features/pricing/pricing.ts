@@ -103,9 +103,9 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
   const custoFixo = subtotal * (input.rateioFixoPercent / 100)
   const custoTotal = subtotal + custoFixo
 
-  let precoFinal = 0
-  let lucro = 0
-  let taxaMarketplace = 0
+  let precoFinal: number
+  let lucro: number
+  let taxaMarketplace: number
 
   if (percentualTaxas > 0) {
     const taxasEMargemDec = (percentualTaxas + input.margemLucroPercent) / 100

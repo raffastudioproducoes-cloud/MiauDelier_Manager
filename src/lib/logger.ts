@@ -152,7 +152,7 @@ export async function listarLogsSistema(filtro?: {
   busca?: string
   limite?: number
 }): Promise<LogSistema[]> {
-  let logs: LogSistema[] = []
+  let logs: LogSistema[]
 
   try {
     if (db && db.isOpen()) {

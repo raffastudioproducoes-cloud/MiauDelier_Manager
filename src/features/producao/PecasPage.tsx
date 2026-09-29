@@ -94,7 +94,7 @@ export function PecasPage() {
   const [pecaExcluindoId, setPecaExcluindoId] = useState<number | null>(null)
   const [carregado, setCarregado] = useState(false)
 
-  const [agora, setAgora] = useState(Date.now())
+  const [agora, setAgora] = useState(() => Date.now())
   const [pecaAdicionarCuraId, setPecaAdicionarCuraId] = useState<number | null>(null)
   const [addCuraValor, setAddCuraValor] = useState('')
   const [addCuraUnidade, setAddCuraUnidade] = useState<'dias' | 'horas' | 'minutos'>('horas')
@@ -133,6 +133,7 @@ export function PecasPage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -151,6 +152,7 @@ export function PecasPage() {
         }
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agora, carregado])
 
   function limparFormulario() {

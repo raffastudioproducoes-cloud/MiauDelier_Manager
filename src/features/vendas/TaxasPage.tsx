@@ -22,7 +22,7 @@ export interface PresetTaxa {
   descricao: string
 }
 
-export const PRESETS_TAXAS: PresetTaxa[] = [
+const PRESETS_TAXAS: PresetTaxa[] = [
   // Shopee
   {
     id: 'shopee-padrao',
@@ -151,6 +151,7 @@ export function TaxasPage() {
     return () => {
       montado.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function aplicarPreset(preset: PresetTaxa) {

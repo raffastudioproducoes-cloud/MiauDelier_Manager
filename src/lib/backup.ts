@@ -40,7 +40,7 @@ function validarEnvelope(json: string): Envelope {
   } catch (err) {
     const msg = 'Arquivo de backup inválido — não é um JSON válido.'
     logError('backup', msg, { erroOriginal: err instanceof Error ? err.message : String(err) })
-    throw new Error('arquivo de backup inválido — não é JSON')
+    throw new Error('arquivo de backup inválido — não é JSON', { cause: err })
   }
   if (!ehObjeto(parsed) || !ehObjeto(parsed.dados) || typeof parsed.checksum !== 'string') {
     const msg = 'Arquivo de backup inválido — esperado um objeto com as propriedades "dados" e "checksum".'
