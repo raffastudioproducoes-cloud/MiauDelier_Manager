@@ -9,6 +9,7 @@ import { Tabs } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/useToast'
 import { criarCategoriaMaterial, listarCategoriasMaterial } from './categoriasMaterialRepo'
 import {
+  criarMaterial,
   listarMateriais,
   registrarCompraMaterial,
   excluirMaterial,
@@ -491,7 +492,7 @@ export function MateriaisPage() {
                       </div>
                     </div>
                     <div className="flex justify-end mt-2 border-t border-outline-variant/30 pt-4">
-                      <Button tipo="submit" variante="primary">
+                      <Button type="submit" variante="primary">
                         + Cadastrar Material
                       </Button>
                     </div>
