@@ -119,11 +119,10 @@ describe('PrecificacaoPage', () => {
     const botaoBuscar = await screen.findByRole('button', { name: /buscar tarifas.*\(RJ\)/i })
     fireEvent.click(botaoBuscar)
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/Light/i).length).toBeGreaterThan(0)
-    }, { timeout: 4000 })
+    const elements = await screen.findAllByText(/Light/i, {}, { timeout: 4000 })
+    expect(elements[0]).toBeInTheDocument()
     
-    expect((await screen.findAllByText(/Águas do Rio/i))[0]).toBeInTheDocument();
+    expect((await screen.findAllByText(/Águas do Rio/i))[0]).toBeInTheDocument()
   })
 
   it('calcula o valor da hora de mão de obra a partir do valor por dia e jornada diária', async () => {
