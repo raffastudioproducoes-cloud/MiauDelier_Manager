@@ -187,6 +187,7 @@ Este README é a fonte pública de verdade sobre o projeto. A documentação de 
 - [x] Financeiro, tela de backup e PWA instalável
 - [ ] Assistente de IA opcional (Gemini)
 - [ ] CI de lint/test/build e deploy contínuo
+- [ ] Fase 7: Sincronização em nuvem e login social com Supabase
 
 ## Licença
 

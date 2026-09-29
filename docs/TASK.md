@@ -102,12 +102,12 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 ## Fase 7 — Cloud, Sincronização e Autenticação Social
 
-**Objetivo**: Evoluir o sistema local-first para um formato híbrido, permitindo sincronização em nuvem e login seguro via Firebase.
+**Objetivo**: Evoluir o sistema local-first para um formato híbrido, permitindo sincronização em nuvem e login seguro via Supabase.
 
 | ID | Tarefa | Prioridade | Status |
 | --- | --- | --- | --- |
-| 7.1 | Configurar projeto Firebase e estrutura do banco de dados Firestore | Alta | Não iniciada |
-| 7.2 | Implementar autenticação via conta Google | Alta | Não iniciada |
-| 7.3 | Implementar autenticação via Email e Senha | Alta | Não iniciada |
+| 7.1 | Configurar projeto Supabase e estrutura do banco de dados (PostgreSQL + RLS) | Alta | Em andamento |
+| 7.2 | Implementar autenticação via conta Google (Supabase Auth) | Alta | Não iniciada |
+| 7.3 | Implementar autenticação via Email e Senha (Supabase Auth) | Alta | Não iniciada |
 | 7.4 | Implementar autenticação via Apple | Baixa | Futuramente |
-| 7.5 | Desenvolver mecanismo de sincronização de dados (Dexie ↔ Firestore) | Alta | Não iniciada |
+| 7.5 | Desenvolver mecanismo de sincronização de dados (Dexie ↔ Supabase) | Alta | Não iniciada |

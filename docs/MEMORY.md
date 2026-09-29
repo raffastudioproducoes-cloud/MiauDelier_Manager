@@ -57,7 +57,7 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 2. **Formatação Dinâmica de Volume e Massa**: Formatação pt-BR com vírgula decimal para volumes resinados: se `>= 1000 ml`, exibe em `L` e `kg resina` (densidade média ~1.1g/cm³); se `< 1000 ml`, exibe em `ml` e `g resina`.
 3. **Armazenamento de Imagens em Base64 Redimensionado**: As fotos de moldes e peças são comprimidas via Canvas offscreen para no máximo 800×800px a 80% de qualidade JPEG antes de serem armazenadas no IndexedDB (`imagemUrl?: string`). Isso preserva o suporte offline 100% local-first sem depender de buckets S3/Cloud Storage.
 4. **Criptografia Financeira Cifrada em Repouso**: Nenhum valor monetário de saldo ou transação é salvo em texto claro no IndexedDB. Apenas a camada `camposCifrados.ts` usando WebCrypto PBKDF2 + AES-GCM-256 tem autoridade para cifra/decifra durante uma sessão ativa.
-5. **Evolução Híbrida (Fase 7 - Firebase)**: Decidido integrar Firebase (Firestore) para armazenamento em nuvem e sincronização com o banco local-first. O sistema terá suporte a Autenticação por Google, Email/Senha e, futuramente, Apple.
+5. **Evolução Híbrida (Fase 7 - Supabase)**: Decidido integrar Supabase (PostgreSQL + RLS) para armazenamento em nuvem e sincronização com o banco local-first. O sistema terá suporte a Autenticação por Google, Email/Senha e, futuramente, Apple. Substitui a ideia original do Firebase devido ao plano Hobby gratuito excelente do Supabase e sua aderência às regras de RLS nativas do Postgres.
 
 ---
 

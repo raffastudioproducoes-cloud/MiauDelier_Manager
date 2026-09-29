@@ -5,3 +5,8 @@ dist
 .superpowers
 .tanstack
 .worktrees
+
+# Env files
+.env
+.env.*
+!.env.example

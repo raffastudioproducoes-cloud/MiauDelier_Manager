@@ -115,4 +115,4 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 
 - **Instalador PWA Completo & Notifications Push**: Registro avançado de Service Worker para alertas nativos do SO ao concluir cura de peças/moldes.
 - **Integração CI/CD**: Pipeline automatizado de lint, testes e build para deploy contínuo em páginas estáticas. (Concluído)
-- **Fase 7 - Cloud e Autenticação (Firebase)**: Evolução do modelo local-first estrito para um modelo híbrido com sincronização em nuvem via Firebase Firestore. Inclusão de login social via Google, Apple e autenticação padrão com Email e Senha.
+- **Fase 7 - Cloud e Autenticação (Supabase)**: Evolução do modelo local-first estrito para um modelo híbrido com sincronização em nuvem via Supabase (PostgreSQL). Inclusão de login social via Google, Apple e autenticação padrão com Email e Senha.

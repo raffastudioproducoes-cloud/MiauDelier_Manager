@@ -6,7 +6,7 @@ Este documento descreve a estrutura técnica, os componentes de software, o mode
 
 ## 1. Arquitetura de Alto Nível
 
-O **MiauDelier Manager** é construído sob uma arquitetura **Local-First SPA (Single-Page Application)**. Não existe backend próprio de aplicação, banco de dados remoto centralizado ou servidor de sessão na versão inicial. Todas as operações de leitura, escrita, cálculo e relatórios ocorrem diretamente no navegador do usuário utilizando **IndexedDB** gerenciado pelo **Dexie.js**. A partir da **Fase 7**, a arquitetura evoluirá para um modelo **Híbrido**, utilizando o **Firebase (Firestore + Auth)** para sincronização em nuvem e login multiplataforma (Google, Email, Apple).
+O **MiauDelier Manager** é construído sob uma arquitetura **Local-First SPA (Single-Page Application)**. Não existe backend próprio de aplicação, banco de dados remoto centralizado ou servidor de sessão na versão inicial. Todas as operações de leitura, escrita, cálculo e relatórios ocorrem diretamente no navegador do usuário utilizando **IndexedDB** gerenciado pelo **Dexie.js**. A partir da **Fase 7**, a arquitetura evoluirá para um modelo **Híbrido**, utilizando o **Supabase (PostgreSQL + Auth)** para sincronização em nuvem e login multiplataforma (Google, Email, Apple).
 
 ```mermaid
 flowchart TD
@@ -57,10 +57,10 @@ flowchart TD
 | **Build & Bundler** | Vite 8.2 | Servidor de dev e empacotamento de produção com Rolldown/ESBuild |
 | **Testes** | Vitest 3 + Testing Library | Execução de suítes de testes unitários e de integração de componentes |
 | **Banco de Dados** | Dexie.js 4.4 + IndexedDB | Banco de dados NoSQL indexado local no navegador |
-| **Sincronização & Nuvem (Fase 7)** | Firebase (Firestore) | Banco de dados NoSQL na nuvem para backup e sincronização |
+| **Sincronização & Nuvem (Fase 7)** | Supabase (PostgreSQL) | Banco de dados na nuvem para backup e sincronização |
 | **Gerenciamento de Estado** | Zustand 5.0 | Estado global reativo de autenticação e sessão do usuário |
 | **Segurança / Cifra** | WebCrypto API Nativa | Derivação de chave PBKDF2 e criptografia simétrica AES-GCM |
-| **Autenticação (Fase 7)** | Firebase Auth | Login Social (Google, Apple) e Email/Senha |
+| **Autenticação (Fase 7)** | Supabase Auth | Login Social (Google, Apple) e Email/Senha |
 | **Estilização** | Tailwind CSS v4 | Framework CSS utilitário para design system customizado em Dark Mode |
 | **Validação** | Zod | Schemas de validação de formulários e parsing |
 | **PWA / Service Worker** | Vite PWA Plugin | Suporte a PWA instalável offline e manifesto da aplicação |
