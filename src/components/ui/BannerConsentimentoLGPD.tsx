@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Button } from './Button'
 
@@ -6,20 +6,13 @@ const CHAVE_CONSENTIMENTO = 'miaudelier_lgpd_consentimento'
 
 export function BannerConsentimentoLGPD() {
   const navigate = useNavigate()
-  const [visivel, setVisivel] = useState(false)
-
-  useEffect(() => {
+  const [visivel, setVisivel] = useState(() => {
     try {
-      const consentimento = localStorage.getItem(CHAVE_CONSENTIMENTO)
-      if (!consentimento) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-        setVisivel(true)
-      }
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      return !localStorage.getItem(CHAVE_CONSENTIMENTO)
     } catch {
-      setVisivel(true)
+      return true
     }
-  }, [])
+  })
 
   function aceitar() {
     try {

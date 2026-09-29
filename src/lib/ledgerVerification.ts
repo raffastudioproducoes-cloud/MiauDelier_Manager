@@ -33,7 +33,7 @@ export async function verificarIntegridadeDoLedger(): Promise<void> {
     }
 
     // 4. Compara com o saldo atual armazenado na conta
-    let saldoAtual = 0
+    let saldoAtual: number
     try {
       const saldoStr = await decryptText(key, conta.saldoCriptografado)
       saldoAtual = parseFloat(saldoStr) || 0
