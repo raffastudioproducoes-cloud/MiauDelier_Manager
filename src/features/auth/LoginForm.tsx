@@ -16,7 +16,6 @@ export function LoginForm() {
   const entrar = useAuthStore((estado) => estado.entrar)
   const criarConta = useAuthStore((estado) => estado.criarConta)
   const recuperarConta = useAuthStore((estado) => estado.recuperarConta)
-  const alterarSenha = useAuthStore((estado) => estado.alterarSenha)
   const autenticado = useAuthStore((estado) => estado.autenticado)
 
   // Supabase Auth State

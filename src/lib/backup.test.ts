@@ -107,7 +107,7 @@ describe('backup JSON', () => {
 
     await expect(importarBackup(semConfiguracoes)).rejects.toThrow(/autenticação/i)
     expect(await db.materiais.count()).toBe(1)
-    expect(await db.configuracoes.count()).toBe(2)
+    expect(await db.configuracoes.count()).toBe(4)
   })
 
   it('rejeita backup sem o verificador, mesmo com salt presente', async () => {
@@ -169,13 +169,13 @@ describe('backup JSON', () => {
     await semearMaterial()
 
     expect(await db.materiais.count()).toBe(1)
-    expect(await db.configuracoes.count()).toBe(2)
+    expect(await db.configuracoes.count()).toBe(4)
 
     const { zerarDadosManterPerfil } = await import('./backup')
     await zerarDadosManterPerfil()
 
     expect(await db.materiais.count()).toBe(0)
-    expect(await db.configuracoes.count()).toBe(2)
+    expect(await db.configuracoes.count()).toBe(4)
   })
 
   it('registra erros no log do sistema (logger) quando a importação de JSON falha', async () => {
@@ -206,5 +206,5 @@ async function exportarBackupFalso(dados: Record<string, unknown[]>): Promise<st
     hash ^= serializados.charCodeAt(i)
     hash = Math.imul(hash, 0x01000193)
   }
-  return JSON.stringify({ dados, checksum: (hash >>> 0).toString(16).padStart(8, '0') })
+  return JSON.stringify({ app: 'MiauDelier_Manager', versao: '1.0', dados, checksum: (hash >>> 0).toString(16).padStart(8, '0') })
 }

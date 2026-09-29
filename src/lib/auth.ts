@@ -142,7 +142,7 @@ export async function setupAccount(
   // Tenta salvar a chave envelopada na nuvem (para recuperação futura)
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.user) {
-    const recoveryKek = await deriveRecoveryKEK(session.user.id)
+    const recoveryKek = await deriveRecoveryKEK(session.user.id, session.user.email!)
     const dekRecoveryWrapped = await wrapDEK(dek, recoveryKek)
     
     await supabase.from('user_keys').upsert({
@@ -243,7 +243,7 @@ export async function migrarParaDek(password: string): Promise<void> {
   // Tenta salvar na nuvem
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.user) {
-    const recoveryKek = await deriveRecoveryKEK(session.user.id)
+    const recoveryKek = await deriveRecoveryKEK(session.user.id, session.user.email!)
     const dekRecoveryWrapped = await wrapDEK(dek, recoveryKek)
     
     await supabase.from('user_keys').upsert({
@@ -279,7 +279,7 @@ export async function recuperarCofreComNuvem(novaSenha: string): Promise<CryptoK
   }
 
   // 2. Deriva a KEK de Recuperação (usando user_id + pepper local)
-  const recoveryKek = await deriveRecoveryKEK(session.user.id)
+  const recoveryKek = await deriveRecoveryKEK(session.user.id, session.user.email!)
 
   try {
     // 3. Desempacota a DEK
@@ -314,7 +314,7 @@ export async function recuperarCofreComNuvem(novaSenha: string): Promise<CryptoK
     return dek
   } catch (err) {
     console.error(err)
-    throw new Error('Falha ao recuperar a chave a partir da nuvem.')
+    throw new Error('Falha ao recuperar a chave a partir da nuvem.', { cause: err })
   }
 }
 
