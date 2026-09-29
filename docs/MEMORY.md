@@ -13,7 +13,7 @@ Este documento atua como a memória operacional viva do projeto **MiauDelier Man
 
 ## 2. Fase Atual
 
-- **Fase Atual**: **Concluído — Fase 6 finalizada. Planejamento da Fase 7.**
+- **Fase Atual**: **Fase 6 — Infraestrutura, PWA e CI/CD**
 
 ---
 
@@ -45,7 +45,9 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 
 ## 5. Tarefas em Andamento
 
-*Nenhuma tarefa em andamento. Iniciaremos a Fase 7 (Firebase) em breve.*
+| ID | Tarefa | Iniciada em | Previsão |
+| --- | --- | --- | --- |
+| 6.1 | Refinamento de PWA Service Worker para cache avançado offline | 28/09/2026 | Em breve |
 
 ---
 

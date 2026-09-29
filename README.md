@@ -185,14 +185,8 @@ Este README é a fonte pública de verdade sobre o projeto. A documentação de 
 - [x] Produção e estoque (materiais, formas, peças)
 - [x] Vendas (precificação na tela, clientes, pedidos)
 - [x] Financeiro, tela de backup e PWA instalável
-- [x] Assistente de IA opcional (Gemini)
-- [x] CI de lint/test/build e deploy contínuo
-
-**Fase 7 — Nuvem e Sincronização (Planejado)**
-- [ ] Banco de dados no Firestore (sincronização cloud híbrida)
-- [ ] Autenticação com conta Google
-- [ ] Autenticação com Email e Senha (Firebase Auth)
-- [ ] Autenticação com Apple (futuramente)
+- [ ] Assistente de IA opcional (Gemini)
+- [ ] CI de lint/test/build e deploy contínuo
 
 ## Licença
 
