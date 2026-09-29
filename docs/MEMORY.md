@@ -13,7 +13,7 @@ Este documento atua como a memória operacional viva do projeto **MiauDelier Man
 
 ## 2. Fase Atual
 
-- **Fase Atual**: **Fase 6 — Infraestrutura, PWA e CI/CD**
+- **Fase Atual**: **Fase 7 — Cloud, Sincronização e Autenticação Social**
 
 ---
 
