@@ -1,9 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 import { PerfilPage } from './PerfilPage'
+
+// setupAccount chama supabase.from(...).upsert(...) — precisa de mock
+vi.mock('../../lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+    },
+    from: vi.fn().mockReturnValue({
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+    }),
+  },
+}))
 
 describe('PerfilPage', () => {
   beforeEach(async () => {
@@ -35,32 +47,36 @@ describe('PerfilPage', () => {
     expect(screen.getByText('Cadastrar Novo Perfil de Ateliê')).toBeInTheDocument()
   })
 
-  it('exibe opção de excluir perfil e abre modal de confirmação ao clicar', async () => {
+  it('exibe opção de excluir conta e abre modal de confirmação ao clicar', async () => {
     render(
       <ToastProvider>
         <PerfilPage />
       </ToastProvider>,
     )
 
+    // Botão no card do perfil ativo (perfil padrão = "🗑️ Excluir Conta")
     const botoesExcluir = screen.getAllByRole('button', { name: /excluir conta/i })
     expect(botoesExcluir.length).toBeGreaterThan(0)
 
     fireEvent.click(botoesExcluir[0])
-    expect(screen.getByText(/Limpar e Restaurar Perfil Principal\?/i)).toBeInTheDocument()
+    // Título do modal definido em PerfilPage.tsx linha 419
+    expect(screen.getByText(/Excluir Conta e Dados Definitivamente\?/i)).toBeInTheDocument()
   })
 
-  it('exibe botão de excluir perfil ao editar um perfil existente', async () => {
+  it('exibe botão de excluir perfil ao editar o perfil ativo', async () => {
     render(
       <ToastProvider>
         <PerfilPage />
       </ToastProvider>,
     )
 
+    // Botão "✏️ Editar Perfil" do card de destaque do perfil ativo
     const botaoEditar = screen.getByRole('button', { name: /editar perfil/i })
     fireEvent.click(botaoEditar)
 
+    // Form título quando editando
     expect(screen.getByText('Editar Perfil do Ateliê')).toBeInTheDocument()
+    // Botão de exclusão dentro do form de edição (linha 326 de PerfilPage.tsx)
     expect(screen.getByRole('button', { name: /excluir este perfil/i })).toBeInTheDocument()
   })
 })
-

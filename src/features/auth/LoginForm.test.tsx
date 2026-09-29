@@ -40,46 +40,43 @@ describe('LoginForm', () => {
     vi.clearAllMocks()
   })
 
-  const mockSession = () => {
-    // Simula que o usuário logou no Supabase
-    const sessaoMock = { user: { email: 'test@example.com' } }
-    vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({ data: { session: sessaoMock } } as any)
-    vi.mocked(supabase.auth.onAuthStateChange).mockImplementationOnce((callback: any) => {
-      callback('SIGNED_IN', sessaoMock)
-      return { data: { subscription: { unsubscribe: vi.fn() } } } as any
-    })
-  }
-
-  it('mostra tela de login padrão primeiro', async () => {
-    useAuthStore.setState({ autenticado: false, contaConfigurada: false })
+  it('mostra tela de login para conta já configurada com botão Entrar', async () => {
+    // contaConfigurada: true → modoCadastro permanece false → botão submit = "Entrar"
+    useAuthStore.setState({ autenticado: false, contaConfigurada: true })
     render(<LoginForm />)
-    expect(await screen.findByRole('tab', { name: /entrar/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /entrar na conta/i })).toBeInTheDocument()
+    // Verifica que o campo de senha existe e o botão de submit é "Entrar"
+    expect(await screen.findByPlaceholderText('Digite sua senha')).toBeInTheDocument()
+    // O submit button tem texto "Entrar" — usamos getAllByRole pois há 2 botões "Entrar"
+    // (um no toggle e um no submit); ambos confirmam que o modo login está ativo
+    const botoesEntrar = screen.getAllByRole('button', { name: /^Entrar$/ })
+    expect(botoesEntrar.length).toBeGreaterThan(0)
   })
 
-  it('mostra aba de criação de conta', async () => {
-    useAuthStore.setState({ autenticado: false, contaConfigurada: false })
+  it('alterna para modo cadastro ao clicar em "Criar Conta" e mostra botão Cadastrar', async () => {
+    useAuthStore.setState({ autenticado: false, contaConfigurada: true })
     render(<LoginForm />)
-    fireEvent.click(screen.getByRole('tab', { name: /criar conta/i }))
-    expect(await screen.findByRole('button', { name: /criar conta/i })).toBeInTheDocument()
+    // Clica no botão "Criar Conta" para trocar de modo
+    fireEvent.click(screen.getByRole('button', { name: /^Criar Conta$/ }))
+    // Agora o botão de submit deve ser "Cadastrar"
+    expect(await screen.findByRole('button', { name: /^Cadastrar$/ })).toBeInTheDocument()
   })
 
   it('cria conta e navega para a rota inicial', async () => {
+    // contaConfigurada: false → useEffect força modoCadastro=true → botão já é "Cadastrar"
     useAuthStore.setState({ autenticado: false, contaConfigurada: false })
     vi.mocked(supabase.auth.signUp).mockResolvedValueOnce({ data: { session: { user: { id: '123' } } }, error: null } as any)
     render(<LoginForm />)
-    
-    fireEvent.click(screen.getByRole('tab', { name: /criar conta/i }))
-    
-    const inputEmail = await screen.findByPlaceholderText('seu@email.com')
-    const inputSenha = await screen.findByPlaceholderText('Crie uma senha forte')
-    const inputConfirmar = await screen.findByPlaceholderText('Repita a senha')
-    
+
+    const inputEmail = await screen.findByPlaceholderText('Digite seu usuário ou e-mail')
+    const inputSenha = await screen.findByPlaceholderText('Digite sua senha')
+    const inputConfirmar = await screen.findByPlaceholderText('Confirme sua senha')
+
     fireEvent.change(inputEmail, { target: { value: 'test@example.com' } })
     fireEvent.change(inputSenha, { target: { value: 'senha-forte-123' } })
     fireEvent.change(inputConfirmar, { target: { value: 'senha-forte-123' } })
-    
-    fireEvent.click(screen.getByRole('button', { name: /criar conta/i }))
+
+    // Clica no botão de submit "Cadastrar"
+    fireEvent.click(screen.getByRole('button', { name: /^Cadastrar$/ }))
 
     await waitFor(() => expect(navegarMock).toHaveBeenCalledWith({ to: '/' }))
   })
@@ -90,15 +87,16 @@ describe('LoginForm', () => {
     useAuthStore.setState({ autenticado: false, contaConfigurada: true })
 
     render(<LoginForm />)
-    
-    const inputEmail = await screen.findByPlaceholderText('seu@email.com')
-    const input = await screen.findByPlaceholderText('Sua senha')
-    
-    fireEvent.change(inputEmail, { target: { value: 'test@example.com' } })
-    fireEvent.change(input, { target: { value: 'senha-errada' } })
-    fireEvent.click(screen.getByRole('button', { name: /entrar na conta/i }))
 
-    expect(await screen.findByText(/senha ou e-mail incorretos/i, {}, { timeout: 5000 })).toBeInTheDocument()
+    const inputSenha = await screen.findByPlaceholderText('Digite sua senha')
+    fireEvent.change(inputSenha, { target: { value: 'senha-errada' } })
+
+    // Submit é o último botão "Entrar" (o toggle tem o mesmo texto)
+    const botoesEntrar = screen.getAllByRole('button', { name: /^Entrar$/ })
+    fireEvent.click(botoesEntrar[botoesEntrar.length - 1])
+
+    // Erro exato definido na linha 76 de LoginForm.tsx: 'Senha incorreta.'
+    expect(await screen.findByText(/senha incorreta/i, {}, { timeout: 5000 })).toBeInTheDocument()
     expect(navegarMock).not.toHaveBeenCalled()
   })
 })
