@@ -40,6 +40,8 @@ describe('MiauDelierDB schema', () => {
         'notificacoes',
         'pecas',
         'pedidos',
+        'syncMetadata',
+        'syncQueue',
         'taxas',
         'transacoes',
       ].sort(),
