@@ -27,7 +27,7 @@ const TABELAS = [
   'auditoria',
 ] as const
 
-type Envelope = { dados: Record<string, unknown[]>; checksum: string }
+type Envelope = { app: string; versao: string; dados: Record<string, unknown[]>; checksum: string }
 
 function ehObjeto(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === 'object' && valor !== null && !Array.isArray(valor)
@@ -49,6 +49,11 @@ function validarEnvelope(json: string): Envelope {
       'arquivo de backup inválido — esperado um objeto com as propriedades "dados" e "checksum"',
     )
   }
+  
+  if (parsed.app !== 'MiauDelier_Manager') {
+    throw new Error('arquivo de backup inválido — este arquivo não foi gerado pelo MiauDelier Manager.')
+  }
+  
   return parsed as unknown as Envelope
 }
 
@@ -79,6 +84,19 @@ function validarAutenticacao(dados: Record<string, unknown[]>): void {
   }
 }
 
+async function validarContaIgual(dados: Record<string, unknown[]>, dbAlvo: MiauDelierDB): Promise<void> {
+  const configuracaoLocal = await dbAlvo.configuracoes.where('chave').equals(CHAVE_SALT).first();
+  if (configuracaoLocal) {
+    const configuracoesBackup = dados.configuracoes;
+    if (Array.isArray(configuracoesBackup)) {
+      const configBackupSalt = configuracoesBackup.find(linha => ehObjeto(linha) && linha.chave === CHAVE_SALT) as any;
+      if (configBackupSalt && configBackupSalt.valor !== configuracaoLocal.valor) {
+        throw new Error('Aviso de Segurança: Este backup pertence a outra conta. Por segurança, só é permitido restaurar backups gerados por esta mesma conta.');
+      }
+    }
+  }
+}
+
 export async function exportarBackup(): Promise<string> {
   try {
     const dados: Record<string, unknown[]> = {}
@@ -93,7 +111,13 @@ export async function exportarBackup(): Promise<string> {
     await db.backups.add({ criadoEm, checksum, tamanhoBytes: dadosSerializados.length })
     await logInfo('backup', 'Backup exportado com sucesso', { checksum, tamanhoBytes: dadosSerializados.length })
 
-    return JSON.stringify({ dados, checksum, criadoEm })
+    return JSON.stringify({ 
+      app: 'MiauDelier_Manager',
+      versao: '1.0.0',
+      dados, 
+      checksum, 
+      criadoEm 
+    })
   } catch (err) {
     await logError('backup', 'Erro ao exportar backup', err)
     throw err
@@ -115,6 +139,7 @@ export async function importarBackup(json: string, targetDb?: MiauDelierDB): Pro
     }
 
     validarAutenticacao(parsed.dados)
+    await validarContaIgual(parsed.dados, dbAlvo)
     for (const nomeTabela of TABELAS) {
       validarLinhasDaTabela(nomeTabela, parsed.dados[nomeTabela] ?? [])
     }
