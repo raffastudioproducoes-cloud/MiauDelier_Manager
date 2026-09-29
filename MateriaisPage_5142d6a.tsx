@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -9,7 +9,6 @@ import { Tabs } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/useToast'
 import { criarCategoriaMaterial, listarCategoriasMaterial } from './categoriasMaterialRepo'
 import {
-  criarMaterial,
   listarMateriais,
   registrarCompraMaterial,
   excluirMaterial,
@@ -17,20 +16,20 @@ import {
 import { listarContas, type ContaDecifrada } from '../financeiro/contasRepo'
 import type { CategoriaMaterial, Material, TipoClassificacaoMaterial } from '../../db/schema'
 
-// ─── Divisões padrão do sistema (fixas, sempre presentes) ──────────────────
+// ÔöÇÔöÇÔöÇ Divis├Áes padr├úo do sistema (fixas, sempre presentes) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 export const DIVISOES_PADRAO = [
-  { id: 'consumivel', nome: 'Insumos / Consumíveis', icone: '🧪', desc: 'Resinas, silicones, pigmentos, enfeites' },
-  { id: 'ferramenta', nome: 'Ferramentas & Equipamentos', icone: '🛠️', desc: 'Estufas, incubadoras, sopradores, politrizes' },
-  { id: 'administrativo', nome: 'Administrativo & Embalagens', icone: '📦', desc: 'Papel, etiquetas, caixas, fitas' },
-  { id: 'epi', nome: 'EPIs & Proteção', icone: '🥽', desc: 'Luvas, máscaras, toucas, refis' },
+  { id: 'consumivel', nome: 'Insumos / Consum├¡veis', icone: '­ƒº¬', desc: 'Resinas, silicones, pigmentos, enfeites' },
+  { id: 'ferramenta', nome: 'Ferramentas & Equipamentos', icone: '­ƒøá´©Å', desc: 'Estufas, incubadoras, sopradores, politrizes' },
+  { id: 'administrativo', nome: 'Administrativo & Embalagens', icone: '­ƒôª', desc: 'Papel, etiquetas, caixas, fitas' },
+  { id: 'epi', nome: 'EPIs & Prote├º├úo', icone: '­ƒÑ¢', desc: 'Luvas, m├íscaras, toucas, refis' },
 ] as const
 
 export const DIVISOES_ESTOQUE = [
-  { id: 'todos', rotulo: 'Todos', icone: '🌐' },
-  { id: 'consumivel', rotulo: 'Insumos / Consumíveis', icone: '🧪', desc: 'Resinas, silicones, pigmentos, enfeites' },
-  { id: 'ferramenta', rotulo: 'Ferramentas & Equipamentos', icone: '🛠️', desc: 'Estufas, incubadoras, sopradores, politrizes' },
-  { id: 'administrativo', rotulo: 'Administrativo & Embalagens', icone: '📦', desc: 'Papel, etiquetas, caixas, fitas' },
-  { id: 'epi', rotulo: 'EPIs & Proteção', icone: '🥽', desc: 'Luvas, máscaras, toucas, refis' },
+  { id: 'todos', rotulo: 'Todos', icone: '­ƒîÉ' },
+  { id: 'consumivel', rotulo: 'Insumos / Consum├¡veis', icone: '­ƒº¬', desc: 'Resinas, silicones, pigmentos, enfeites' },
+  { id: 'ferramenta', rotulo: 'Ferramentas & Equipamentos', icone: '­ƒøá´©Å', desc: 'Estufas, incubadoras, sopradores, politrizes' },
+  { id: 'administrativo', rotulo: 'Administrativo & Embalagens', icone: '­ƒôª', desc: 'Papel, etiquetas, caixas, fitas' },
+  { id: 'epi', rotulo: 'EPIs & Prote├º├úo', icone: '­ƒÑ¢', desc: 'Luvas, m├íscaras, toucas, refis' },
 ] as const
 
 export function obterClassificacaoMaterial(
@@ -49,14 +48,14 @@ export function obterClassificacaoMaterial(
 
 export const GRUPOS_UNIDADES = [
   {
-    titulo: 'Volume / Líquido',
+    titulo: 'Volume / L├¡quido',
     opcoes: [
       { valor: 'ml', rotulo: 'Mililitro (ml)' },
       { valor: 'l', rotulo: 'Litro (l)' },
     ],
   },
   {
-    titulo: 'Massa / Sólido / Grão',
+    titulo: 'Massa / S├│lido / Gr├úo',
     opcoes: [
       { valor: 'g', rotulo: 'Grama (g)' },
       { valor: 'kg', rotulo: 'Quilograma (kg)' },
@@ -75,9 +74,9 @@ export const GRUPOS_UNIDADES = [
     ],
   },
   {
-    titulo: 'Comprimento / Dimensão',
+    titulo: 'Comprimento / Dimens├úo',
     opcoes: [
-      { valor: 'cm', rotulo: 'Centímetro (cm)' },
+      { valor: 'cm', rotulo: 'Cent├¡metro (cm)' },
       { valor: 'm', rotulo: 'Metro (m)' },
     ],
   },
@@ -91,7 +90,7 @@ function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-// Tipo de ID de aba de filtro: pode ser 'todos', um dos IDs padrão, ou 'cat_<id>' para divisões customizadas
+// Tipo de ID de aba de filtro: pode ser 'todos', um dos IDs padr├úo, ou 'cat_<id>' para divis├Áes customizadas
 type FiltroId = 'todos' | TipoClassificacaoMaterial | string
 
 export function MateriaisPage() {
@@ -104,7 +103,7 @@ export function MateriaisPage() {
 
   const [materialExcluindoId, setMaterialExcluindoId] = useState<number | null>(null)
 
-  // Formulário Entrada de Compras / Reposição
+  // Formul├írio Entrada de Compras / Reposi├º├úo
   const [compraModo, setCompraModo] = useState<'existente' | 'novo'>('existente')
   const [compraMaterialId, setCompraMaterialId] = useState('')
   const [compraQtd, setCompraQtd] = useState('')
@@ -116,8 +115,8 @@ export function MateriaisPage() {
   const [compraNovoNome, setCompraNovoNome] = useState('')
   const [compraNovoUnidadeSelecao, setCompraNovoUnidadeSelecao] = useState('ml')
   const [compraNovoUnidadeCustom, setCompraNovoUnidadeCustom] = useState('')
-  const [compraNovaDiv, setCompraNovaDiv] = useState('consumivel') // ID da divisão padrão ou 'cat_<id>' para custom
-  // Formulário Cadastro Básico
+  const [compraNovaDiv, setCompraNovaDiv] = useState('consumivel') // ID da divis├úo padr├úo ou 'cat_<id>' para custom
+  // Formul├írio Cadastro B├ísico
   const [cadastroBasicoNome, setCadastroBasicoNome] = useState('')
   const [cadastroBasicoUnidadeSelecao, setCadastroBasicoUnidadeSelecao] = useState('ml')
   const [cadastroBasicoUnidadeCustom, setCadastroBasicoUnidadeCustom] = useState('')
@@ -174,16 +173,16 @@ export function MateriaisPage() {
     setAbaAtiva('compra')
   }
 
-  // Divisões customizadas do banco (sem as padrão e sem 'Geral')
+  // Divis├Áes customizadas do banco (sem as padr├úo e sem 'Geral')
   const divisoesCustom = categorias.filter(
     (c) => !c.categoriaPaiId && c.nome !== 'Geral' && !NOMES_PADRAO_FIXOS.has(c.nome.toLowerCase()),
   )
 
-  // Lista completa de filtros: Todos + 4 padrão + divisões custom do user
+  // Lista completa de filtros: Todos + 4 padr├úo + divis├Áes custom do user
   const todosFiltros = [
-    { id: 'todos', rotulo: 'Todos', icone: '🌐' },
+    { id: 'todos', rotulo: 'Todos', icone: '­ƒîÉ' },
     ...DIVISOES_ESTOQUE.filter((d) => d.id !== 'todos').map((d) => ({ id: d.id, rotulo: d.rotulo, icone: d.icone })),
-    ...divisoesCustom.map((c) => ({ id: `cat_${c.id}`, rotulo: c.nome, icone: '📁' })),
+    ...divisoesCustom.map((c) => ({ id: `cat_${c.id}`, rotulo: c.nome, icone: '­ƒôü' })),
   ]
 
   function obterMaterialClassifTotal(m: Material): FiltroId {
@@ -205,7 +204,7 @@ export function MateriaisPage() {
     const valorTotal = valorProdutos + valorFrete
 
     if (!Number.isFinite(qtd) || qtd <= 0) {
-      setErroCompra('Informe uma quantidade comprada válida e maior que zero.')
+      setErroCompra('Informe uma quantidade comprada v├ílida e maior que zero.')
       return
     }
     if (!Number.isFinite(valorTotal) || valorTotal < 0) {
@@ -245,15 +244,15 @@ export function MateriaisPage() {
           return
         }
 
-        // Descobrir categoriaId a partir da divisão selecionada
+        // Descobrir categoriaId a partir da divis├úo selecionada
         let catIdFinal: number | undefined
         let tipoClassif: TipoClassificacaoMaterial | undefined
 
         if (compraNovaDiv.startsWith('cat_')) {
-          // Divisão customizada
+          // Divis├úo customizada
           catIdFinal = Number(compraNovaDiv.replace('cat_', ''))
         } else {
-          // Divisão padrão: mapear para tipo e usar/criar categoria 'Geral' do banco
+          // Divis├úo padr├úo: mapear para tipo e usar/criar categoria 'Geral' do banco
           tipoClassif = compraNovaDiv as TipoClassificacaoMaterial
           // Busca ou cria uma categoria 'Geral' para servir como anchor
           const catGeral = categorias.find((c) => c.nome === 'Geral')
@@ -357,7 +356,7 @@ export function MateriaisPage() {
       return
     }
     if (!montado.current) return
-    mostrarToast('Material excluído com sucesso')
+    mostrarToast('Material exclu├¡do com sucesso')
     setMaterialExcluindoId(null)
     await recarregar()
   }
@@ -376,7 +375,7 @@ export function MateriaisPage() {
       <div>
         <h1 className="text-xl font-semibold text-on-surface">Materiais & Insumos</h1>
         <p className="text-label-sm text-on-surface-variant">
-          Controle de estoque, compras e custos unitários do ateliê.
+          Controle de estoque, compras e custos unit├írios do ateli├¬.
         </p>
       </div>
 
@@ -386,12 +385,12 @@ export function MateriaisPage() {
         abas={[
           {
             id: 'estoque',
-            rotulo: '📦 Estoque Atual',
+            rotulo: '­ƒôª Estoque Atual',
             conteudo: (
               <div className="flex flex-col gap-6">
                 <Card className="flex flex-col gap-4">
                   <div>
-                    <h2 className="text-base font-semibold text-on-surface">Novo material (cadastro básico)</h2>
+                    <h2 className="text-base font-semibold text-on-surface">Novo material (cadastro b├ísico)</h2>
                     <p className="text-xs text-on-surface-variant">Cadastre um novo material rapidamente.</p>
                   </div>
                   <form onSubmit={handleCadastrarBasico} className="flex flex-col gap-4">
@@ -399,7 +398,7 @@ export function MateriaisPage() {
                       <TextField
                         id="cadastro-basico-nome"
                         rotulo="Nome do material"
-                        placeholder="Ex: Essência de Lavanda"
+                        placeholder="Ex: Ess├¬ncia de Lavanda"
                         value={cadastroBasicoNome}
                         onChange={(e) => setCadastroBasicoNome(e.target.value)}
                         required
@@ -419,16 +418,14 @@ export function MateriaisPage() {
                             }}
                             className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                           >
-                            {GRUPOS_UNIDADES.map((grupo) => (
-                              <optgroup key={grupo.titulo} label={grupo.titulo}>
-                                {grupo.opcoes.map((opcao) => (
-                                  <option key={opcao.valor} value={opcao.valor}>
-                                    {opcao.rotulo}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            ))}
-                            <option value="__outra__">+ Outra unidade (especificar)</option>
+                            <option value="ml">Mililitros (ml)</option>
+                            <option value="L">Litros (L)</option>
+                            <option value="g">Gramas (g)</option>
+                            <option value="kg">Quilogramas (kg)</option>
+                            <option value="un">Unidades (un)</option>
+                            <option value="cm">Cent├¡metros (cm)</option>
+                            <option value="m">Metros (m)</option>
+                            <option value="__outra__">Outra / Personalizada</option>
                           </select>
                         </div>
                         {cadastroBasicoUnidadeSelecao === '__outra__' && (
@@ -443,29 +440,20 @@ export function MateriaisPage() {
                         )}
                       </div>
 
-                      <div>
-                        <TextField
-                          id="cadastro-basico-qtd"
-                          rotulo="Estoque inicial / Quantidade atual"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0"
-                          value={cadastroBasicoQtd}
-                          onChange={(e) => setCadastroBasicoQtd(e.target.value)}
-                        />
-                        <p className="mt-1 text-xs text-on-surface-variant flex gap-1">
-                          <span>📦</span>
-                          <span>
-                            <strong>Estoque a entrar:</strong> {cadastroBasicoQtd ? cadastroBasicoQtd : '0'}{' '}
-                            {cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom || 'unidade' : cadastroBasicoUnidadeSelecao}. Esta é a quantidade física inicial que você está acrescentando para este material.
-                          </span>
-                        </p>
-                      </div>
+                      <TextField
+                        id="cadastro-basico-qtd"
+                        rotulo="Estoque inicial"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0"
+                        value={cadastroBasicoQtd}
+                        onChange={(e) => setCadastroBasicoQtd(e.target.value)}
+                      />
 
                       <TextField
                         id="cadastro-basico-custo"
-                        rotulo="Custo unitário (R$)"
+                        rotulo="Custo unit├írio (R$)"
                         type="number"
                         min="0"
                         step="0.01"
@@ -474,32 +462,19 @@ export function MateriaisPage() {
                         onChange={(e) => setCadastroBasicoCusto(e.target.value)}
                       />
 
-                      <div>
-                        <TextField
-                          id="cadastro-basico-frete"
-                          rotulo="Valor do Frete / Taxa (R$ - opcional)"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Ex: 15.00"
-                          value={cadastroBasicoFrete}
-                          onChange={(e) => setCadastroBasicoFrete(e.target.value)}
-                        />
-                      </div>
-                      
-                      {Number(cadastroBasicoFrete) > 0 && Number(cadastroBasicoQtd) > 0 && Number(cadastroBasicoCusto) >= 0 && (
-                        <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 text-xs text-on-surface col-span-1 sm:col-span-2 lg:col-span-3">
-                          <p className="font-semibold text-primary">
-                            💡 Resumo de Frete Rateado no Custo:
-                          </p>
-                          <p className="mt-0.5">
-                            Base: {formatarMoeda(Number(cadastroBasicoCusto))}/{cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom || 'unidade' : cadastroBasicoUnidadeSelecao} + Frete Rateado: +{formatarMoeda(Number(cadastroBasicoFrete) / Number(cadastroBasicoQtd))}/{cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom || 'unidade' : cadastroBasicoUnidadeSelecao} = <strong>Custo Unitário Efetivo: {formatarMoeda(Number(cadastroBasicoCusto) + (Number(cadastroBasicoFrete) / Number(cadastroBasicoQtd)))}/{cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom || 'unidade' : cadastroBasicoUnidadeSelecao}</strong>
-                          </p>
-                        </div>
-                      )}
+                      <TextField
+                        id="cadastro-basico-frete"
+                        rotulo="Frete / Taxa (R$)"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={cadastroBasicoFrete}
+                        onChange={(e) => setCadastroBasicoFrete(e.target.value)}
+                      />
 
                       <div className="flex flex-col gap-1">
-                        <label htmlFor="cadastro-basico-divisao" className="text-xs font-medium text-on-surface">Divisão / Tipo</label>
+                        <label htmlFor="cadastro-basico-divisao" className="text-xs font-medium text-on-surface">Divis├úo / Tipo</label>
                         <select
                           id="cadastro-basico-divisao"
                           value={cadastroBasicoDiv}
@@ -510,13 +485,13 @@ export function MateriaisPage() {
                             <option key={t.id} value={t.id}>{t.icone} {t.nome}</option>
                           ))}
                           {categorias.map(c => (
-                            <option key={`cat_${c.id}`} value={`cat_${c.id}`}>📁 {c.nome}</option>
+                            <option key={`cat_${c.id}`} value={`cat_${c.id}`}>­ƒôü {c.nome}</option>
                           ))}
                         </select>
                       </div>
                     </div>
                     <div className="flex justify-end mt-2 border-t border-outline-variant/30 pt-4">
-                      <Button type="submit" variante="primary">
+                      <Button tipo="submit" variante="primary">
                         + Cadastrar Material
                       </Button>
                     </div>
@@ -528,11 +503,11 @@ export function MateriaisPage() {
                     <div>
                       <h2 className="text-sm font-semibold text-on-surface">Materiais em Estoque</h2>
                       <p className="text-xs text-on-surface-variant">
-                        Filtre pelas divisões do estoque para visualizar cada tipo de material.
+                        Filtre pelas divis├Áes do estoque para visualizar cada tipo de material.
                       </p>
                     </div>
                     <Button variante="primary" onClick={() => setAbaAtiva('compra')}>
-                      🛒 Registrar Nova Compra
+                      ­ƒøÆ Registrar Nova Compra
                     </Button>
                   </div>
 
@@ -587,7 +562,7 @@ export function MateriaisPage() {
                           descricao={
                             filtroAtivo === 'todos'
                               ? 'Cadastre o primeiro insumo ou registre uma compra.'
-                              : 'Cadastre materiais atribuindo esta divisão no formulário acima.'
+                              : 'Cadastre materiais atribuindo esta divis├úo no formul├írio acima.'
                           }
                         />
                       )
@@ -601,12 +576,12 @@ export function MateriaisPage() {
                           const classif = obterClassificacaoMaterial(material, categorias)
                           const metaBadge =
                             classif === 'consumivel'
-                              ? { label: '🧪 INSUMO', style: 'text-emerald-700 bg-emerald-500/10 border-emerald-500/30' }
+                              ? { label: '­ƒº¬ INSUMO', style: 'text-emerald-700 bg-emerald-500/10 border-emerald-500/30' }
                               : classif === 'ferramenta'
-                              ? { label: '🛠️ FERRAMENTA', style: 'text-amber-700 bg-amber-500/10 border-amber-500/30' }
+                              ? { label: '­ƒøá´©Å FERRAMENTA', style: 'text-amber-700 bg-amber-500/10 border-amber-500/30' }
                               : classif === 'administrativo'
-                              ? { label: '📦 ADM / EMBALAGEM', style: 'text-purple-700 bg-purple-500/10 border-purple-500/30' }
-                              : { label: '🥽 EPI', style: 'text-cyan-700 bg-cyan-500/10 border-cyan-500/30' }
+                              ? { label: '­ƒôª ADM / EMBALAGEM', style: 'text-purple-700 bg-purple-500/10 border-purple-500/30' }
+                              : { label: '­ƒÑ¢ EPI', style: 'text-cyan-700 bg-cyan-500/10 border-cyan-500/30' }
 
                           return (
                             <div key={material.id} className="relative flex flex-col sm:flex-row items-start gap-4">
@@ -641,11 +616,11 @@ export function MateriaisPage() {
                                       {metaBadge.label}
                                     </span>
                                     <span className="text-[11px] font-bold uppercase text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-                                      🏷️ {nomeCategoria(material.categoriaId, material.subcategoriaId)}
+                                      ­ƒÅÀ´©Å {nomeCategoria(material.categoriaId, material.subcategoriaId)}
                                     </span>
                                     {ehZerado && (
                                       <span className="text-[11px] font-bold uppercase text-error bg-error/10 px-2 py-0.5 rounded border border-error/20">
-                                        ⚠️ Sem Estoque
+                                        ÔÜá´©Å Sem Estoque
                                       </span>
                                     )}
                                   </div>
@@ -658,7 +633,7 @@ export function MateriaisPage() {
                                   <div>
                                     <h3 className="font-semibold text-base text-on-surface">{material.nome}</h3>
                                     <p className="text-xs text-on-surface-variant mt-0.5">
-                                      {material.quantidadeEstoque} {material.unidade} em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade}{material.valorFrete !== undefined && material.valorFrete > 0 ? ` (Frete: ${formatarMoeda(material.valorFrete)})` : ''}
+                                      {material.quantidadeEstoque} {material.unidade} em estoque ┬À Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade}{material.valorFrete !== undefined && material.valorFrete > 0 ? ` (Frete: ${formatarMoeda(material.valorFrete)})` : ''}
                                     </p>
                                   </div>
 
@@ -668,7 +643,7 @@ export function MateriaisPage() {
                                       className="text-xs"
                                       onClick={() => material.id !== undefined && iniciarCompraParaMaterial(material.id)}
                                     >
-                                      🛒 Repor Estoque
+                                      ­ƒøÆ Repor Estoque
                                     </Button>
                                     <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setMaterialExcluindoId(material.id ?? null)}>
                                       Excluir
@@ -688,13 +663,13 @@ export function MateriaisPage() {
           },
           {
             id: 'compra',
-            rotulo: '🛒 Registrar Compra / Reposição',
+            rotulo: '­ƒøÆ Registrar Compra / Reposi├º├úo',
             conteudo: (
               <Card>
                 <div className="mb-4">
-                  <h2 className="text-lg font-semibold text-on-surface">Entrada de Produtos Recém-Comprados</h2>
+                  <h2 className="text-lg font-semibold text-on-surface">Entrada de Produtos Rec├®m-Comprados</h2>
                   <p className="mt-1 text-sm text-on-surface-variant">
-                    Registre a compra de novos insumos para repor estoque, recalcular custo unitário e lançar a despesa
+                    Registre a compra de novos insumos para repor estoque, recalcular custo unit├írio e lan├ºar a despesa
                     automaticamente no caixa.
                   </p>
                 </div>
@@ -739,7 +714,7 @@ export function MateriaisPage() {
                         <option value="">Selecione o produto...</option>
                         {materiais.map((mat) => (
                           <option key={mat.id} value={mat.id}>
-                            {mat.nome} ({mat.quantidadeEstoque} {mat.unidade} atual · Custo: {formatarMoeda(mat.custoUnitario)}/{mat.unidade})
+                            {mat.nome} ({mat.quantidadeEstoque} {mat.unidade} atual ┬À Custo: {formatarMoeda(mat.custoUnitario)}/{mat.unidade})
                           </option>
                         ))}
                       </select>
@@ -787,7 +762,7 @@ export function MateriaisPage() {
 
                       <div className="flex flex-col gap-1">
                         <label htmlFor="compra-novo-divisao" className="text-sm font-medium text-on-surface">
-                          Divisão / Tipo
+                          Divis├úo / Tipo
                         </label>
                         <select
                           id="compra-novo-divisao"
@@ -801,10 +776,10 @@ export function MateriaisPage() {
                             </option>
                           ))}
                           {divisoesCustom.length > 0 && (
-                            <optgroup label="Divisões Personalizadas">
+                            <optgroup label="Divis├Áes Personalizadas">
                               {divisoesCustom.map((c) => (
                                 <option key={c.id} value={`cat_${c.id}`}>
-                                  📁 {c.nome}
+                                  ­ƒôü {c.nome}
                                 </option>
                               ))}
                             </optgroup>
@@ -826,7 +801,7 @@ export function MateriaisPage() {
                       />
                       {materialSelecionadoCompra && (
                         <p className="mt-1 text-xs text-on-surface-variant flex items-center gap-1">
-                          <span>📦</span>
+                          <span>­ƒôª</span>
                           <span>
                             <strong>Estoque atual:</strong> {materialSelecionadoCompra.quantidadeEstoque}{' '}
                             {materialSelecionadoCompra.unidade}. Novo total:{' '}
@@ -858,7 +833,7 @@ export function MateriaisPage() {
                   {Number(compraQtd) > 0 && (Number(compraValorTotal) >= 0 || Number(compraValorFrete) > 0) && (
                     <div className="rounded-lg bg-surface-container-high p-3 text-sm text-on-surface">
                       <p className="font-semibold text-primary">
-                        Custo Unitário desta compra (com frete):{' '}
+                        Custo Unit├írio desta compra (com frete):{' '}
                         {formatarMoeda((Number(compraValorTotal) + Number(compraValorFrete || 0)) / Number(compraQtd))}/{' '}
                         {materialSelecionadoCompra
                           ? materialSelecionadoCompra.unidade
@@ -882,14 +857,14 @@ export function MateriaisPage() {
                         onChange={(e) => setCompraAtualizarCusto(e.target.checked)}
                         className="rounded text-primary focus:ring-primary"
                       />
-                      Atualizar o custo unitário do cadastro para o custo desta nova compra
+                      Atualizar o custo unit├írio do cadastro para o custo desta nova compra
                     </label>
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <label htmlFor="compra-conta" className="text-sm font-medium text-on-surface">
-                        Lançar Despesa no Financeiro
+                        Lan├ºar Despesa no Financeiro
                       </label>
                       <select
                         id="compra-conta"
@@ -897,7 +872,7 @@ export function MateriaisPage() {
                         onChange={(e) => setCompraContaId(e.target.value)}
                         className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                       >
-                        <option value="">Não lançar no financeiro</option>
+                        <option value="">N├úo lan├ºar no financeiro</option>
                         {contas.map((conta) => (
                           <option key={conta.id} value={conta.id}>
                             {conta.nome} (Saldo atual: {formatarMoeda(conta.saldo)})
@@ -937,7 +912,7 @@ export function MateriaisPage() {
       <ConfirmModal
         aberto={materialExcluindoId !== null}
         titulo="Excluir material?"
-        descricao="Isso não afeta peças já criadas com este material."
+        descricao="Isso n├úo afeta pe├ºas j├í criadas com este material."
         onConfirmar={() => materialExcluindoId !== null && handleExcluir(materialExcluindoId)}
         onCancelar={() => setMaterialExcluindoId(null)}
       />
