@@ -185,9 +185,9 @@ Este README é a fonte pública de verdade sobre o projeto. A documentação de 
 - [x] Produção e estoque (materiais, formas, peças)
 - [x] Vendas (precificação na tela, clientes, pedidos)
 - [x] Financeiro, tela de backup e PWA instalável
-- [ ] Assistente de IA opcional (Gemini)
-- [ ] CI de lint/test/build e deploy contínuo
-- [ ] Fase 7: Sincronização em nuvem e login social com Supabase (Em andamento: Schema e RLS Multi-tenant 100% migrados)
+- [x] Assistente de IA opcional (Gemini)
+- [x] CI de lint/test/build e deploy contínuo
+- [ ] Fase 7: Autenticação em nuvem (Google/Email) e Sincronização com Supabase (Login 100% concluído! Faltam mesclagem de perfis e o mecanismo de sync real-time)
 
 ## Licença
 
