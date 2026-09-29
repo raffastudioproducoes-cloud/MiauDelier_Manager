@@ -47,6 +47,11 @@ export function ehBackupGestoraX(json: string): boolean {
     const parsed = JSON.parse(json)
     if (!ehObjeto(parsed)) return false
 
+    // Se for claramente um backup nativo do MiauDelier, não é GestoraX
+    if (typeof parsed.checksum === 'string' && ehObjeto(parsed.dados)) {
+      return false
+    }
+
     const app = String(parsed.aplicacao ?? '').toLowerCase()
     if (app === 'gestorax' || app === 'nexora-erp-pro' || app.includes('gestorax') || app.includes('nexora')) {
       return true
@@ -54,7 +59,7 @@ export function ehBackupGestoraX(json: string): boolean {
 
     if (ehObjeto(parsed.dados)) {
       const chaves = Object.keys(parsed.dados)
-      if (chaves.includes('consumosPeca') || chaves.includes('eventosPeca') || chaves.includes('perfilUsuario')) {
+      if (chaves.includes('perfilUsuario') || chaves.includes('equipamentos') || chaves.includes('notificacoes')) {
         return true
       }
     }
