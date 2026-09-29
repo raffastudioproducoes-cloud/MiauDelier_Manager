@@ -37,7 +37,7 @@
 
 ## Apresentação
 
-**MiauDelier Manager** é um aplicativo web (PWA, local-first) para gestão do ateliê da **MiauDelier** e de outros profissionais que trabalham com resina epóxi e moldes de silicone. Reúne cálculo técnico de volume e mistura, precificação real, controle de produção, estoque, clientes/pedidos e financeiro em um único lugar, com todos os dados residindo no dispositivo da usuária.
+**MiauDelier Manager** é um aplicativo web (PWA, local-first) para gestão do ateliê da **MiauDelier** e de outros profissionais que trabalham com resina epóxi e moldes de silicone. Reúne cálculo técnico de volume e mistura, precificação real, controle de produção, estoque, clientes/pedidos e financeiro em um único lugar. Os dados residem primeiro no dispositivo da usuária e sincronizam na nuvem via Event Sourcing.
 
 Versão atual: **v1.0.0** · Idioma: **Português Brasileiro** · Plataforma: **Web (PWA)**
 
@@ -50,8 +50,8 @@ Transformar o controle manual do ofício de resina em decisões de produção e 
 - controlar estoque de insumos e moldes;
 - acompanhar peças em produção com histórico de eventos;
 - gerenciar clientes e pedidos;
-- manter o financeiro do ateliê (contas, transações) protegido por senha, mesmo offline;
-- exportar e restaurar os dados do negócio a qualquer momento, sem depender de nuvem de terceiros.
+- manter o financeiro do ateliê (contas, transações) protegido por criptografia de ponta-a-ponta, acessível mesmo offline;
+- exportar e restaurar os dados, além de contar com sincronização segura (Zero-Knowledge) na nuvem (Supabase).
 
 ## Público-alvo
 
@@ -78,10 +78,10 @@ Transformar o controle manual do ofício de resina em decisões de produção e 
 ## Tecnologias
 
 - **TypeScript 5.8**
-- **React 19.2** (SPA, sem servidor de aplicação)
+- **React 19.2** (SPA local-first integrada ao Supabase)
 - **TanStack Router** com roteamento por arquivo
 - **Vite 8.2** + **Vitest 3** para build e testes
-- **Dexie 4.4** sobre **IndexedDB** — persistência 100% local
+- **Dexie 4.4** sobre **IndexedDB** — persistência local-first sincronizada via Event Sourcing
 - **Zustand 5.0** para estado de sessão reativo
 - **zod** + **react-hook-form** — validação (a entrar nos formulários das próximas fases)
 - **WebCrypto** nativo (PBKDF2-SHA256 600.000 iterações + AES-GCM-256) — sem biblioteca de criptografia externa
@@ -112,7 +112,7 @@ MiauDelier-Manager/
 
 Princípios adotados:
 
-- **Local-first**: sem backend próprio, sem API HTTP de negócio, sem servidor de sessão;
+- **Local-first**: os dados vivem primeiro no dispositivo e são sincronizados via Event Sourcing com o backend (Supabase);
 - dado sensível cifrado em repouso com chave derivada da senha, nunca persistida;
 - toda leitura/escrita de campo cifrado passa por uma única camada (`camposCifrados.ts`) — nenhum acesso direto ao Dexie por fora dela;
 - schema de banco cobre todos os módulos do produto desde a primeira versão, para nunca precisar de migração dolorosa;
@@ -133,7 +133,7 @@ cd MiauDelier_Manager
 npm install
 ```
 
-Não há segredo ou variável de ambiente obrigatória para rodar localmente — o app funciona 100% offline (o módulo de IA, quando existir, será a única exceção, e a chave de API fica configurada pela própria usuária dentro do app, cifrada localmente).
+Para rodar com sincronização de nuvem, é necessário configurar as chaves do Supabase no arquivo `.env.local` (crie a partir do `.env.example`). O app também pode operar de modo 100% offline se configurado. A chave da API do Gemini (IA) fica configurada pela própria usuária na interface.
 
 ## Desenvolvimento e testes
 
@@ -164,8 +164,8 @@ Gera o bundle de produção em `dist/`. O app é uma SPA estática — qualquer 
 - Valor de conta e de transação é cifrado (AES-GCM) antes de tocar o disco; sem sessão aberta, a camada de cifra recusa ler ou escrever.
 - Login bloqueia temporariamente (backoff crescente) após 5 tentativas erradas seguidas, persistido no dispositivo — sobrevive a recarregar a página.
 - Backup exportado/importado valida checksum e formato do envelope antes de qualquer escrita no banco; um arquivo corrompido ou incompleto nunca é aplicado parcialmente.
-- Não existe fluxo de recuperação de senha automatizado — por não haver backend, a única via de recuperação é reimportar um backup anterior. Isso é uma decisão de produto, não uma lacuna.
-- Não há telemetria, analytics ou qualquer envio de dado do ateliê para fora do dispositivo, exceto a chamada opcional e explícita ao assistente de IA (quando existir), sempre condicionada a haver internet disponível.
+- Não existe fluxo de recuperação da senha-mestre local (Cofre), que é responsável por cifrar os dados. A plataforma usa autenticação na nuvem (Google/Email), mas a senha do Cofre local não pode ser recuperada remotamente (decisão Zero-Knowledge).
+- Os dados do ateliê são sincronizados, porém cifrados localmente antes do envio, garantindo privacidade ponta a ponta. O assistente de IA usa uma conexão direta protegida.
 
 ## Sincronização em Nuvem e Event Sourcing (Fase 7)
 
@@ -178,7 +178,7 @@ A partir da versão que inclui suporte à nuvem, a sincronização de dados func
 
 O MiauDelier Manager é uso proprietário e single-tenant — não há modelo de assinatura nem cobrança dentro do app.
 
-O módulo de IA é opcional e ainda não está implementado (ver Roadmap). Quando existir: usará a API gratuita do Gemini, só ativa com internet disponível, com instrução de sistema fixa que restringe o assistente ao domínio do ofício (resina, moldes, produção, precificação) — não editável pela usuária. A personalidade de resposta será selecionável entre opções pré-definidas, sem afrouxar essa restrição. A chave de API fica configurada pela própria usuária e é cifrada localmente pela mesma camada de segurança do restante do app.
+O módulo de IA utiliza a API gratuita do Gemini, sendo ativado somente com internet disponível, e possui restrição instrucional fixa ao domínio do ofício (resina, moldes, produção, precificação). A chave de API fica configurada pela própria usuária e é cifrada localmente pela mesma camada de segurança do restante do app.
 
 ## Documentação
 

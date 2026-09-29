@@ -13,7 +13,7 @@
 
 O **MiauDelier Manager** é um aplicativo web progressivo (PWA), operando no modelo *local-first*, concebido para a gestão integral de ateliês de resina epóxi e fabricação de moldes de silicone. O sistema unifica cálculos técnicos de volume e proporção de mistura, precificação com base em custos reais, controle de estoque de insumos e moldes, acompanhamento do ciclo de vida das peças, cadastro de clientes, gestão de pedidos, ledger financeiro cifrado e divulgação de produtos acabados para venda direta via WhatsApp.
 
-Todos os dados operacionais residem exclusivamente no dispositivo da usuária (IndexedDB via Dexie.js), garantindo privacidade total, operação offline contínua e independência de servidores centrais.
+Os dados operacionais residem inicialmente no dispositivo da usuária (IndexedDB via Dexie.js), garantindo operação offline contínua, e são sincronizados ativamente com a nuvem (Supabase) via arquitetura Event Sourcing e criptografia Zero-Knowledge, provendo segurança e disponibilidade.
 
 ---
 
@@ -116,4 +116,4 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 
 - **Instalador PWA Completo & Notifications Push**: Registro avançado de Service Worker para alertas nativos do SO ao concluir cura de peças/moldes.
 - **Integração CI/CD**: Pipeline automatizado de lint, testes e build para deploy contínuo em páginas estáticas. (Concluído)
-- **Fase 7 - Cloud e Autenticação (Supabase)**: O modelo híbrido com sincronização em nuvem via Supabase (PostgreSQL) está em andamento. Login social via Google e autenticação com Email + OTP estão operacionais. Restante da fase (Merge de contas, Apple Auth, Sincronização Dexie ↔ Supabase) em roadmap.
+- **Fase 7 - Cloud e Autenticação (Supabase)**: O modelo híbrido com sincronização em nuvem via Supabase (PostgreSQL) está **concluído**. Login social via Google, Email + OTP, mesclagem segura de perfis e a sincronização bidirecional robusta (Dexie ↔ Supabase via arquitetura Event Sourcing com validação Ledger) estão implementados e operacionais.
