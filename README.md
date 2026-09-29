@@ -187,7 +187,7 @@ Este README é a fonte pública de verdade sobre o projeto. A documentação de 
 - [x] Financeiro, tela de backup e PWA instalável
 - [x] Assistente de IA opcional (Gemini)
 - [x] CI de lint/test/build e deploy contínuo
-- [ ] Fase 7: Autenticação em nuvem (Google/Email) e Sincronização com Supabase (Login e Mesclagem de perfis concluídos! Falta apenas o mecanismo de sync real-time Dexie <-> Supabase)
+- [x] Fase 7: Autenticação em nuvem (Google/Email) e Sincronização com Supabase (Motor Event Sourcing Dexie <-> Supabase concluído!)
 
 ## Licença
 

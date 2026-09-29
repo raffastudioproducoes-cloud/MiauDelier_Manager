@@ -5,9 +5,16 @@ import { RouterProvider } from '@tanstack/react-router'
 import { getRouter } from './router'
 import { inicializarLoggerGlobal } from './lib/logger'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { registerDexieHooks, syncWithSupabase } from './lib/syncService'
 
 // Inicializa a captura global de falhas e eventos do sistema
 inicializarLoggerGlobal()
+
+// Inicia o motor de sincronização Event Sourcing (Supabase <-> Dexie)
+registerDexieHooks()
+setInterval(syncWithSupabase, 30_000)
+window.addEventListener('online', syncWithSupabase)
+window.addEventListener('focus', syncWithSupabase)
 
 import { registerSW } from 'virtual:pwa-register'
 registerSW({ immediate: true })

@@ -241,6 +241,22 @@ export interface LogSistema {
   stack?: string
 }
 
+export interface SyncEvent {
+  id?: string
+  tabela: string
+  registroId: string
+  acao: 'insert' | 'update' | 'delete'
+  dadosString: string
+  timestamp: number
+  sincronizado: boolean
+}
+
+export interface SyncMetadata {
+  id?: number
+  chave: string
+  valor: string
+}
+
 export class MiauDelierDB extends Dexie {
   categoriasMaterial!: EntityTable<CategoriaMaterial, 'id'>
   materiais!: EntityTable<Material, 'id'>
@@ -260,6 +276,8 @@ export class MiauDelierDB extends Dexie {
   equipamentos!: EntityTable<Equipamento, 'id'>
   taxas!: EntityTable<Taxa, 'id'>
   logs!: EntityTable<LogSistema, 'id'>
+  syncQueue!: EntityTable<SyncEvent, 'id'>
+  syncMetadata!: EntityTable<SyncMetadata, 'id'>
 
   constructor(dbName?: string) {
     super(dbName || getDbNameForPerfil())
@@ -293,8 +311,11 @@ export class MiauDelierDB extends Dexie {
     this.version(5).stores({
       logs: '++id, nivel, timestamp, origem',
     })
+    this.version(6).stores({
+      syncQueue: 'id, tabela, registroId, sincronizado, timestamp',
+      syncMetadata: '++id, &chave'
+    })
   }
 }
 
 export const db = new MiauDelierDB()
-
