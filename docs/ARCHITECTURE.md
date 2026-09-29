@@ -20,8 +20,9 @@ flowchart TD
         end
 
         subgraph SecurityLayer ["Camada de Segurança Zero-Knowledge"]
-          PBKDF2["Derivação de Chave (Senha do Cofre)"]
-          AESGCM["Criptografia de Campos (AES-GCM-256)"]
+          PBKDF2["Derivação KEKs (Senha/Frase)"]
+          DEKWRAP["DEK Wrappers (Empacotamento)"]
+          AESGCM["Criptografia de Dados (DEK AES-GCM)"]
         end
 
         subgraph StorageLayer ["Camada de Persistência Local"]
@@ -46,7 +47,7 @@ flowchart TD
 ### Fluxo de Autenticação e Dados Cifrados (Login de 2 Passos)
 
 1. **Autenticação de Identidade (Supabase):** O usuário efetua login com Google, Apple, ou Email + OTP (5 min). O Supabase valida a identidade e emite um JWT de sessão. Isso garante acesso à sincronização e respeita o RLS (`auth.uid() = user_id`).
-2. **Desbloqueio do Cofre (Zero-Knowledge):** Mesmo logado com OAuth, o usuário **deve** informar a sua **Senha do Cofre** localmente. O WebCrypto deriva a chave AES-GCM usando PBKDF2 (600.000 iterações) baseada exclusivamente nesta senha. A senha e a chave nunca são salvas.
+2. **Desbloqueio e Recuperação do Cofre (DEK/KEK):** Mesmo logado com a nuvem, o usuário **deve** informar a sua **Senha do Cofre** localmente para acessar dados cifrados. O sistema utiliza a senha para derivar uma KEK (Key Encryption Key) via PBKDF2 (600.000 iterações), que por sua vez desempacota a DEK (Data Encryption Key) mestre salva localmente. Caso o usuário perca a senha, ele aciona o recurso "Esqueci minha senha", onde uma **autenticação dupla** é exigida: após reverificar sua identidade provando acesso ao E-mail cadastrado (OTP no Supabase Auth), o sistema faz o download de uma versão de recuperação da DEK previamente empacotada na nuvem. O aplicativo, então, deriva uma KEK de Recuperação (usando o `user_id` do Supabase e um pepper local da aplicação) para desempacotar a DEK, restabelecer a sessão e permitir a criação de uma nova Senha do Cofre.
 3. **Múltiplos Perfis (10 perfis/conta):** Um único `user_id` pode possuir até 10 perfis isolados. Cada registro possui um `perfil_id`. Na nuvem, o RLS permite que o usuário gerencie seus perfis, e localmente o Dexie isola o roteamento de dados por perfil. O recurso de **Mesclar Conta** (para migrar de um perfil puramente local/senha para uma conta Google) é feito de forma segura mediante confirmação com a Senha do Cofre, estando obrigatoriamente logado na tela de gestão de Perfis.
 4. **Escrita/Leitura Cifrada**: Dados financeiros passam pelo helper `cifrarCampo()`/`decifrarCampo()` usando a chave em memória. O banco remoto armazena apenas as strings base64 do payload cifrado.na-se ilegível para os campos protegidos.
 

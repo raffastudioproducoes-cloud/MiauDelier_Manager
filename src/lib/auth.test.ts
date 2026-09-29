@@ -74,7 +74,7 @@ describe('auth de usuário único', () => {
     await setupAccount('senha-nova-2026', { apagandoDadosExistentes: true })
 
     const linhas = await db.configuracoes.toArray()
-    expect(linhas).toHaveLength(2)
+    expect(linhas).toHaveLength(4)
 
     const key = await login('senha-nova-2026')
     expect(key).not.toBeNull()
@@ -88,7 +88,12 @@ describe('auth de usuário único', () => {
     await setupAccount('senha-atomica')
 
     const linhas = await db.configuracoes.toArray()
-    expect(linhas.map((linha) => linha.chave).sort()).toEqual(['auth.salt', 'auth.verificador'])
+    expect(linhas.map((linha) => linha.chave).sort()).toEqual([
+      'auth.dek_senha',
+      'auth.migracao_dek_concluida',
+      'auth.salt',
+      'auth.verificador',
+    ])
   })
 
   it('não confunde conta corrompida (salt sem verificador) com senha errada', async () => {

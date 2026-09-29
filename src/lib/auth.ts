@@ -7,10 +7,17 @@ import {
   bytesToBase64,
   base64ToBytes,
   importSessionKey,
+  generateDEK,
+  wrapDEK,
+  unwrapDEK,
+  deriveRecoveryKEK,
 } from './crypto'
+import { supabase } from './supabase'
 
 export const CHAVE_SALT = 'auth.salt'
 export const CHAVE_VERIFICADOR = 'auth.verificador'
+export const CHAVE_DEK_SENHA = 'auth.dek_senha'
+export const CHAVE_MIGRACAO_DEK = 'auth.migracao_dek_concluida'
 const CHAVE_TENTATIVAS_FALHAS = 'auth.tentativasFalhas'
 const CHAVE_BLOQUEADO_ATE = 'auth.bloqueadoAte'
 const CHAVE_LOCAL_STORAGE_SESSAO = 'miaudelier_session_key'
@@ -116,7 +123,7 @@ export async function hasAccountConfigured(): Promise<boolean> {
 export async function setupAccount(
   password: string,
   opcoes: { apagandoDadosExistentes?: boolean } = {},
-): Promise<CryptoKey> {
+): Promise<{ key: CryptoKey }> {
   if (!opcoes.apagandoDadosExistentes && (await hasAccountConfigured())) {
     throw new Error(
       'já existe uma conta configurada neste dispositivo; re-chavear tornaria todo dado cifrado ' +
@@ -125,35 +132,46 @@ export async function setupAccount(
     )
   }
 
-  const salt = generateSalt()
-  const key = await deriveKey(password, salt)
-  const verificador = await encryptText(key, TEXTO_VERIFICACAO)
+  const saltSenha = generateSalt()
+  const kekSenha = await deriveKey(password, saltSenha)
 
-  // Salt e verificador precisam nascer juntos: sem transação, uma aba fechada entre as duas
-  // gravações deixaria salt sem verificador, e o app pediria "Entrar" para uma conta que
-  // nenhuma senha abre — num produto sem recuperação de senha.
+  const dek = await generateDEK()
+  const dekSenhaWrapped = await wrapDEK(dek, kekSenha)
+  const verificador = await encryptText(dek, TEXTO_VERIFICACAO)
+  
+  // Tenta salvar a chave envelopada na nuvem (para recuperação futura)
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.user) {
+    const recoveryKek = await deriveRecoveryKEK(session.user.id)
+    const dekRecoveryWrapped = await wrapDEK(dek, recoveryKek)
+    
+    await supabase.from('user_keys').upsert({
+      user_id: session.user.id,
+      wrapped_dek: dekRecoveryWrapped,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' })
+  }
+
   await db.transaction('rw', db.configuracoes, async () => {
-    await salvarConfiguracao(CHAVE_SALT, bytesToBase64(salt))
+    await salvarConfiguracao(CHAVE_SALT, bytesToBase64(saltSenha))
+    await salvarConfiguracao(CHAVE_DEK_SENHA, dekSenhaWrapped)
     await salvarConfiguracao(CHAVE_VERIFICADOR, verificador)
+    await salvarConfiguracao(CHAVE_MIGRACAO_DEK, 'true')
   })
 
-  sessionKey = key
-  await persistSessionKey(key)
-  return key
+  sessionKey = dek
+  await persistSessionKey(dek)
+  return { key: dek }
 }
 
 export async function login(password: string): Promise<CryptoKey | null> {
-  // Bloqueio verificado ANTES de qualquer tentativa de decifrar — mesmo com a senha certa, uma
-  // conta bloqueada por excesso de tentativas erradas não abre até o tempo de espera passar.
   await verificarBloqueio()
 
   const saltRegistro = await db.configuracoes.where('chave').equals(CHAVE_SALT).first()
   const verificadorRegistro = await db.configuracoes.where('chave').equals(CHAVE_VERIFICADOR).first()
+  
   if (!saltRegistro) return null
   if (!verificadorRegistro) {
-    // Estado impossível de produzir via setupAccount (que grava os dois em transação): só
-    // sobra banco corrompido ou editado por fora. Não é senha errada, e mentir dizendo que é
-    // faria a usuária tentar senhas para sempre em vez de restaurar um backup.
     throw new Error(
       'conta corrompida: existe salt mas não existe verificador. Nenhuma senha abre este banco — ' +
         'restaure um backup JSON.',
@@ -161,23 +179,156 @@ export async function login(password: string): Promise<CryptoKey | null> {
   }
 
   const salt = base64ToBytes(saltRegistro.valor)
-  const key = await deriveKey(password, salt)
+  const derivedKey = await deriveKey(password, salt)
 
-  try {
-    const texto = await decryptText(key, verificadorRegistro.valor)
-    if (texto !== TEXTO_VERIFICACAO) {
+  let dek: CryptoKey
+  const dekSenhaRegistro = await db.configuracoes.where('chave').equals(CHAVE_DEK_SENHA).first()
+
+  if (dekSenhaRegistro) {
+    // Fluxo novo com DEK
+    try {
+      dek = await unwrapDEK(dekSenhaRegistro.valor, derivedKey)
+      const texto = await decryptText(dek, verificadorRegistro.valor)
+      if (texto !== TEXTO_VERIFICACAO) {
+        await registrarTentativaFalha()
+        return null
+      }
+    } catch {
       await registrarTentativaFalha()
       return null
     }
-  } catch {
-    await registrarTentativaFalha()
-    return null
+  } else {
+    // Fluxo legado sem DEK
+    try {
+      const texto = await decryptText(derivedKey, verificadorRegistro.valor)
+      if (texto !== TEXTO_VERIFICACAO) {
+        await registrarTentativaFalha()
+        return null
+      }
+      dek = derivedKey // A chave derivada atuava como DEK e KEK
+    } catch {
+      await registrarTentativaFalha()
+      return null
+    }
   }
 
   await limparTentativasFalhas()
-  sessionKey = key
-  await persistSessionKey(key)
-  return key
+  sessionKey = dek
+  await persistSessionKey(dek)
+  return dek
+}
+
+export async function isMigratedToDek(): Promise<boolean> {
+  const registro = await db.configuracoes.where('chave').equals(CHAVE_MIGRACAO_DEK).first()
+  return registro?.valor === 'true'
+}
+
+export async function migrarParaDek(password: string): Promise<void> {
+  const isMigrated = await isMigratedToDek()
+  if (isMigrated) throw new Error('Conta já migrada para novo formato')
+
+  const saltRegistro = await db.configuracoes.where('chave').equals(CHAVE_SALT).first()
+  if (!saltRegistro) throw new Error('Conta não encontrada')
+
+  const salt = base64ToBytes(saltRegistro.valor)
+  const legacyKey = await deriveKey(password, salt)
+
+  const novoSaltSenha = generateSalt()
+  const kekSenha = await deriveKey(password, novoSaltSenha)
+  
+  const dek = legacyKey
+  const dekSenhaWrapped = await wrapDEK(dek, kekSenha)
+  const verificador = await encryptText(dek, TEXTO_VERIFICACAO)
+  
+  // Tenta salvar na nuvem
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.user) {
+    const recoveryKek = await deriveRecoveryKEK(session.user.id)
+    const dekRecoveryWrapped = await wrapDEK(dek, recoveryKek)
+    
+    await supabase.from('user_keys').upsert({
+      user_id: session.user.id,
+      wrapped_dek: dekRecoveryWrapped,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' })
+  }
+
+  await db.transaction('rw', db.configuracoes, async () => {
+    await salvarConfiguracao(CHAVE_SALT, bytesToBase64(novoSaltSenha))
+    await salvarConfiguracao(CHAVE_DEK_SENHA, dekSenhaWrapped)
+    await salvarConfiguracao(CHAVE_VERIFICADOR, verificador)
+    await salvarConfiguracao(CHAVE_MIGRACAO_DEK, 'true')
+  })
+}
+
+export async function recuperarCofreComNuvem(novaSenha: string): Promise<CryptoKey | null> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) {
+    throw new Error('Você precisa estar logado na nuvem para recuperar o cofre.')
+  }
+
+  // 1. Busca a chave encriptada do Supabase
+  const { data: userKeys, error } = await supabase
+    .from('user_keys')
+    .select('wrapped_dek')
+    .eq('user_id', session.user.id)
+    .single()
+
+  if (error || !userKeys?.wrapped_dek) {
+    throw new Error('Chave de recuperação não encontrada na nuvem.')
+  }
+
+  // 2. Deriva a KEK de Recuperação (usando user_id + pepper local)
+  const recoveryKek = await deriveRecoveryKEK(session.user.id)
+
+  try {
+    // 3. Desempacota a DEK
+    const dek = await unwrapDEK(userKeys.wrapped_dek, recoveryKek)
+    
+    // 4. Verifica se a DEK está correta (valida o verificador local)
+    const verificadorReg = await db.configuracoes.where('chave').equals(CHAVE_VERIFICADOR).first()
+    if (verificadorReg) {
+        const texto = await decryptText(dek, verificadorReg.valor)
+        if (texto !== TEXTO_VERIFICACAO) {
+          throw new Error('Chave desempacotada não abre os dados locais.')
+        }
+    } else {
+        // Se não tiver verificador, cria (pode ser o caso de device novo baixando a DEK)
+        const verificador = await encryptText(dek, TEXTO_VERIFICACAO)
+        await salvarConfiguracao(CHAVE_VERIFICADOR, verificador)
+        await salvarConfiguracao(CHAVE_MIGRACAO_DEK, 'true')
+    }
+
+    // 5. Salva a nova Senha do Cofre no IndexedDB
+    const novoSalt = generateSalt()
+    const novaKek = await deriveKey(novaSenha, novoSalt)
+    const dekSenhaWrapped = await wrapDEK(dek, novaKek)
+
+    await db.transaction('rw', db.configuracoes, async () => {
+      await salvarConfiguracao(CHAVE_SALT, bytesToBase64(novoSalt))
+      await salvarConfiguracao(CHAVE_DEK_SENHA, dekSenhaWrapped)
+    })
+
+    sessionKey = dek
+    await persistSessionKey(dek)
+    return dek
+  } catch (err) {
+    console.error(err)
+    throw new Error('Falha ao recuperar a chave a partir da nuvem.')
+  }
+}
+
+export async function alterarSenha(novaSenha: string): Promise<void> {
+  if (!sessionKey) throw new Error('Usuário não está logado')
+  
+  const novoSalt = generateSalt()
+  const novaKek = await deriveKey(novaSenha, novoSalt)
+  const dekSenhaWrapped = await wrapDEK(sessionKey, novaKek)
+  
+  await db.transaction('rw', db.configuracoes, async () => {
+    await salvarConfiguracao(CHAVE_SALT, bytesToBase64(novoSalt))
+    await salvarConfiguracao(CHAVE_DEK_SENHA, dekSenhaWrapped)
+  })
 }
 
 export function getSessionKey(): CryptoKey | null {

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { hasAccountConfigured, setupAccount, login, clearSession, restoreSessionKey } from '../lib/auth'
+import { hasAccountConfigured, setupAccount, login, clearSession, restoreSessionKey, recuperarCofreComNuvem, alterarSenha as dbAlterarSenha } from '../lib/auth'
 
 interface AuthState {
   autenticado: boolean
@@ -7,6 +7,8 @@ interface AuthState {
   carregarEstadoInicial: () => Promise<void>
   entrar: (senha: string) => Promise<boolean>
   criarConta: (senha: string) => Promise<void>
+  recuperarConta: (novaSenha: string) => Promise<boolean>
+  alterarSenha: (novaSenha: string) => Promise<void>
   sair: () => void
 }
 
@@ -38,6 +40,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   criarConta: async (senha: string) => {
     await setupAccount(senha)
     set({ autenticado: true, contaConfigurada: true })
+  },
+
+  recuperarConta: async (novaSenha: string) => {
+    const chave = await recuperarCofreComNuvem(novaSenha)
+    if (!chave) return false
+    set({ autenticado: true })
+    return true
+  },
+
+  alterarSenha: async (novaSenha: string) => {
+    await dbAlterarSenha(novaSenha)
   },
 
   sair: () => {

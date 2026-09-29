@@ -56,7 +56,8 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 - **Autenticação, Proteção de Perfil & Nuvem (Fase 7)**:
   - Arquitetura Híbrida: Login Social (Google/Apple) e Email+OTP (5 min) via Supabase Auth.
   - Multi-tenancy isolado: Suporte a até 10 perfis independentes por Conta de Usuário (`user_id`).
-  - Segurança Zero-Knowledge: Cofre cifrado com PBKDF2 e AES-GCM-256. Mesmo logado via OAuth, o usuário deve informar a **Senha do Cofre** para descriptografar os dados.
+  - Segurança Zero-Knowledge: Cofre cifrado com PBKDF2 e AES-GCM-256. Mesmo logado via OAuth, o usuário deve informar a **Senha do Cofre** para descriptografar os dados locais.
+  - Recuperação de Conta (Cloud DEK/KEK): A chave dos dados (DEK) é envelopada por uma KEK de recuperação derivada do `user_id` e armazenada com segurança na nuvem (Supabase). Caso o usuário esqueça a senha local, ele pode reautenticar via E-mail (OTP), recuperar a DEK e definir uma nova senha, mantendo a integridade e o isolamento dos dados.
   - Mesclagem de Contas: Permite unificar conta local/senha com identidade Google/Apple, confirmando a senha do cofre atual na área restrita.
 - **Calculadora de Volume & Proporção de Mistura**:
   - Suporte a geometrias: Retangular, Cilíndrica, Esférica e Medida Direta.

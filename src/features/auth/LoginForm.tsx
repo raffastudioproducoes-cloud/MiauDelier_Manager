@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button'
 import logoMiauDelier from '../../assets/logo-miaudelier.png'
 import catFeederBanner from '../../assets/cats-feeder-login.jpg'
 
-type AuthStep = 'SUPABASE_LOGIN' | 'OTP_VERIFICATION' | 'VAULT_UNLOCK' | 'VAULT_SETUP';
+type AuthStep = 'SUPABASE_LOGIN' | 'OTP_VERIFICATION' | 'VAULT_UNLOCK' | 'VAULT_SETUP' | 'VAULT_RECOVERY_NEW_PASSWORD';
 
 export function LoginForm() {
   const navigate = useNavigate()
@@ -15,6 +15,8 @@ export function LoginForm() {
   const carregarEstadoInicial = useAuthStore((estado) => estado.carregarEstadoInicial)
   const entrar = useAuthStore((estado) => estado.entrar)
   const criarConta = useAuthStore((estado) => estado.criarConta)
+  const recuperarConta = useAuthStore((estado) => estado.recuperarConta)
+  const alterarSenha = useAuthStore((estado) => estado.alterarSenha)
   const autenticado = useAuthStore((estado) => estado.autenticado)
 
   // Supabase Auth State
@@ -27,6 +29,7 @@ export function LoginForm() {
   const [senhaCofre, setSenhaCofre] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [isRecoveringVault, setIsRecoveringVault] = useState(false)
   
   // UI State
   const [erro, setErro] = useState<string | null>(null)
@@ -64,10 +67,32 @@ export function LoginForm() {
     }
   }, [autenticado, navigate])
 
-  function avancarParaCofre() {
-    // Rely on local `contaConfigurada` state.
-    if (contaConfigurada === false) {
-      setStep('VAULT_SETUP')
+  async function avancarParaCofre(currentSession = session) {
+    if (isRecoveringVault) {
+      setStep('VAULT_RECOVERY_NEW_PASSWORD')
+    } else if (contaConfigurada === false) {
+      if (currentSession?.user) {
+        setEnviando(true)
+        try {
+          const { data } = await supabase
+            .from('user_keys')
+            .select('wrapped_dek')
+            .eq('user_id', currentSession.user.id)
+            .single()
+          
+          if (data?.wrapped_dek) {
+            setStep('VAULT_RECOVERY_NEW_PASSWORD')
+            setMensagem('Conta localizada na nuvem! Defina uma senha local para proteger este dispositivo.')
+          } else {
+            setStep('VAULT_SETUP')
+          }
+        } catch (e) {
+          console.error(e)
+          setStep('VAULT_SETUP')
+        } finally {
+          setEnviando(false)
+        }
+      }
     } else if (contaConfigurada === true) {
       setStep('VAULT_UNLOCK')
     }
@@ -75,7 +100,7 @@ export function LoginForm() {
 
   useEffect(() => {
     if (session && contaConfigurada !== null) {
-       avancarParaCofre()
+       avancarParaCofre(session)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contaConfigurada, session])
@@ -141,6 +166,8 @@ export function LoginForm() {
           throw new Error('As senhas não coincidem.')
         }
         await criarConta(senhaCofre)
+        navigate({ to: '/' })
+        return
       } else {
         const sucesso = await entrar(senhaCofre)
         if (!sucesso) {
@@ -150,6 +177,42 @@ export function LoginForm() {
       navigate({ to: '/' })
     } catch (err: any) {
       setErro(err.message || 'Falha ao acessar cofre local.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  async function handleEsqueciSenha() {
+    const emailAtual = session?.user?.email
+    if (!emailAtual) return
+    setIsRecoveringVault(true)
+    await supabase.auth.signOut()
+    setEmail(emailAtual)
+    setStep('SUPABASE_LOGIN')
+    setMensagem('Para redefinir sua senha do cofre, por favor confirme sua identidade (e-mail) solicitando um novo código.')
+  }
+
+
+
+  async function handleNewPasswordSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (enviando) return
+    setEnviando(true)
+    setErro(null)
+    
+    try {
+      if (senhaCofre !== confirmarSenha) {
+        throw new Error('As senhas não coincidem.')
+      }
+      // Chama a função da loja passando a nova senha. Ela fará o fetch no supabase e desembaralhará.
+      const sucesso = await recuperarConta(senhaCofre)
+      if (!sucesso) {
+        throw new Error('Falha ao redefinir a senha do cofre.')
+      }
+      setIsRecoveringVault(false)
+      navigate({ to: '/' })
+    } catch (err: any) {
+      setErro(err.message || 'Falha ao alterar senha.')
     } finally {
       setEnviando(false)
     }
@@ -204,11 +267,19 @@ export function LoginForm() {
               <div>
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">Identifique-se 👋</h1>
                 <p className="mt-1.5 text-xs sm:text-sm text-on-surface-variant">
-                  {contaConfigurada 
-                    ? 'Identifique-se na nuvem para sincronizar seu cofre local.' 
-                    : 'Crie ou acesse sua conta na nuvem.'}
+                  {isRecoveringVault
+                    ? 'Confirme sua identidade na nuvem para redefinir a senha do cofre.'
+                    : contaConfigurada 
+                      ? 'Identifique-se na nuvem para sincronizar seu cofre local.' 
+                      : 'Crie ou acesse sua conta na nuvem.'}
                 </p>
               </div>
+
+              {mensagem && (
+                <div className="bg-primary/10 text-primary p-3 rounded-xl text-xs font-medium border border-primary/20">
+                  {mensagem}
+                </div>
+              )}
 
               <form onSubmit={handleEnviarEmailOtp} className="flex flex-col gap-3.5">
                 <TextField
@@ -325,6 +396,18 @@ export function LoginForm() {
                 <Button type="submit" disabled={enviando || !senhaCofre} className="w-full py-2.5 text-xs font-bold mt-1 rounded-xl">
                   {step === 'VAULT_SETUP' ? 'Salvar e Acessar' : 'Decifrar Dados'}
                 </Button>
+
+                {step === 'VAULT_UNLOCK' && (
+                  <div className="mt-1 text-center">
+                    <button
+                      type="button"
+                      onClick={handleEsqueciSenha}
+                      className="text-xs text-primary hover:underline cursor-pointer font-medium"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+                )}
                 
                 <div className="mt-2 text-center">
                    <button 
@@ -338,6 +421,52 @@ export function LoginForm() {
                      Desconectar conta da Nuvem
                    </button>
                 </div>
+              </form>
+            </>
+          )}
+
+
+
+          {step === 'VAULT_RECOVERY_NEW_PASSWORD' && (
+            <>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">Nova Senha 🔑</h1>
+                <p className="mt-1.5 text-xs sm:text-sm text-on-surface-variant">
+                  Conta recuperada! Crie uma nova senha do cofre agora.
+                </p>
+              </div>
+
+              <form onSubmit={handleNewPasswordSubmit} className="flex flex-col gap-3.5">
+                <div className="relative">
+                  <TextField
+                    id="senhaCofreNova"
+                    rotulo="Nova Senha do Cofre"
+                    type={mostrarSenha ? 'text' : 'password'}
+                    placeholder="Sua nova senha secreta"
+                    value={senhaCofre}
+                    onChange={(e) => setSenhaCofre(e.target.value)}
+                    erro={erro ?? undefined}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha(!mostrarSenha)}
+                    className="absolute right-3.5 top-9 text-xs font-medium text-on-surface-variant hover:text-on-surface cursor-pointer"
+                  >
+                    {mostrarSenha ? '🙈' : '👁️'}
+                  </button>
+                </div>
+                <TextField
+                  id="confirmar-senha-nova"
+                  rotulo="Confirmar Nova Senha"
+                  type="password"
+                  placeholder="Confirme a nova senha"
+                  value={confirmarSenha}
+                  onChange={(e) => setConfirmarSenha(e.target.value)}
+                />
+
+                <Button type="submit" disabled={enviando || !senhaCofre || !confirmarSenha} className="w-full py-2.5 text-xs font-bold mt-1 rounded-xl">
+                  Salvar Nova Senha
+                </Button>
               </form>
             </>
           )}

@@ -33,7 +33,8 @@ Este documento apresenta a auditoria estática de segurança do **MiauDelier Man
   ```
 
 ## 5. Criptografia de Dados Pessoais e Sensíveis
-- **Estado Atual (Local-first):** Altamente Seguro. A arquitetura implementa uma camada interceptadora (`src/lib/camposCifrados.ts`) que criptografa dados financeiros e de clientes com **AES-GCM-256** antes de salvar no IndexedDB. A chave só reside em memória (`authStore`) enquanto a sessão está ativa.
+- **Estado Atual (Local-first):** Altamente Seguro. A arquitetura implementa uma camada interceptadora (`src/lib/camposCifrados.ts`) que criptografa dados financeiros e de clientes com **AES-GCM-256** antes de salvar no IndexedDB.
+- **Arquitetura de Chaves (DEK/KEK):** A chave de criptografia dos dados (DEK - Data Encryption Key) não é derivada diretamente da senha do usuário. Em vez disso, a DEK é gerada aleatoriamente (256-bits) e armazenada de forma encriptada (Wrapped) por Key Encryption Keys (KEKs). Existem duas KEKs principais: uma derivada da Senha do Cofre e outra derivada do `user_id` da conta em nuvem para fins de recuperação. Isso permite que o usuário troque a senha local ou recupere o acesso (após autenticação OTP) sem perder os dados e sem que o sistema remoto conheça as chaves em claro.
 - **Fase 7 (Supabase):** O Supabase criptografa todos os dados "em repouso" (at rest) nativamente no servidor AWS/GCP. 
 - **Veredito / Ação:** **Seguro e Conforme.** Recomenda-se **manter** a camada `camposCifrados.ts` ativa mesmo com a sincronização do Supabase. Isso cria uma arquitetura **E2EE (End-to-End Encryption)**, onde o Supabase armazena os dados já cifrados pelo cliente, impedindo até mesmo o vazamento em nuvem em caso de invasão da conta.
 
