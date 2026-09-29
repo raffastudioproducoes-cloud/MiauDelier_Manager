@@ -17,6 +17,37 @@ import {
   type PerfilAtelie,
 } from '../../lib/perfisRepo'
 
+function formatarDocumento(valor: string) {
+  const v = valor.replace(/\D/g, '')
+  if (v.length <= 11) {
+    return v
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  } else {
+    return v
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+      .slice(0, 18)
+  }
+}
+
+function formatarTelefone(valor: string) {
+  const v = valor.replace(/\D/g, '')
+  if (v.length <= 10) {
+    return v
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+  } else {
+    return v
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .slice(0, 15)
+  }
+}
+
 export function PerfilPage() {
   const { mostrarToast } = useToast()
   const [perfis, setPerfis] = useState(listarPerfis())
@@ -69,8 +100,8 @@ export function PerfilPage() {
     setNomeDono(perfil.nomeDono || '')
     setEmailDono(perfil.emailDono || '')
     setEndereco(perfil.endereco || '')
-    setDocumento(perfil.documento || '')
-    setTelefone(perfil.telefone || '')
+    setDocumento(perfil.documento ? formatarDocumento(perfil.documento) : '')
+    setTelefone(perfil.telefone ? formatarTelefone(perfil.telefone) : '')
     setErroForm(null)
     setExibindoFormulario(true)
   }
@@ -260,14 +291,14 @@ export function PerfilPage() {
                 id="perfil-documento"
                 rotulo="CNPJ ou CPF"
                 value={documento}
-                onChange={(e) => setDocumento(e.target.value)}
+                onChange={(e) => setDocumento(formatarDocumento(e.target.value))}
                 placeholder="Ex: 00.000.000/0001-00 ou 000.000.000-00"
               />
               <TextField
                 id="perfil-telefone"
                 rotulo="Telefone / WhatsApp"
                 value={telefone}
-                onChange={(e) => setTelefone(e.target.value)}
+                onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
                 placeholder="Ex: (11) 99999-8888"
               />
               <TextField

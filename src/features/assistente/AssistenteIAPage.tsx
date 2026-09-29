@@ -17,6 +17,8 @@ export function AssistenteIAPage() {
   const [enviando, setEnviando] = useState(false)
   const [confirmandoLimpeza, setConfirmandoLimpeza] = useState(false)
 
+  const [ultimoEnvio, setUltimoEnvio] = useState(0)
+
   const montado = useRef(true)
 
   useEffect(() => {
@@ -44,10 +46,19 @@ export function AssistenteIAPage() {
   async function handleEnviar() {
     const perguntaLimpa = pergunta.trim()
     if (!perguntaLimpa || enviando) return
+
+    const agora = Date.now()
+    if (agora - ultimoEnvio < 5000) {
+      mostrarToast('Por favor, aguarde alguns segundos antes de enviar outra mensagem.', 'erro')
+      return
+    }
+
     if (perguntaLimpa.length > TAMANHO_MAXIMO_PERGUNTA) {
       mostrarToast(`Pergunta muito longa (máximo de ${TAMANHO_MAXIMO_PERGUNTA} caracteres).`, 'erro')
       return
     }
+
+    setUltimoEnvio(agora)
     setEnviando(true)
     try {
       const historicoAnterior = await listarMensagensIA()
