@@ -349,7 +349,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background text-on-surface md:flex-row">
       {/* Header Mobile */}
-      <header className="sticky top-0 z-40 flex h-16 w-full shrink-0 items-center justify-between border-b border-outline-variant/10 bg-background px-4 md:hidden">
+      <header className="sticky top-0 z-40 flex min-h-[4rem] w-full shrink-0 items-center justify-between border-b border-outline-variant/10 bg-background px-4 pt-[env(safe-area-inset-top)] md:hidden">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -518,7 +518,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 p-4 md:p-6 overflow-x-hidden flex flex-col justify-between min-h-[calc(100vh-2rem)]">
+      <main className="flex-1 p-4 md:p-6 overflow-x-hidden flex flex-col justify-between min-h-[calc(100vh-2rem)] pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div>{children}</div>
 
         {/* Rodapé Global com Informações de Conformidade, Direitos e Empresa */}

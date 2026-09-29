@@ -9,6 +9,9 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 // Inicializa a captura global de falhas e eventos do sistema
 inicializarLoggerGlobal()
 
+import { registerSW } from 'virtual:pwa-register'
+registerSW({ immediate: true })
+
 const router = getRouter()
 
 createRoot(document.getElementById('root')!).render(
