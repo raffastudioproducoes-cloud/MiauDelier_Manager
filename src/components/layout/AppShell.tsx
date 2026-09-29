@@ -524,8 +524,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Rodapé Global com Informações de Conformidade, Direitos e Empresa */}
         <footer className="mt-12 pt-6 border-t border-outline-variant/15 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-on-surface-variant">
           <div className="flex flex-col items-center md:items-start gap-1">
-            <span className="font-semibold text-on-surface">
+            <span className="font-semibold text-on-surface flex flex-wrap items-center justify-center md:justify-start gap-2">
               © 2026 Raffa Studio Produções. Empresa registrada desde 2026.
+              <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold tracking-widest">
+                v{__APP_VERSION__}
+              </span>
             </span>
             <span className="text-[11px] text-on-surface-variant/80">
               Todos os direitos reservados · Suporte Técnico: <a href="mailto:contato.raffasp@gmail.com" className="text-primary hover:underline font-medium">contato.raffasp@gmail.com</a>
