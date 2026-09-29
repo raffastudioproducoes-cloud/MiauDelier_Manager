@@ -8,7 +8,7 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 - **Total de Tarefas**: 30
 - **Concluídas**: 29
-- **Em Andamento**: 1
+- **Em Andamento**: 0
 - **Não Iniciadas**: 0
 
 ---
@@ -93,7 +93,7 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 | ID | Tarefa | Prioridade | Status |
 | --- | --- | --- | --- |
-| 6.1 | Configurar manifesto PWA e Service Worker via `vite-plugin-pwa` para execução offline | Alta | Em andamento |
+| 6.1 | Configurar manifesto PWA e Service Worker via `vite-plugin-pwa` para execução offline | Alta | Concluída |
 | 6.2 | Garantir suíte de testes (Vitest + Testing Library) com 100% de cobertura nos fluxos críticos | Alta | Concluída |
 | 6.3 | Configurar pipeline de CI/CD para lint, verificação de tipos (`tsc`) e build automatizado | Média | Concluída |
 | 6.4 | Implementar registrador de eventos e captura de falhas silenciosas (`src/lib/logger.ts`, `ErrorBoundary`, `/logs`) com sanitização de senhas/dados sensíveis | Alta | Concluída |

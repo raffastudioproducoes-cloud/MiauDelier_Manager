@@ -184,7 +184,7 @@ Este README é a fonte pública de verdade sobre o projeto. A documentação de 
 - [ ] Design system e shell de navegação
 - [ ] Produção e estoque (materiais, formas, peças)
 - [ ] Vendas (precificação na tela, clientes, pedidos)
-- [ ] Financeiro, tela de backup e PWA instalável
+- [x] Financeiro, tela de backup e PWA instalável
 - [ ] Assistente de IA opcional (Gemini)
 - [ ] CI de lint/test/build e deploy contínuo
 
