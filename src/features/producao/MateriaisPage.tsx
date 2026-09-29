@@ -82,8 +82,6 @@ const GRUPOS_UNIDADES = [
   },
 ]
 
-const VALORES_UNIDADES_PADRAO = GRUPOS_UNIDADES.flatMap((g) => g.opcoes.map((o) => o.valor))
-
 const NOMES_PADRAO_FIXOS = new Set(DIVISOES_PADRAO.map((d) => d.nome.toLowerCase()))
 
 function formatarMoeda(valor: number): string {
