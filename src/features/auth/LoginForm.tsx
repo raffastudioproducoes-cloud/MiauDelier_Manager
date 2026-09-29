@@ -64,7 +64,7 @@ export function LoginForm() {
     }
   }, [autenticado, navigate])
 
-  const avancarParaCofre = () => {
+  function avancarParaCofre() {
     // Rely on local `contaConfigurada` state.
     if (contaConfigurada === false) {
       setStep('VAULT_SETUP')
