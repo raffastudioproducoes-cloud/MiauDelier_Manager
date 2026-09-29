@@ -9,7 +9,6 @@ import { Tabs } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/useToast'
 import { criarCategoriaMaterial, listarCategoriasMaterial } from './categoriasMaterialRepo'
 import {
-  criarMaterial,
   listarMateriais,
   registrarCompraMaterial,
   excluirMaterial,
@@ -117,14 +116,6 @@ export function MateriaisPage() {
   const [compraNovoUnidadeSelecao, setCompraNovoUnidadeSelecao] = useState('ml')
   const [compraNovoUnidadeCustom, setCompraNovoUnidadeCustom] = useState('')
   const [compraNovaDiv, setCompraNovaDiv] = useState('consumivel') // ID da divisão padrão ou 'cat_<id>' para custom
-  // Formulário Cadastro Básico
-  const [cadastroBasicoNome, setCadastroBasicoNome] = useState('')
-  const [cadastroBasicoUnidadeSelecao, setCadastroBasicoUnidadeSelecao] = useState('ml')
-  const [cadastroBasicoUnidadeCustom, setCadastroBasicoUnidadeCustom] = useState('')
-  const [cadastroBasicoQtd, setCadastroBasicoQtd] = useState('')
-  const [cadastroBasicoCusto, setCadastroBasicoCusto] = useState('')
-  const [cadastroBasicoFrete, setCadastroBasicoFrete] = useState('')
-  const [cadastroBasicoDiv, setCadastroBasicoDiv] = useState('consumivel')
 
   const [erroCompra, setErroCompra] = useState<string | null>(null)
 
@@ -294,59 +285,7 @@ export function MateriaisPage() {
     }
   }
 
-  async function handleCadastrarBasico(evento: React.FormEvent) {
-    evento.preventDefault()
-    if (!cadastroBasicoNome.trim()) {
-      mostrarToast('Informe o nome do material.', 'erro')
-      return
-    }
 
-    const unidadeFinal = cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom.trim() : cadastroBasicoUnidadeSelecao
-    if (!unidadeFinal) {
-      mostrarToast('Informe a unidade de medida.', 'erro')
-      return
-    }
-
-    let catIdFinal: number | undefined
-    let tipoClassif: TipoClassificacaoMaterial | undefined
-
-    if (cadastroBasicoDiv.startsWith('cat_')) {
-      catIdFinal = Number(cadastroBasicoDiv.replace('cat_', ''))
-    } else {
-      tipoClassif = cadastroBasicoDiv as TipoClassificacaoMaterial
-      const catGeral = categorias.find((c) => c.nome === 'Geral')
-      if (catGeral?.id) {
-        catIdFinal = catGeral.id
-      } else {
-        catIdFinal = await criarCategoriaMaterial('Geral', undefined, undefined)
-      }
-    }
-
-    try {
-      await criarMaterial({
-        nome: cadastroBasicoNome.trim(),
-        categoriaId: catIdFinal ?? 1,
-        unidade: unidadeFinal,
-        quantidadeEstoque: Number(cadastroBasicoQtd) || 0,
-        custoUnitario: Number(cadastroBasicoCusto) || 0,
-        valorFrete: Number(cadastroBasicoFrete) > 0 ? Number(cadastroBasicoFrete) : undefined,
-        tipoClassificacao: tipoClassif,
-      })
-
-      mostrarToast('Material cadastrado com sucesso!')
-      setCadastroBasicoNome('')
-      setCadastroBasicoUnidadeSelecao('ml')
-      setCadastroBasicoUnidadeCustom('')
-      setCadastroBasicoQtd('')
-      setCadastroBasicoCusto('')
-      setCadastroBasicoFrete('')
-      setCadastroBasicoDiv('consumivel')
-      await recarregar()
-    } catch (falha) {
-      if (!montado.current) return
-      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao cadastrar material.', 'erro')
-    }
-  }
 
   async function handleExcluir(materialId: number) {
     try {
@@ -410,139 +349,6 @@ export function MateriaisPage() {
                   </Card>
                 </div>
 
-                <Card className="flex flex-col gap-4">
-                  <div>
-                    <h2 className="text-base font-semibold text-on-surface">Novo material (cadastro básico)</h2>
-                    <p className="text-xs text-on-surface-variant">Cadastre um novo material rapidamente.</p>
-                  </div>
-                  <form onSubmit={handleCadastrarBasico} className="flex flex-col gap-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <TextField
-                        id="cadastro-basico-nome"
-                        rotulo="Nome do material"
-                        placeholder="Ex: Essência de Lavanda"
-                        value={cadastroBasicoNome}
-                        onChange={(e) => setCadastroBasicoNome(e.target.value)}
-                        required
-                      />
-
-                      <div className="flex gap-2">
-                        <div className="flex flex-col gap-1 w-full">
-                          <label htmlFor="cadastro-basico-unidade" className="text-xs font-medium text-on-surface">Unidade de Medida</label>
-                          <select
-                            id="cadastro-basico-unidade"
-                            value={cadastroBasicoUnidadeSelecao}
-                            onChange={(e) => {
-                              setCadastroBasicoUnidadeSelecao(e.target.value)
-                              if (e.target.value !== '__outra__') {
-                                setCadastroBasicoUnidadeCustom('')
-                              }
-                            }}
-                            className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                          >
-                            {GRUPOS_UNIDADES.map((grupo) => (
-                              <optgroup key={grupo.titulo} label={grupo.titulo}>
-                                {grupo.opcoes.map((opcao) => (
-                                  <option key={opcao.valor} value={opcao.valor}>
-                                    {opcao.rotulo}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            ))}
-                            <option value="__outra__">+ Outra unidade (especificar)</option>
-                          </select>
-                        </div>
-                        {cadastroBasicoUnidadeSelecao === '__outra__' && (
-                          <TextField
-                            id="cadastro-basico-unidade-custom"
-                            rotulo="Qual?"
-                            placeholder="Ex: caixa"
-                            value={cadastroBasicoUnidadeCustom}
-                            onChange={(e) => setCadastroBasicoUnidadeCustom(e.target.value)}
-                            required
-                          />
-                        )}
-                      </div>
-
-                      <div>
-                        <TextField
-                          id="cadastro-basico-qtd"
-                          rotulo="Estoque inicial / Quantidade atual"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0"
-                          value={cadastroBasicoQtd}
-                          onChange={(e) => setCadastroBasicoQtd(e.target.value)}
-                        />
-                        <p className="mt-1 text-xs text-on-surface-variant flex gap-1">
-                          <span>📦</span>
-                          <span>
-                            <strong>Estoque a entrar:</strong> {cadastroBasicoQtd ? cadastroBasicoQtd : '0'}{' '}
-                            {cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom || 'unidade' : cadastroBasicoUnidadeSelecao}. Esta é a quantidade física inicial que você está acrescentando para este material.
-                          </span>
-                        </p>
-                      </div>
-
-                      <TextField
-                        id="cadastro-basico-custo"
-                        rotulo="Custo unitário (R$)"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0,00"
-                        value={cadastroBasicoCusto}
-                        onChange={(e) => setCadastroBasicoCusto(e.target.value)}
-                      />
-
-                      <div>
-                        <TextField
-                          id="cadastro-basico-frete"
-                          rotulo="Valor do Frete / Taxa (R$ - opcional)"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Ex: 15.00"
-                          value={cadastroBasicoFrete}
-                          onChange={(e) => setCadastroBasicoFrete(e.target.value)}
-                        />
-                      </div>
-                      
-                      {Number(cadastroBasicoFrete) > 0 && Number(cadastroBasicoQtd) > 0 && Number(cadastroBasicoCusto) >= 0 && (
-                        <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 text-xs text-on-surface col-span-1 sm:col-span-2 lg:col-span-3">
-                          <p className="font-semibold text-primary">
-                            💡 Resumo de Frete Rateado no Custo:
-                          </p>
-                          <p className="mt-0.5">
-                            Base: {formatarMoeda(Number(cadastroBasicoCusto))}/{cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom || 'unidade' : cadastroBasicoUnidadeSelecao} + Frete Rateado: +{formatarMoeda(Number(cadastroBasicoFrete) / Number(cadastroBasicoQtd))}/{cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom || 'unidade' : cadastroBasicoUnidadeSelecao} = <strong>Custo Unitário Efetivo: {formatarMoeda(Number(cadastroBasicoCusto) + (Number(cadastroBasicoFrete) / Number(cadastroBasicoQtd)))}/{cadastroBasicoUnidadeSelecao === '__outra__' ? cadastroBasicoUnidadeCustom || 'unidade' : cadastroBasicoUnidadeSelecao}</strong>
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col gap-1">
-                        <label htmlFor="cadastro-basico-divisao" className="text-xs font-medium text-on-surface">Divisão / Tipo</label>
-                        <select
-                          id="cadastro-basico-divisao"
-                          value={cadastroBasicoDiv}
-                          onChange={(e) => setCadastroBasicoDiv(e.target.value)}
-                          className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                        >
-                          {DIVISOES_PADRAO.map(t => (
-                            <option key={t.id} value={t.id}>{t.icone} {t.nome}</option>
-                          ))}
-                          {categorias.map(c => (
-                            <option key={`cat_${c.id}`} value={`cat_${c.id}`}>📁 {c.nome}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex justify-end mt-2 border-t border-outline-variant/30 pt-4">
-                      <Button type="submit" variante="primary">
-                        + Cadastrar Material
-                      </Button>
-                    </div>
-                  </form>
-                </Card>
 
                 <section>
                   <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
