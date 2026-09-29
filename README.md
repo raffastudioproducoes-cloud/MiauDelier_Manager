@@ -167,6 +167,13 @@ Gera o bundle de produção em `dist/`. O app é uma SPA estática — qualquer 
 - Não existe fluxo de recuperação de senha automatizado — por não haver backend, a única via de recuperação é reimportar um backup anterior. Isso é uma decisão de produto, não uma lacuna.
 - Não há telemetria, analytics ou qualquer envio de dado do ateliê para fora do dispositivo, exceto a chamada opcional e explícita ao assistente de IA (quando existir), sempre condicionada a haver internet disponível.
 
+## Sincronização em Nuvem e Event Sourcing (Fase 7)
+
+A partir da versão que inclui suporte à nuvem, a sincronização de dados funciona com base em um **Ledger (Event Sourcing) local-first**:
+- **Imutabilidade e Append-Only:** Os dados não são simplesmente atualizados no Supabase. O banco de dados remoto age como um *log cego*, registrando apenas os eventos (criação, edição e exclusão) cifrados pela chave local da usuária. O servidor remoto nunca tem a chave para ler os dados, garantindo privacidade *Zero-Knowledge*.
+- **Verificação de Integridade Real (Ledger):** Inspirado em sistemas bancários, **o saldo das contas não pode ser modificado arbitrariamente**. A cada ciclo de sincronização ou reinício, o sistema lê todas as *transações* do livro-razão (ledger), recalcula os saldos e corrige forçosamente a tabela de `contas` se detectar que o valor local foi manipulado sem autorização/transação correspondente, gerando uma trilha de auditoria.
+
+
 ## Assinaturas e IA
 
 O MiauDelier Manager é uso proprietário e single-tenant — não há modelo de assinatura nem cobrança dentro do app.
