@@ -16,6 +16,7 @@ import {
   RESERVED_DEFAULT_PROFILE_ID,
   type PerfilAtelie,
 } from '../../lib/perfisRepo'
+import { CloudIdentityManager } from './CloudIdentityManager'
 
 function formatarDocumento(valor: string) {
   const v = valor.replace(/\D/g, '')
@@ -337,6 +338,9 @@ export function PerfilPage() {
           </form>
         </Card>
       )}
+
+      {/* Gestão de Identidade na Nuvem */}
+      {!exibindoFormulario && <CloudIdentityManager />}
 
       {/* Lista de Todos os Perfis */}
       <div className="flex flex-col gap-3">
