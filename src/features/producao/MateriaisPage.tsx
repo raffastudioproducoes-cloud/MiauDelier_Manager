@@ -17,14 +17,14 @@ import { listarContas, type ContaDecifrada } from '../financeiro/contasRepo'
 import type { CategoriaMaterial, Material, TipoClassificacaoMaterial } from '../../db/schema'
 
 // ─── Divisões padrão do sistema (fixas, sempre presentes) ──────────────────
-export const DIVISOES_PADRAO = [
+const DIVISOES_PADRAO = [
   { id: 'consumivel', nome: 'Insumos / Consumíveis', icone: '🧪', desc: 'Resinas, silicones, pigmentos, enfeites' },
   { id: 'ferramenta', nome: 'Ferramentas & Equipamentos', icone: '🛠️', desc: 'Estufas, incubadoras, sopradores, politrizes' },
   { id: 'administrativo', nome: 'Administrativo & Embalagens', icone: '📦', desc: 'Papel, etiquetas, caixas, fitas' },
   { id: 'epi', nome: 'EPIs & Proteção', icone: '🥽', desc: 'Luvas, máscaras, toucas, refis' },
 ] as const
 
-export const DIVISOES_ESTOQUE = [
+const DIVISOES_ESTOQUE = [
   { id: 'todos', rotulo: 'Todos', icone: '🌐' },
   { id: 'consumivel', rotulo: 'Insumos / Consumíveis', icone: '🧪', desc: 'Resinas, silicones, pigmentos, enfeites' },
   { id: 'ferramenta', rotulo: 'Ferramentas & Equipamentos', icone: '🛠️', desc: 'Estufas, incubadoras, sopradores, politrizes' },
@@ -32,7 +32,7 @@ export const DIVISOES_ESTOQUE = [
   { id: 'epi', rotulo: 'EPIs & Proteção', icone: '🥽', desc: 'Luvas, máscaras, toucas, refis' },
 ] as const
 
-export function obterClassificacaoMaterial(
+function obterClassificacaoMaterial(
   material: Material,
   categorias: CategoriaMaterial[],
 ): TipoClassificacaoMaterial {
@@ -46,7 +46,7 @@ export function obterClassificacaoMaterial(
   return 'consumivel'
 }
 
-export const GRUPOS_UNIDADES = [
+const GRUPOS_UNIDADES = [
   {
     titulo: 'Volume / Líquido',
     opcoes: [
@@ -82,7 +82,7 @@ export const GRUPOS_UNIDADES = [
   },
 ]
 
-export const VALORES_UNIDADES_PADRAO = GRUPOS_UNIDADES.flatMap((g) => g.opcoes.map((o) => o.valor))
+const VALORES_UNIDADES_PADRAO = GRUPOS_UNIDADES.flatMap((g) => g.opcoes.map((o) => o.valor))
 
 const NOMES_PADRAO_FIXOS = new Set(DIVISOES_PADRAO.map((d) => d.nome.toLowerCase()))
 

@@ -67,13 +67,13 @@ Transformar o controle manual do ofício de resina em decisões de produção e 
 | **Autenticação** | Login de usuário único, senha nunca gravada em claro, bloqueio temporário após tentativas erradas | ✅ Disponível |
 | **Segurança de dados** | Valor de conta/transação cifrado em repouso (AES-GCM), ilegível sem a senha | ✅ Disponível |
 | **Calculadora de volume** | Geometria retangular, cilíndrica, esférica e medida direta; proporções 2:1, 3:1, 1:1 e 100:3; margem de segurança | ✅ Disponível (motor) |
-| **Precificação** | Custo direto + mão de obra + rateio fixo + margem → preço sugerido | ✅ Disponível (motor) |
+| **Precificação** | Motor de precificação inteligente (Custo direto + mão de obra + rateio fixo + margem → preço sugerido) | ✅ Disponível |
 | **Backup** | Exportação/importação em JSON com checksum validado antes de qualquer escrita | ✅ Disponível |
-| **Design system e navegação** | Componentes visuais e shell de navegação responsivo | ✅ Disponível |
-| **Produção e estoque** | Materiais, formas, peças e ledger de eventos | ✅ Disponível |
-| **Vendas** | Clientes, pedidos e precificação na tela | ✅ Disponível |
-| **Financeiro** | Contas, transações e tela de backup | ✅ Disponível |
-| **Assistente de IA** | Dicas e apoio contextual sobre o ofício (opcional, online-only) | ✅ Disponível |
+| **Design system e navegação** | Componentes visuais e shell de navegação responsivo adaptável | ✅ Disponível |
+| **Produção e estoque** | Controle de materiais, formas, peças e ledger imutável de eventos/consumo | ✅ Disponível |
+| **Vendas** | Gerenciamento de clientes, controle de pedidos e orçamentos na tela | ✅ Disponível |
+| **Financeiro** | Contas bancárias criptografadas e transações via ledger verificado | ✅ Disponível |
+| **Assistente de IA** | Assistente inteligente via Gemini API para apoio, dicas e suporte técnico sobre resina e uso da plataforma | ✅ Disponível |
 
 ## Tecnologias
 
