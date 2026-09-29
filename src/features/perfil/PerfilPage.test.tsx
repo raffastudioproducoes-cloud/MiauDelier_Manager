@@ -42,7 +42,7 @@ describe('PerfilPage', () => {
       </ToastProvider>,
     )
 
-    const botoesExcluir = screen.getAllByRole('button', { name: /excluir perfil/i })
+    const botoesExcluir = screen.getAllByRole('button', { name: /excluir conta/i })
     expect(botoesExcluir.length).toBeGreaterThan(0)
 
     fireEvent.click(botoesExcluir[0])

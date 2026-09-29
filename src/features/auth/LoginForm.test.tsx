@@ -16,10 +16,15 @@ vi.mock('../../lib/supabase', () => ({
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
       signInWithOAuth: vi.fn(),
+      signInWithPassword: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      signUp: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       signInWithOtp: vi.fn(),
       verifyOtp: vi.fn(),
       signOut: vi.fn(),
-    }
+    },
+    from: vi.fn().mockReturnValue({
+      upsert: vi.fn().mockResolvedValue({ error: null })
+    })
   }
 }))
 
@@ -45,32 +50,36 @@ describe('LoginForm', () => {
     })
   }
 
-  it('mostra tela de login do Supabase primeiro', async () => {
+  it('mostra tela de login padrão primeiro', async () => {
     useAuthStore.setState({ autenticado: false, contaConfigurada: false })
     render(<LoginForm />)
-    expect(await screen.findByRole('heading', { name: /identifique-se/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /enviar código/i })).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: /entrar/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /entrar na conta/i })).toBeInTheDocument()
   })
 
-  it('mostra formulário de criação de cofre local quando nuvem aprovada mas sem cofre', async () => {
+  it('mostra aba de criação de conta', async () => {
     useAuthStore.setState({ autenticado: false, contaConfigurada: false })
-    mockSession()
     render(<LoginForm />)
-    expect(await screen.findByRole('heading', { name: /crie seu cofre/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: /criar conta/i }))
+    expect(await screen.findByRole('button', { name: /criar conta/i })).toBeInTheDocument()
   })
 
   it('cria conta e navega para a rota inicial', async () => {
     useAuthStore.setState({ autenticado: false, contaConfigurada: false })
-    mockSession()
+    vi.mocked(supabase.auth.signUp).mockResolvedValueOnce({ data: { session: { user: { id: '123' } } }, error: null } as any)
     render(<LoginForm />)
     
-    const inputSenha = await screen.findByLabelText(/^senha do cofre$/i)
-    const inputConfirmar = await screen.findByLabelText(/confirmar senha/i)
+    fireEvent.click(screen.getByRole('tab', { name: /criar conta/i }))
     
+    const inputEmail = await screen.findByPlaceholderText('seu@email.com')
+    const inputSenha = await screen.findByPlaceholderText('Crie uma senha forte')
+    const inputConfirmar = await screen.findByPlaceholderText('Repita a senha')
+    
+    fireEvent.change(inputEmail, { target: { value: 'test@example.com' } })
     fireEvent.change(inputSenha, { target: { value: 'senha-forte-123' } })
     fireEvent.change(inputConfirmar, { target: { value: 'senha-forte-123' } })
     
-    fireEvent.click(screen.getByRole('button', { name: /salvar e acessar/i }))
+    fireEvent.click(screen.getByRole('button', { name: /criar conta/i }))
 
     await waitFor(() => expect(navegarMock).toHaveBeenCalledWith({ to: '/' }))
   })
@@ -79,15 +88,17 @@ describe('LoginForm', () => {
     await setupAccount('senha-certa')
     clearSession()
     useAuthStore.setState({ autenticado: false, contaConfigurada: true })
-    mockSession()
 
     render(<LoginForm />)
     
-    const input = await screen.findByLabelText(/^senha do cofre$/i)
+    const inputEmail = await screen.findByPlaceholderText('seu@email.com')
+    const input = await screen.findByPlaceholderText('Sua senha')
+    
+    fireEvent.change(inputEmail, { target: { value: 'test@example.com' } })
     fireEvent.change(input, { target: { value: 'senha-errada' } })
-    fireEvent.click(screen.getByRole('button', { name: /decifrar dados/i }))
+    fireEvent.click(screen.getByRole('button', { name: /entrar na conta/i }))
 
-    expect(await screen.findByText(/senha do cofre incorreta/i, {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText(/senha ou e-mail incorretos/i, {}, { timeout: 5000 })).toBeInTheDocument()
     expect(navegarMock).not.toHaveBeenCalled()
   })
 })
