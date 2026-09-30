@@ -607,9 +607,9 @@ export function AjudaSuportePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="flex flex-col gap-2 p-4">
-              <h3 className="text-sm font-bold text-on-surface flex items-center gap-1.5">🔐 Armazenamento 100% Local</h3>
+              <h3 className="text-sm font-bold text-on-surface flex items-center gap-1.5">🔐 Sincronização Segura (Zero-Knowledge)</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Não possuímos servidores centralizados onde seus dados financeiros ou de clientes ficam salvos. Tudo permanece no banco de dados local criptografado (IndexedDB) do seu próprio computador ou celular.
+                Nós não temos acesso aos seus dados financeiros ou de clientes. Tudo é criptografado com sua senha mestre localmente no seu dispositivo antes de ser enviado para a nuvem de forma segura, garantindo sincronização sem comprometer a privacidade.
               </p>
             </Card>
 
