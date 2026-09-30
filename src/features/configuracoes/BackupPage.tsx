@@ -96,7 +96,7 @@ export function BackupPage() {
   async function handleImportarNovoPerfil() {
     if (!conteudoSelecionado) return
     try {
-      const novoPerfil = criarPerfil('Ateliê Restaurado')
+      const novoPerfil = await criarPerfil('Ateliê Restaurado')
       const dbName = getDbNameForPerfil(novoPerfil.id)
       const targetDb = new MiauDelierDB(dbName)
       

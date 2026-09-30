@@ -368,7 +368,7 @@ export class MiauDelierDB extends Dexie {
         // Garante que o perfil padrão existe
         const temPadrao = perfisParaImportar.some((p) => p.id === 'padrao')
         if (!temPadrao) {
-          perfisParaImportar.unshift({ id: 'padrao', nome: 'Ateliê Principal', criadoEm: now, updatedAt: now })
+          perfisParaImportar.unshift({ id: 'padrao', nome: 'Ateliê Principal', nomeDono: '', emailDono: '', documento: '', telefone: '', endereco: '', criadoEm: now, updatedAt: now })
         }
         if (perfisParaImportar.length > 0) {
           await tx.table('perfisAtelie').bulkPut(perfisParaImportar)

@@ -58,11 +58,10 @@ export function CloudIdentityManager() {
 
       // 2. Senha correta — inicia o fluxo OAuth de vinculação via redirect
       //    O Supabase redireciona para o Google e volta ao mesmo URL com o link feito.
-      const { error } = await supabase.auth.linkWithOAuth({
+      const { error } = await supabase.auth.linkIdentity({
         provider: providerParaLigar as 'google',
         options: {
           redirectTo: window.location.origin + window.location.pathname,
-          scopes: 'email profile',
         },
       })
 

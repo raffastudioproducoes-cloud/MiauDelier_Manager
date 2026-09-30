@@ -87,7 +87,7 @@ export function PerfilPage() {
   }
 
   function handleTrocarPerfil(id: string) {
-    if (id === perfilAtivo.id) return
+    if (id === perfilAtivo?.id) return
     selecionarPerfil(id)
     mostrarToast('Ateliê ativo alterado! Carregando dados isolados...', 'sucesso')
     setTimeout(() => {

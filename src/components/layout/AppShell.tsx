@@ -300,7 +300,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       return false
     }
   })
-  const perfilAtivo = getPerfilAtivo()
+  const [perfilAtivo, setPerfilAtivo] = useState<any>(null)
+
+  useEffect(() => {
+    getPerfilAtivo().then(setPerfilAtivo).catch(console.error)
+  }, [])
 
   useEffect(() => {
     try {
@@ -375,7 +379,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           onClick={() => irPara('/perfil')}
           className="text-xs px-2.5 py-1 rounded-full bg-primary-container text-on-primary-container font-medium hover:opacity-90"
         >
-          {perfilAtivo.nome}
+          {perfilAtivo?.nome || 'MiauDelier'}
         </button>
       </header>
 
@@ -426,7 +430,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="text-[10px] uppercase font-bold text-on-surface-variant/70 tracking-wider">
                   Perfil Ativo
                 </span>
-                <span className="truncate text-sm font-bold text-on-surface">{perfilAtivo.nome}</span>
+                <span className="truncate text-sm font-bold text-on-surface">{perfilAtivo?.nome || 'MiauDelier'}</span>
               </div>
               <span className="text-xs text-primary font-medium underline shrink-0 ml-1">Gerenciar</span>
             </div>
@@ -434,10 +438,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => irPara('/perfil')}
-              title={`Perfil Ativo: ${perfilAtivo.nome}`}
+              title={`Perfil Ativo: ${perfilAtivo?.nome || 'MiauDelier'}`}
               className="flex h-10 w-full items-center justify-center rounded-xl bg-primary-container/20 text-primary border border-primary/20 hover:bg-primary-container/40 transition-colors"
             >
-              <span className="text-xs font-bold uppercase">{perfilAtivo.nome.charAt(0)}</span>
+              <span className="text-xs font-bold uppercase">{perfilAtivo?.nome?.charAt(0) || 'M'}</span>
             </button>
           )}
 
