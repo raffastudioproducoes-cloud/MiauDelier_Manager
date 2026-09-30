@@ -111,7 +111,8 @@ export async function syncWithSupabase() {
   const perfil_id = perfilAtivo.supabaseId
 
   // 3. Upload dos eventos locais pendentes
-  const pending = await db.syncQueue.where('sincronizado').equals(0).toArray()
+  // Como deletamos os itens da fila após o sucesso, tudo na fila está pendente.
+  const pending = await db.syncQueue.toArray()
 
   if (pending.length > 0) {
     const payloads = await Promise.all(

@@ -12,7 +12,8 @@ inicializarLoggerGlobal()
 
 // Inicia o motor de sincronização Event Sourcing (Supabase <-> Dexie)
 registerDexieHooks()
-setInterval(syncWithSupabase, 30_000)
+// Sincroniza a cada 5 minutos (300.000 ms) para não sobrecarregar
+setInterval(syncWithSupabase, 300_000)
 window.addEventListener('online', syncWithSupabase)
 window.addEventListener('focus', syncWithSupabase)
 
