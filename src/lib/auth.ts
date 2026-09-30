@@ -335,6 +335,47 @@ export function getSessionKey(): CryptoKey | null {
   return sessionKey
 }
 
+/**
+ * Garante que a wrapped_dek esteja salva no Supabase (tabela user_keys).
+ * Essencial para que outro dispositivo possa recuperar a DEK e descriptografar
+ * os dados sincronizados. Deve ser chamada após login com sucesso.
+ */
+export async function ensureWrappedDekInCloud(): Promise<void> {
+  if (!sessionKey) return
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return
+
+  // Verifica se já existe a wrapped_dek na nuvem
+  const { data: existing } = await supabase
+    .from('user_keys')
+    .select('wrapped_dek')
+    .eq('user_id', session.user.id)
+    .single()
+
+  if (existing?.wrapped_dek) {
+    // Já existe na nuvem — nada a fazer
+    return
+  }
+
+  // Não existe — faz upload da DEK empacotada com recovery KEK
+  console.log('[Auth] wrapped_dek ausente na nuvem — fazendo upload...')
+  const recoveryKek = await deriveRecoveryKEK(session.user.id, session.user.email!)
+  const dekRecoveryWrapped = await wrapDEK(sessionKey, recoveryKek)
+
+  const { error } = await supabase.from('user_keys').upsert({
+    user_id: session.user.id,
+    wrapped_dek: dekRecoveryWrapped,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' })
+
+  if (error) {
+    console.error('[Auth] Erro ao salvar wrapped_dek na nuvem:', error)
+  } else {
+    console.log('[Auth] wrapped_dek salva na nuvem com sucesso.')
+  }
+}
+
 export function clearSession(): void {
   sessionKey = null
   try {

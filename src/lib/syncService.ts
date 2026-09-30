@@ -501,9 +501,70 @@ export async function syncOnLogin() {
     }
   } else if (totalLocalRecords > 0 && (remoteCount ?? 0) === 0) {
     // Tem dados locais mas nada na nuvem — faz primeiro upload
-    console.log('[Sync Login] Nuvem vazia — fazendo primeiro upload dos dados locais...')
+    console.log('[Sync Login] Nuvem vazia — criando snapshot completo e enviando...')
+    // Primeiro verifica se a syncQueue está vazia (dados criados antes do event-sourcing)
+    const queueCount = await db.syncQueue.count()
+    if (queueCount === 0 && totalLocalRecords > 0) {
+      console.log('[Sync Login] syncQueue vazia com dados existentes — gerando snapshot completo...')
+      await createFullSnapshot()
+    }
     await uploadPendingEvents()
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Snapshot Completo — captura TODOS os dados locais existentes
+// Necessário para dados que foram criados antes do sistema de Event Sourcing
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Lê todos os registros de todas as tabelas sincronizáveis e cria eventos
+ * de 'insert' na syncQueue para cada um. Isso garante que dados antigos
+ * (criados antes do event-sourcing) sejam capturados e enviados para a nuvem.
+ *
+ * É idempotente: verifica se a syncQueue já tem eventos antes de criar.
+ */
+export async function createFullSnapshot(): Promise<number> {
+  const existingQueue = await db.syncQueue.count()
+  if (existingQueue > 0) {
+    console.log(`[Snapshot] syncQueue já tem ${existingQueue} evento(s) — pulando snapshot.`)
+    return 0
+  }
+
+  let totalEvents = 0
+  const now = Date.now()
+
+  for (const tableName of TABLES_TO_SYNC) {
+    try {
+      const allRecords = await db.table(tableName).toArray()
+      if (allRecords.length === 0) continue
+
+      // Agrupa em lotes para não sobrecarregar a transação
+      const BATCH = 100
+      for (let i = 0; i < allRecords.length; i += BATCH) {
+        const batch = allRecords.slice(i, i + BATCH)
+        const events = batch.map((record, idx) => ({
+          id: crypto.randomUUID(),
+          tabela: tableName,
+          registroId: String(record.id),
+          acao: 'insert' as const,
+          dadosString: JSON.stringify(record),
+          timestamp: now + totalEvents + idx, // garante timestamps únicos e ordenados
+          sincronizado: false,
+        }))
+        await db.syncQueue.bulkAdd(events)
+        totalEvents += batch.length
+      }
+
+      console.log(`[Snapshot] ${tableName}: ${allRecords.length} registro(s) capturado(s).`)
+    } catch (err) {
+      console.warn(`[Snapshot] Erro ao capturar tabela ${tableName}:`, err)
+    }
+  }
+
+  console.log(`[Snapshot] Total: ${totalEvents} evento(s) criados na syncQueue.`)
+  hasPendingLocalChanges = true
+  return totalEvents
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -511,6 +572,17 @@ export async function syncOnLogin() {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function forceUpload() {
+  // Se a fila está vazia mas tem dados locais, cria snapshot antes
+  const queueCount = await db.syncQueue.count()
+  if (queueCount === 0) {
+    let totalLocal = 0
+    for (const t of TABLES_TO_SYNC) {
+      try { totalLocal += await db.table(t).count() } catch { /* */ }
+    }
+    if (totalLocal > 0) {
+      await createFullSnapshot()
+    }
+  }
   await uploadPendingEvents()
 }
 
@@ -527,3 +599,4 @@ export async function forceDownload() {
 
   await downloadRemoteEvents(perfil_id, key)
 }
+

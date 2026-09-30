@@ -70,16 +70,25 @@ export function LoginForm() {
           setEnviando(false)
           return
         } else {
-          // Entrar no cofre local
+          // PASSO 1: Faz login no Supabase PRIMEIRO (para sync funcionar)
+          if (email) {
+            const { error: supaErr } = await supabase.auth.signInWithPassword({ email, password: senha })
+            if (supaErr) {
+              console.warn('Login Supabase falhou (continuando com cofre local):', supaErr.message)
+            }
+          }
+          // PASSO 2: Entrar no cofre local
           const sucesso = await entrar(senha)
           if (!sucesso) {
             setErro('Senha incorreta.')
             return
           }
-          // Tenta entrar no supabase silenciosamente para sync, mas não falha se der erro
-          // (Pois a mesclagem/login na nuvem pode ser feita no dashboard)
-          if (email) {
-            await supabase.auth.signInWithPassword({ email, password: senha })
+          // PASSO 3: Garante que a wrapped_dek está salva na nuvem (para sync entre dispositivos)
+          try {
+            const { ensureWrappedDekInCloud } = await import('../../lib/auth')
+            await ensureWrappedDekInCloud()
+          } catch (e) {
+            console.warn('Não foi possível garantir DEK na nuvem:', e)
           }
         }
       } else {
@@ -95,10 +104,22 @@ export function LoginForm() {
             setErro('E-mail ou senha incorretos.')
             return
           }
-          const recovered = await recuperarConta(senha)
+          let recovered = false
+          try {
+            recovered = await recuperarConta(senha)
+          } catch (e) {
+            console.warn('Recuperação do cofre falhou:', e)
+          }
           if (!recovered) {
-            // Se não encontrou cofre na nuvem, apenas cria um novo localmente
+            // Se não encontrou cofre na nuvem, cria um novo localmente
+            // e faz upload da wrapped_dek imediatamente
             await criarConta(senha)
+            try {
+              const { ensureWrappedDekInCloud } = await import('../../lib/auth')
+              await ensureWrappedDekInCloud()
+            } catch (e) {
+              console.warn('Não foi possível salvar DEK na nuvem:', e)
+            }
           }
         } else {
           // Cria a conta na nuvem e o cofre local
