@@ -1,5 +1,15 @@
 import Dexie, { type EntityTable } from 'dexie'
-import { getDbNameForPerfil } from '../lib/perfisRepo'
+
+// Resolve o nome do banco Dexie para o perfil ativo sem depender de perfisRepo
+// (evita circular import: schema → perfisRepo → schema)
+const LEGACY_KEY_ATIVO = 'miaudelier_perfil_ativo'
+const RESERVED_DEFAULT_PROFILE_ID_SCHEMA = 'padrao'
+
+export function getDbNameForPerfil(perfilId?: string): string {
+  const id = perfilId ?? (localStorage.getItem(LEGACY_KEY_ATIVO) ?? RESERVED_DEFAULT_PROFILE_ID_SCHEMA)
+  if (id === RESERVED_DEFAULT_PROFILE_ID_SCHEMA) return 'MiauDelierManager'
+  return `MiauDelierManager__${id}`
+}
 
 export type TipoClassificacaoMaterial = 'consumivel' | 'ferramenta' | 'administrativo' | 'epi'
 
@@ -257,6 +267,22 @@ export interface SyncMetadata {
   valor: string
 }
 
+/** Perfil de ateliê armazenado localmente no Dexie e sincronizado com Supabase */
+export interface PerfilAtelieDB {
+  /** ID local (string): 'padrao' ou 'atelie_<timestamp>_<rand>' */
+  id: string
+  /** ID numérico da linha na tabela `perfis` do Supabase (null = ainda não sincronizado) */
+  supabaseId?: number
+  nome: string
+  nomeDono?: string
+  emailDono?: string
+  documento?: string
+  telefone?: string
+  endereco?: string
+  criadoEm: string
+  updatedAt: string
+}
+
 export class MiauDelierDB extends Dexie {
   categoriasMaterial!: EntityTable<CategoriaMaterial, 'id'>
   materiais!: EntityTable<Material, 'id'>
@@ -278,6 +304,7 @@ export class MiauDelierDB extends Dexie {
   logs!: EntityTable<LogSistema, 'id'>
   syncQueue!: EntityTable<SyncEvent, 'id'>
   syncMetadata!: EntityTable<SyncMetadata, 'id'>
+  perfisAtelie!: EntityTable<PerfilAtelieDB, 'id'>
 
   constructor(dbName?: string) {
     super(dbName || getDbNameForPerfil())
@@ -314,6 +341,41 @@ export class MiauDelierDB extends Dexie {
     this.version(6).stores({
       syncQueue: 'id, tabela, registroId, sincronizado, timestamp',
       syncMetadata: '++id, &chave'
+    })
+    this.version(7).stores({
+      // Tabela de perfis migrada do localStorage para o Dexie
+      // id é a chave primária string ('padrao' ou 'atelie_<ts>_<rand>')
+      perfisAtelie: '&id, supabaseId, updatedAt, criadoEm'
+    }).upgrade(async (tx) => {
+      // Migração única: importa perfis que estavam no localStorage
+      try {
+        const raw = localStorage.getItem('miaudelier_perfis_atelie')
+        const stored: any[] = raw ? JSON.parse(raw) : []
+        const now = new Date().toISOString()
+        const perfisParaImportar = stored
+          .filter((p: any) => p && p.id && p.nome)
+          .map((p: any) => ({
+            id: p.id,
+            nome: p.nome,
+            nomeDono: p.nomeDono,
+            emailDono: p.emailDono,
+            documento: p.documento,
+            telefone: p.telefone,
+            endereco: p.endereco,
+            criadoEm: p.criadoEm || now,
+            updatedAt: now,
+          }))
+        // Garante que o perfil padrão existe
+        const temPadrao = perfisParaImportar.some((p) => p.id === 'padrao')
+        if (!temPadrao) {
+          perfisParaImportar.unshift({ id: 'padrao', nome: 'Ateliê Principal', criadoEm: now, updatedAt: now })
+        }
+        if (perfisParaImportar.length > 0) {
+          await tx.table('perfisAtelie').bulkPut(perfisParaImportar)
+        }
+      } catch {
+        // não falha a migração se o localStorage estiver corrompido
+      }
     })
   }
 }

@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { db } from '../db/schema'
 import {
   listarPerfis,
   criarPerfil,
@@ -10,24 +11,45 @@ import {
   RESERVED_DEFAULT_PROFILE_ID,
 } from './perfisRepo'
 
+// Supabase não é necessário nas operações locais do perfisRepo
+vi.mock('./supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+    },
+    from: vi.fn().mockReturnValue({
+      upsert: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: null, error: null })
+        })
+      }),
+      delete: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    }),
+  },
+}))
+
 describe('perfisRepo', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear()
+    await db.delete()
+    await db.open()
   })
 
-  it('deve retornar perfil padrão inicialmente', () => {
-    const perfis = listarPerfis()
+  it('deve retornar perfil padrão inicialmente', async () => {
+    const perfis = await listarPerfis()
     expect(perfis).toHaveLength(1)
     expect(perfis[0].id).toBe(RESERVED_DEFAULT_PROFILE_ID)
     expect(perfis[0].nome).toBe('Ateliê Principal')
 
-    const ativo = getPerfilAtivo()
+    const ativo = await getPerfilAtivo()
     expect(ativo.id).toBe(RESERVED_DEFAULT_PROFILE_ID)
     expect(getDbNameForPerfil(ativo.id)).toBe('MiauDelierManager')
   })
 
-  it('deve criar novos perfis de ateliê com metadados completos e IDs únicos', () => {
-    const perfil1 = criarPerfil({
+  it('deve criar novos perfis de ateliê com metadados completos e IDs únicos', async () => {
+    const perfil1 = await criarPerfil({
       nome: 'Ateliê Resinas Mágicas',
       nomeDono: 'Rafaela Silva',
       emailDono: 'rafaela@atelie.com',
@@ -44,13 +66,13 @@ describe('perfisRepo', () => {
     expect(perfil1.id).toBeDefined()
     expect(getDbNameForPerfil(perfil1.id)).toBe(`MiauDelierManager__${perfil1.id}`)
 
-    const perfis = listarPerfis()
+    const perfis = await listarPerfis()
     expect(perfis).toHaveLength(2)
   })
 
-  it('deve atualizar informações de um perfil existente', () => {
-    const perfil = criarPerfil('Ateliê Inicial')
-    const atualizado = atualizarPerfil(perfil.id, {
+  it('deve atualizar informações de um perfil existente', async () => {
+    const perfil = await criarPerfil('Ateliê Inicial')
+    const atualizado = await atualizarPerfil(perfil.id, {
       nome: 'Ateliê Atualizado',
       nomeDono: 'Maria Oliveira',
       emailDono: 'maria@atelie.com',
@@ -58,17 +80,17 @@ describe('perfisRepo', () => {
     expect(atualizado.nome).toBe('Ateliê Atualizado')
     expect(atualizado.nomeDono).toBe('Maria Oliveira')
 
-    const perfis = listarPerfis()
+    const perfis = await listarPerfis()
     const encontrado = perfis.find((p) => p.id === perfil.id)
     expect(encontrado?.nome).toBe('Ateliê Atualizado')
   })
 
   it('deve excluir um perfil de ateliê secundário', async () => {
-    const perfil = criarPerfil('Ateliê Temporário')
-    expect(listarPerfis()).toHaveLength(2)
+    const perfil = await criarPerfil('Ateliê Temporário')
+    expect(await listarPerfis()).toHaveLength(2)
 
     await excluirPerfil(perfil.id)
-    expect(listarPerfis()).toHaveLength(1)
+    expect(await listarPerfis()).toHaveLength(1)
   })
 
   it('não deve permitir excluir o perfil principal (padrao)', async () => {
@@ -77,11 +99,11 @@ describe('perfisRepo', () => {
     )
   })
 
-  it('deve permitir alternar entre perfis de ateliê', () => {
-    const perfil2 = criarPerfil('Ateliê Secundário')
+  it('deve permitir alternar entre perfis de ateliê', async () => {
+    const perfil2 = await criarPerfil('Ateliê Secundário')
     selecionarPerfil(perfil2.id)
 
-    const ativo = getPerfilAtivo()
+    const ativo = await getPerfilAtivo()
     expect(ativo.id).toBe(perfil2.id)
     expect(ativo.nome).toBe('Ateliê Secundário')
   })

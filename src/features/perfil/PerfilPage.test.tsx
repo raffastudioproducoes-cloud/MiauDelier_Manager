@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 import { PerfilPage } from './PerfilPage'
 
-// setupAccount chama supabase.from(...).upsert(...) — precisa de mock
+// Mock completo do Supabase — todos os métodos que CloudIdentityManager e perfisRepo usam
 vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: {
@@ -17,13 +17,22 @@ vi.mock('../../lib/supabase', () => ({
       unlinkIdentity: vi.fn().mockResolvedValue({ error: null }),
     },
     from: vi.fn().mockReturnValue({
-      upsert: vi.fn().mockResolvedValue({ error: null }),
+      upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      }),
+      delete: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
     }),
   },
 }))
 
 describe('PerfilPage', () => {
   beforeEach(async () => {
+    localStorage.clear()
     await db.delete()
     await db.open()
     await setupAccount('senha-do-ateliê')
@@ -36,9 +45,10 @@ describe('PerfilPage', () => {
       </ToastProvider>,
     )
 
-    expect(screen.getByText('Gestão de Perfis de Ateliê')).toBeInTheDocument()
-    expect(screen.getAllByText(/Ateliê Principal/i).length).toBeGreaterThan(0)
-    expect(screen.getByText(/✓ Ativo Agora/i)).toBeInTheDocument()
+    expect(await screen.findByText('Gestão de Perfis de Ateliê')).toBeInTheDocument()
+    // Aguarda o carregamento assíncrono dos perfis do Dexie
+    expect(await screen.findAllByText(/Ateliê Principal/i)).not.toHaveLength(0)
+    expect(await screen.findByText(/✓ Ativo Agora/i)).toBeInTheDocument()
   })
 
   it('abre formulário ao clicar em "+ Novo Ateliê"', async () => {
@@ -48,6 +58,8 @@ describe('PerfilPage', () => {
       </ToastProvider>,
     )
 
+    // Aguarda o loading inicial
+    await screen.findByText(/✓ Ativo Agora/i)
     fireEvent.click(screen.getByRole('button', { name: /\+ novo ateliê/i }))
     expect(screen.getByText('Cadastrar Novo Perfil de Ateliê')).toBeInTheDocument()
   })
@@ -59,12 +71,12 @@ describe('PerfilPage', () => {
       </ToastProvider>,
     )
 
-    // Botão no card do perfil ativo (perfil padrão = "🗑️ Excluir Conta")
+    await screen.findByText(/✓ Ativo Agora/i)
+
     const botoesExcluir = screen.getAllByRole('button', { name: /excluir conta/i })
     expect(botoesExcluir.length).toBeGreaterThan(0)
 
     fireEvent.click(botoesExcluir[0])
-    // Título do modal definido em PerfilPage.tsx linha 419
     expect(screen.getByText(/Excluir Conta e Dados Definitivamente\?/i)).toBeInTheDocument()
   })
 
@@ -75,13 +87,12 @@ describe('PerfilPage', () => {
       </ToastProvider>,
     )
 
-    // Botão "✏️ Editar Perfil" do card de destaque do perfil ativo
+    await screen.findByText(/✓ Ativo Agora/i)
+
     const botaoEditar = screen.getByRole('button', { name: /editar perfil/i })
     fireEvent.click(botaoEditar)
 
-    // Form título quando editando
-    expect(screen.getByText('Editar Perfil do Ateliê')).toBeInTheDocument()
-    // Botão de exclusão dentro do form de edição (linha 326 de PerfilPage.tsx)
+    await waitFor(() => expect(screen.getByText('Editar Perfil do Ateliê')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: /excluir este perfil/i })).toBeInTheDocument()
   })
 })

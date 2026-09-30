@@ -2,8 +2,13 @@ import { db } from '../db/schema'
 import { getSessionKey } from './auth'
 import { encryptText, decryptText } from './crypto'
 import { supabase } from './supabase'
+import { syncPerfisFromSupabase } from './perfisRepo'
 
 export let isApplyingRemote = false
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Hooks Dexie — registram mudanças locais na fila de sync
+// ──────────────────────────────────────────────────────────────────────────────
 
 export function registerDexieHooks() {
   const tablesToSync = [
@@ -73,6 +78,10 @@ export function registerDexieHooks() {
   })
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Sync principal — upload + download de eventos criptografados
+// ──────────────────────────────────────────────────────────────────────────────
+
 export async function syncWithSupabase() {
   const key = getSessionKey()
   if (!key) return
@@ -82,27 +91,40 @@ export async function syncWithSupabase() {
   } = await supabase.auth.getUser()
   if (!user) return
 
-  const { data: perfis } = await supabase.from('perfis').select('id').eq('user_id', user.id).single()
-  if (!perfis) return
+  // 1. Sincroniza perfis de ateliê (não passam pelo Event Sourcing, têm sync dedicado)
+  await syncPerfisFromSupabase().catch((e) =>
+    console.warn('Erro ao sincronizar perfis:', e),
+  )
 
-  const perfil_id = perfis.id
+  // 2. Resolve o perfil_id do Supabase para o perfil atualmente ativo
+  //    Busca o primeiro perfil do usuário que tenha supabaseId definido.
+  const { getPerfilAtivo } = await import('./perfisRepo')
+  const perfilAtivo = await getPerfilAtivo()
 
-  // 1. Upload local changes
+  // Se o perfil ativo ainda não tem supabaseId (criado offline), não há
+  // como referenciar sync_events — aborta a parte de event-sourcing por agora.
+  if (!perfilAtivo.supabaseId) {
+    console.warn('syncWithSupabase: perfil ativo ainda não sincronizado com Supabase, pulando event-sourcing.')
+    return
+  }
+
+  const perfil_id = perfilAtivo.supabaseId
+
+  // 3. Upload dos eventos locais pendentes
   const pending = await db.syncQueue.where('sincronizado').equals(0).toArray()
 
   if (pending.length > 0) {
     const payloads = await Promise.all(
-      pending.map(async (event) => {
-        return {
-          id: event.id,
-          perfil_id,
-          tabela: event.tabela,
-          registro_id: event.registroId,
-          acao: event.acao,
-          dados_criptografados: event.dadosString === '{}' ? '' : await encryptText(key, event.dadosString),
-          timestamp: event.timestamp,
-        }
-      })
+      pending.map(async (event) => ({
+        id: event.id,
+        perfil_id,
+        tabela: event.tabela,
+        registro_id: event.registroId,
+        acao: event.acao,
+        dados_criptografados:
+          event.dadosString === '{}' ? '' : await encryptText(key, event.dadosString),
+        timestamp: event.timestamp,
+      })),
     )
 
     const { error } = await supabase.from('sync_events').insert(payloads)
@@ -114,13 +136,14 @@ export async function syncWithSupabase() {
     }
   }
 
-  // 2. Download remote changes
+  // 4. Download dos eventos remotos mais recentes
   const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
   let lastTs = lastSync ? Number(lastSync.valor) : 0
 
   const { data: remoteEvents, error: fetchError } = await supabase
     .from('sync_events')
     .select('*')
+    .eq('perfil_id', perfil_id)
     .gt('timestamp', lastTs)
     .order('timestamp', { ascending: true })
 
@@ -147,11 +170,10 @@ export async function syncWithSupabase() {
       lastTs = event.timestamp
     }
 
-    // Após mesclar os dados, verifica se o usuário não alterou o Dexie local maliciosamente
+    // Verifica integridade do ledger após aplicar eventos remotos
     import('./ledgerVerification').then(({ verificarIntegridadeDoLedger }) => {
       verificarIntegridadeDoLedger()
     })
-
   } catch (err) {
     console.error('Erro ao aplicar evento remoto:', err)
   } finally {

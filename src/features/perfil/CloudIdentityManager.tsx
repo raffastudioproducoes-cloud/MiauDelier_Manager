@@ -50,24 +50,26 @@ export function CloudIdentityManager() {
     setErroSenha(null)
 
     try {
-      // 1. Validar a senha local (conforme requisito)
+      // 1. Valida a senha local do cofre
       const senhaValida = await entrar(senhaLocal)
-      
       if (!senhaValida) {
         throw new Error('Senha do cofre incorreta. Tente novamente.')
       }
 
-      // 2. Senha correta, prosseguir para o OAuth Link Identity
-      const { error } = await supabase.auth.linkIdentity({ provider: providerParaLigar as any })
-      
-      if (error) {
-        throw error
-      }
-      
-      // O Supabase irá redirecionar automaticamente para a página do provedor
+      // 2. Senha correta — inicia o fluxo OAuth de vinculação via redirect
+      //    O Supabase redireciona para o Google e volta ao mesmo URL com o link feito.
+      const { error } = await supabase.auth.linkWithOAuth({
+        provider: providerParaLigar as 'google',
+        options: {
+          redirectTo: window.location.origin + window.location.pathname,
+          scopes: 'email profile',
+        },
+      })
+
+      if (error) throw error
+      // O browser será redirecionado automaticamente — não há mais código após esse ponto
     } catch (err: any) {
-      setErroSenha(err.message || 'Erro ao validar senha local e vincular.')
-    } finally {
+      setErroSenha(err.message || 'Erro ao validar senha e vincular conta.')
       setValidandoSenha(false)
     }
   }

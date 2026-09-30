@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/TextField'
@@ -53,8 +53,18 @@ function formatarTelefone(valor: string) {
 
 export function PerfilPage() {
   const { mostrarToast } = useToast()
-  const [perfis, setPerfis] = useState(listarPerfis())
-  const [perfilAtivo, setPerfilAtivoEstado] = useState(getPerfilAtivo())
+  const [perfis, setPerfis] = useState<PerfilAtelie[]>([])
+  const [perfilAtivo, setPerfilAtivoEstado] = useState<PerfilAtelie | null>(null)
+
+  // Carrega perfis do Dexie ao montar (async)
+  useEffect(() => {
+    async function carregar() {
+      const [lista, ativo] = await Promise.all([listarPerfis(), getPerfilAtivo()])
+      setPerfis(lista)
+      setPerfilAtivoEstado(ativo)
+    }
+    carregar()
+  }, [])
 
   // Formulário de perfil
   const [exibindoFormulario, setExibindoFormulario] = useState(false)
@@ -70,10 +80,10 @@ export function PerfilPage() {
   // Exclusão
   const [perfilExcluindoId, setPerfilExcluindoId] = useState<string | null>(null)
 
-  function recarregarPerfis() {
-    const lista = listarPerfis()
+  async function recarregarPerfis() {
+    const [lista, ativo] = await Promise.all([listarPerfis(), getPerfilAtivo()])
     setPerfis(lista)
-    setPerfilAtivoEstado(getPerfilAtivo())
+    setPerfilAtivoEstado(ativo)
   }
 
   function handleTrocarPerfil(id: string) {
@@ -115,7 +125,7 @@ export function PerfilPage() {
     setErroForm(null)
   }
 
-  function handleSalvarPerfil(e: React.FormEvent) {
+  async function handleSalvarPerfil(e: React.FormEvent) {
     e.preventDefault()
     setErroForm(null)
 
@@ -126,7 +136,7 @@ export function PerfilPage() {
 
     try {
       if (perfilEmEdicaoId) {
-        atualizarPerfil(perfilEmEdicaoId, {
+        await atualizarPerfil(perfilEmEdicaoId, {
           nome: nomeAtelier,
           nomeDono,
           emailDono,
@@ -136,7 +146,7 @@ export function PerfilPage() {
         })
         mostrarToast(`Ateliê "${nomeAtelier.trim()}" atualizado com sucesso!`, 'sucesso')
       } else {
-        const novo = criarPerfil({
+        const novo = await criarPerfil({
           nome: nomeAtelier,
           nomeDono,
           emailDono,
@@ -146,7 +156,7 @@ export function PerfilPage() {
         })
         mostrarToast(`Novo ateliê "${novo.nome}" cadastrado com sucesso!`, 'sucesso')
       }
-      recarregarPerfis()
+      await recarregarPerfis()
       setExibindoFormulario(false)
       setPerfilEmEdicaoId(null)
     } catch (err) {
@@ -179,7 +189,7 @@ export function PerfilPage() {
         return
       }
 
-      const eraAtivo = perfilExcluindoId === perfilAtivo.id
+      const eraAtivo = perfilExcluindoId === perfilAtivo?.id
       await excluirPerfil(perfilExcluindoId)
       mostrarToast('Perfil de ateliê e dados isolados excluídos com sucesso.', 'sucesso')
       setPerfilExcluindoId(null)
@@ -189,7 +199,7 @@ export function PerfilPage() {
       if (eraAtivo) {
         setTimeout(() => window.location.reload(), 400)
       } else {
-        recarregarPerfis()
+        await recarregarPerfis()
       }
     } catch (err) {
       mostrarToast(err instanceof Error ? err.message : 'Erro ao excluir perfil.', 'erro')
@@ -198,6 +208,15 @@ export function PerfilPage() {
   }
 
   const perfilSendoExcluido = perfis.find((p) => p.id === perfilExcluindoId)
+
+  // Enquanto os perfis carregam do Dexie, exibe loading
+  if (!perfilAtivo) {
+    return (
+      <div className="flex items-center justify-center py-16 text-on-surface-variant text-sm">
+        Carregando perfis…
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
