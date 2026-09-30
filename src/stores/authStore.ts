@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { hasAccountConfigured, setupAccount, login, clearSession, restoreSessionKey, recuperarCofreComNuvem, alterarSenha as dbAlterarSenha } from '../lib/auth'
-import { syncPerfisFromSupabase } from '../lib/perfisRepo'
-import { syncWithSupabase } from '../lib/syncService'
+import { syncOnLogin } from '../lib/syncService'
 
 interface AuthState {
   autenticado: boolean
@@ -30,15 +29,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       contaConfigurada: true,
       autenticado: chaveRestaurada !== null,
     })
+
+    // Se restaurou sessão, faz sync imediato em background
+    if (chaveRestaurada) {
+      syncOnLogin().catch(console.warn)
+    }
   },
 
   entrar: async (senha: string) => {
     const chave = await login(senha)
     if (!chave) return false
     set({ autenticado: true })
-    // Dispara sync em background — não bloqueia o login
-    syncPerfisFromSupabase().catch(console.warn)
-    syncWithSupabase().catch(console.warn)
+    // Sync agressivo pós-login — baixa todos os dados necessários
+    syncOnLogin().catch(console.warn)
     return true
   },
 
@@ -51,9 +54,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     const chave = await recuperarCofreComNuvem(novaSenha)
     if (!chave) return false
     set({ autenticado: true })
-    // Dispara sync em background após recuperar o cofre
-    syncPerfisFromSupabase().catch(console.warn)
-    syncWithSupabase().catch(console.warn)
+    // Sync agressivo pós-recuperação — baixa todos os dados
+    syncOnLogin().catch(console.warn)
     return true
   },
 
