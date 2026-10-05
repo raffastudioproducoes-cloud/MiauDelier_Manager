@@ -39,9 +39,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   entrar: async (senha: string) => {
     const chave = await login(senha)
     if (!chave) return false
+    // Sync agressivo pós-login — baixa todos os dados necessários antes de liberar a tela
+    await syncOnLogin().catch(console.warn)
     set({ autenticado: true })
-    // Sync agressivo pós-login — baixa todos os dados necessários
-    syncOnLogin().catch(console.warn)
     return true
   },
 
@@ -53,9 +53,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   recuperarConta: async (novaSenha: string) => {
     const chave = await recuperarCofreComNuvem(novaSenha)
     if (!chave) return false
+    // Sync agressivo pós-recuperação — baixa todos os dados antes de liberar a tela
+    await syncOnLogin().catch(console.warn)
     set({ autenticado: true })
-    // Sync agressivo pós-recuperação — baixa todos os dados
-    syncOnLogin().catch(console.warn)
     return true
   },
 
