@@ -61,6 +61,7 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 3. **Armazenamento de Imagens em Base64 Redimensionado**: As fotos de moldes e peças são comprimidas via Canvas offscreen para no máximo 800×800px a 80% de qualidade JPEG antes de serem armazenadas no IndexedDB (`imagemUrl?: string`). Isso preserva o suporte offline 100% local-first sem depender de buckets S3/Cloud Storage.
 4. **Criptografia Financeira Cifrada em Repouso**: Nenhum valor monetário de saldo ou transação é salvo em texto claro no IndexedDB. Apenas a camada `camposCifrados.ts` usando WebCrypto PBKDF2 + AES-GCM-256 tem autoridade para cifra/decifra durante uma sessão ativa.
 5. **Evolução Híbrida (Fase 7 - Supabase)**: Decidido integrar Supabase (PostgreSQL + RLS) para armazenamento em nuvem e sincronização com o banco local-first. O sistema terá suporte a Autenticação por Google, Email/Senha e, futuramente, Apple. Substitui a ideia original do Firebase devido ao plano Hobby gratuito excelente do Supabase e sua aderência às regras de RLS nativas do Postgres.
+6. **Fluxo de Autenticação Estrito (Nuvem + Local-First)**: A página padroniza o login como entrada principal. Se a conta não for encontrada (Invalid Credentials), o sistema redireciona para o formulário de cadastro. Após a confirmação de e-mail (via Supabase magic link), o usuário é intencionalmente deslogado de sessões temporárias para forçar o login manual com senha, o qual é requisito obrigatório para gerar/recuperar a chave de criptografia local (DEK) no IndexedDB.
 
 ---
 
