@@ -62,10 +62,13 @@ describe('LoginForm', () => {
   })
 
   it('cria conta e navega para a rota inicial', async () => {
-    // contaConfigurada: false → useEffect força modoCadastro=true → botão já é "Cadastrar"
+    // contaConfigurada: false → formulário inicia no modo login por padrão
     useAuthStore.setState({ autenticado: false, contaConfigurada: false })
     vi.mocked(supabase.auth.signUp).mockResolvedValueOnce({ data: { session: { user: { id: '123' } } }, error: null } as any)
     render(<LoginForm />)
+
+    // Precisamos clicar em "Criar Conta" explicitamente
+    fireEvent.click(screen.getByRole('button', { name: /^Criar Conta$/ }))
 
     const inputEmail = await screen.findByPlaceholderText('Digite seu usuário ou e-mail')
     const inputSenha = await screen.findByPlaceholderText('Digite sua senha')
