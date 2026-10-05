@@ -90,7 +90,7 @@ export function LoginForm() {
             if (supaErr) {
               console.warn('Login Supabase falhou (pode ser conta legada). Tentando criar na nuvem...', supaErr.message)
               // MIGRATION: Conta criada antes do Supabase. Vamos criar a conta na nuvem agora!
-              const { data, error: signUpErr } = await supabase.auth.signUp({
+              const { error: signUpErr } = await supabase.auth.signUp({
                 email,
                 password: senha,
                 options: { data: { full_name: nome || email.split('@')[0] } }
