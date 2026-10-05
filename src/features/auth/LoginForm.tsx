@@ -131,7 +131,11 @@ export function LoginForm() {
           }
           const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
           if (error) {
-            setErro('E-mail ou senha incorretos.')
+            if (error.message.toLowerCase().includes('email not confirmed')) {
+              setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
+            } else {
+              setErro('E-mail ou senha incorretos.')
+            }
             setEnviando(false)
             setMostrarOverlay(false)
             return
@@ -163,13 +167,19 @@ export function LoginForm() {
             })
             if (error) {
               const isDuplicated = error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('já cadastrado')
-              setErro(isDuplicated ? 'Este e-mail já está cadastrado.' : error.message)
+              setErro(isDuplicated ? 'Este e-mail já está cadastrado. Tente fazer login ou verifique seu e-mail para confirmar a conta.' : error.message)
               setEnviando(false)
               setMostrarOverlay(false)
               return
             }
             if (data?.user?.identities && data.user.identities.length === 0) {
-              setErro('Este e-mail já está cadastrado.')
+              setErro('Este e-mail já está cadastrado. Tente fazer login ou verifique seu e-mail para confirmar a conta.')
+              setEnviando(false)
+              setMostrarOverlay(false)
+              return
+            }
+            if (!data.session) {
+              setErro('Cadastro quase pronto! Verifique sua caixa de e-mail e clique no link de confirmação para acessar o aplicativo.')
               setEnviando(false)
               setMostrarOverlay(false)
               return
