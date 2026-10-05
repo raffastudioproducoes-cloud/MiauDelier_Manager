@@ -165,24 +165,56 @@ export function LoginForm() {
               password: senha,
               options: { data: { full_name: nome } }
             })
+            
             if (error) {
               const isDuplicated = error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('já cadastrado')
-              setErro(isDuplicated ? 'Este e-mail já está cadastrado. Tente fazer login ou verifique seu e-mail para confirmar a conta.' : error.message)
+              if (isDuplicated) {
+                setErro('Este e-mail já possui cadastro. Redirecionando para o login...')
+                setTimeout(() => {
+                  setErro('')
+                  setModoCadastro(false)
+                }, 2500)
+              } else {
+                setErro(error.message)
+              }
               setEnviando(false)
               setMostrarOverlay(false)
               return
             }
+            
             if (data?.user?.identities && data.user.identities.length === 0) {
-              setErro('Este e-mail já está cadastrado. Tente fazer login ou verifique seu e-mail para confirmar a conta.')
+              setErro('Este e-mail já possui cadastro. Redirecionando para o login...')
+              setTimeout(() => {
+                setErro('')
+                setModoCadastro(false)
+              }, 2500)
               setEnviando(false)
               setMostrarOverlay(false)
               return
             }
+            
             if (!data?.session) {
-              setErro('Cadastro quase pronto! Verifique sua caixa de e-mail e clique no link de confirmação para acessar o aplicativo.')
-              setEnviando(false)
-              setMostrarOverlay(false)
-              return
+              setTextoOverlay('Confirme no seu e-mail. Aguardando...')
+              
+              let isConfirmed = false
+              while (!isConfirmed) {
+                await new Promise(resolve => setTimeout(resolve, 3000))
+                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                  email,
+                  password: senha
+                })
+                
+                if (signInData?.session) {
+                  isConfirmed = true
+                  setTextoOverlay('E-mail confirmado!')
+                  await new Promise(resolve => setTimeout(resolve, 1000))
+                } else if (signInErr && !signInErr.message.toLowerCase().includes('email not confirmed')) {
+                  setErro(signInErr.message)
+                  setEnviando(false)
+                  setMostrarOverlay(false)
+                  return
+                }
+              }
             }
           }
           await criarConta(senha)
