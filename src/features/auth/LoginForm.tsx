@@ -75,14 +75,7 @@ export function LoginForm() {
           setMostrarOverlay(false)
           return
         } else {
-          // PASSO 1: Faz login no Supabase PRIMEIRO (para sync funcionar)
-          if (email) {
-            const { error: supaErr } = await supabase.auth.signInWithPassword({ email, password: senha })
-            if (supaErr) {
-              console.warn('Login Supabase falhou (continuando com cofre local):', supaErr.message)
-            }
-          }
-          // PASSO 2: Entrar no cofre local
+          // PASSO 1: Entrar no cofre local (valida a senha com 100% de certeza)
           const sucesso = await entrar(senha)
           if (!sucesso) {
             setErro('Senha incorreta.')
@@ -90,6 +83,31 @@ export function LoginForm() {
             setMostrarOverlay(false)
             return
           }
+
+          // PASSO 2: Agora tentamos logar ou criar na nuvem para manter a sincronia
+          if (email) {
+            const { error: supaErr } = await supabase.auth.signInWithPassword({ email, password: senha })
+            if (supaErr) {
+              console.warn('Login Supabase falhou (pode ser conta legada). Tentando criar na nuvem...', supaErr.message)
+              // MIGRATION: Conta criada antes do Supabase. Vamos criar a conta na nuvem agora!
+              const { error: signUpErr } = await supabase.auth.signUp({
+                email,
+                password: senha,
+                options: { data: { full_name: nome || email.split('@')[0] } }
+              })
+              if (signUpErr) {
+                console.error('Falha ao migrar conta para a nuvem:', signUpErr.message)
+              } else {
+                console.log('Conta legada migrada para a nuvem com sucesso!')
+                // Tenta logar de novo só por garantia
+                await supabase.auth.signInWithPassword({ email, password: senha })
+                // Chama o syncOnLogin de novo porque a primeira chamada (dentro de entrar) falhou por não ter conta na nuvem
+                const { syncOnLogin } = await import('../../lib/syncService')
+                await syncOnLogin().catch(console.warn)
+              }
+            }
+          }
+
           // PASSO 3: Garante que a wrapped_dek está salva na nuvem (para sync entre dispositivos)
           try {
             const { ensureWrappedDekInCloud } = await import('../../lib/auth')
