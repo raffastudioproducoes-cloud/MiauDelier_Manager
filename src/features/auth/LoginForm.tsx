@@ -152,13 +152,20 @@ export function LoginForm() {
         } else {
           // Cria a conta na nuvem e o cofre local
           if (email) {
-            const { error } = await supabase.auth.signUp({
+            const { data, error } = await supabase.auth.signUp({
               email,
               password: senha,
               options: { data: { full_name: nome } }
             })
             if (error) {
-              setErro(error.message)
+              const isDuplicated = error.message.toLowerCase().includes('already registered') || error.message.toLowerCase().includes('já cadastrado')
+              setErro(isDuplicated ? 'Este e-mail já está cadastrado.' : error.message)
+              setEnviando(false)
+              setMostrarOverlay(false)
+              return
+            }
+            if (data?.user?.identities && data.user.identities.length === 0) {
+              setErro('Este e-mail já está cadastrado.')
               setEnviando(false)
               setMostrarOverlay(false)
               return
