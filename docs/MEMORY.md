@@ -69,4 +69,5 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 - **Comando de Verificação de Tipos**: `npx tsc --noEmit`
 - **Comando de Testes Automatizados**: `npx vitest run`
 - **Comando de Build**: `npx vite build`
-- **Localização do Vault Obsidian de Apoio**: `C:\Users\rafae\Documents\Obsidian`
+- **Localização do Vault Obsidian de Apoio**: `https://github.com/raffastudioproducoes-cloud/RaffaStudio-Vault`
+- **Diretório Local do Projeto**: `G:\.shortcut-targets-by-id\181ELvcABCaCM1Gik13jlEQ4ERpBRwO9o\Projetos\MiauDelier Manager`
