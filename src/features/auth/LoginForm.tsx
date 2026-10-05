@@ -34,16 +34,21 @@ export function LoginForm() {
 
   useEffect(() => {
     if (autenticado) {
-      navigate({ to: '/' })
+      if (contaConfigurada) {
+        navigate({ to: '/' })
+      } else {
+        // Autenticado via link de confirmação, mas sem cofre local.
+        // Precisamos que o usuário faça o login manualmente para capturar a senha e criar/recuperar o cofre.
+        supabase.auth.signOut().then(() => {
+          setErro('E-mail confirmado com sucesso! Por favor, faça o login com sua senha para acessar seu ateliê.')
+          setModoCadastro(false)
+        })
+      }
     }
-  }, [autenticado, navigate])
+  }, [autenticado, contaConfigurada, navigate])
 
-  useEffect(() => {
-    if (contaConfigurada === false) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setModoCadastro(true)
-    }
-  }, [contaConfigurada])
+  // Removido o useEffect que mudava para modoCadastro(true) automaticamente.
+  // Assim a página de login sempre carrega no formulário de logar.
 
   if (contaConfigurada === null) {
     return (
@@ -134,7 +139,11 @@ export function LoginForm() {
             if (error.message.toLowerCase().includes('email not confirmed')) {
               setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
             } else {
-              setErro('E-mail ou senha incorretos.')
+              setErro('Conta não encontrada ou senha incorreta. Redirecionando para cadastro...')
+              setTimeout(() => {
+                setErro('Complete os dados para criar sua conta.')
+                setModoCadastro(true)
+              }, 2500)
             }
             setEnviando(false)
             setMostrarOverlay(false)
@@ -209,12 +218,18 @@ export function LoginForm() {
                   setTextoOverlay('E-mail confirmado!')
                   await new Promise(resolve => setTimeout(resolve, 1000))
                 } else if (signInErr && !signInErr.message.toLowerCase().includes('email not confirmed')) {
-                  setErro(signInErr.message)
-                  setEnviando(false)
-                  setMostrarOverlay(false)
-                  return
+                  // Ignoramos outros erros como 'invalid login credentials' no loop,
+                  // pois o usuário pode ter digitado errado, mas a confirmação deve continuar.
                 }
               }
+              
+              // E-mail confirmado. Encerramos a sessão gerada e voltamos para o login conforme fluxo solicitado.
+              await supabase.auth.signOut()
+              setModoCadastro(false)
+              setErro('E-mail confirmado com sucesso! Faça o login para acessar o ateliê.')
+              setMostrarOverlay(false)
+              setEnviando(false)
+              return // Para aqui e não executa criarConta nem navigate
             }
           }
           await criarConta(senha)
