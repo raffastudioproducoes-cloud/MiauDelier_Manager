@@ -178,7 +178,7 @@ export function LoginForm() {
               setMostrarOverlay(false)
               return
             }
-            if (!data.session) {
+            if (!data?.session) {
               setErro('Cadastro quase pronto! Verifique sua caixa de e-mail e clique no link de confirmação para acessar o aplicativo.')
               setEnviando(false)
               setMostrarOverlay(false)
