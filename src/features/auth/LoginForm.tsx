@@ -90,7 +90,7 @@ export function LoginForm() {
             if (supaErr) {
               console.warn('Login Supabase falhou (pode ser conta legada). Tentando criar na nuvem...', supaErr.message)
               // MIGRATION: Conta criada antes do Supabase. Vamos criar a conta na nuvem agora!
-              const { error: signUpErr } = await supabase.auth.signUp({
+              const { data, error: signUpErr } = await supabase.auth.signUp({
                 email,
                 password: senha,
                 options: { data: { full_name: nome || email.split('@')[0] } }
@@ -101,10 +101,14 @@ export function LoginForm() {
                 console.log('Conta legada migrada para a nuvem com sucesso!')
                 // Tenta logar de novo só por garantia
                 await supabase.auth.signInWithPassword({ email, password: senha })
-                // Chama o syncOnLogin de novo porque a primeira chamada (dentro de entrar) falhou por não ter conta na nuvem
                 const { syncOnLogin } = await import('../../lib/syncService')
                 await syncOnLogin().catch(console.warn)
               }
+            } else {
+              // Se o login na nuvem deu certo de primeira, precisamos rodar o syncOnLogin 
+              // agora, pois a chamada dentro de entrar() falhou por falta de sessão ativa
+              const { syncOnLogin } = await import('../../lib/syncService')
+              await syncOnLogin().catch(console.warn)
             }
           }
 
