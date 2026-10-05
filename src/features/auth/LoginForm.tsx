@@ -363,14 +363,23 @@ export function LoginForm() {
             </div>
 
             {modoCadastro && (
-              <TextField
-                id="confirmar-senha"
-                rotulo="Confirmar senha"
-                type="password"
-                placeholder="Confirme sua senha"
-                value={confirmarSenha}
-                onChange={(e) => setConfirmarSenha(e.target.value)}
-              />
+              <div className="relative">
+                <TextField
+                  id="confirmar-senha"
+                  rotulo="Confirmar senha"
+                  type={mostrarSenha ? 'text' : 'password'}
+                  placeholder="Confirme sua senha"
+                  value={confirmarSenha}
+                  onChange={(e) => setConfirmarSenha(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute right-3.5 top-9 text-xs font-medium text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                >
+                  {mostrarSenha ? '🙈 Ocultar' : '👁️ Mostrar'}
+                </button>
+              </div>
             )}
 
             <Button
