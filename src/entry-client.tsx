@@ -22,6 +22,14 @@ window.addEventListener('focus', () => {
   // Debounce: só sincroniza se passou mais de 2 min desde o último sync
   syncWithSupabase()
 })
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    syncWithSupabase()
+  }
+})
+window.addEventListener('beforeunload', () => {
+  syncWithSupabase()
+})
 
 import { registerSW } from 'virtual:pwa-register'
 registerSW({ immediate: true })

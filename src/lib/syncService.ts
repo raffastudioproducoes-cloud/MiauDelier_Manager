@@ -10,8 +10,8 @@ export let isApplyingRemote = false
 // Configuração de Auto-save
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Tempo de inatividade antes de auto-salvar na nuvem (30 minutos) */
-const AUTO_SAVE_INACTIVITY_MS = 30 * 60 * 1000
+/** Tempo de inatividade antes de auto-salvar na nuvem (5 segundos) */
+const AUTO_SAVE_INACTIVITY_MS = 5 * 1000
 
 /** Timer de inatividade para auto-save */
 let inactivityTimer: ReturnType<typeof setTimeout> | null = null
