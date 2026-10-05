@@ -23,6 +23,8 @@ export function LoginForm() {
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [mostrarOverlay, setMostrarOverlay] = useState(false)
+  const [textoOverlay, setTextoOverlay] = useState('Verificando dados...')
 
   const autenticado = useAuthStore((estado) => estado.autenticado)
 
@@ -64,10 +66,13 @@ export function LoginForm() {
     }
 
     try {
+      setMostrarOverlay(true)
+      setTextoOverlay(modoCadastro ? 'Criando conta e ateliê...' : 'Verificando dados e sincronizando...')
       if (contaConfigurada) {
         if (modoCadastro) {
           setErro('Já existe uma conta neste dispositivo. Acesse a aba "Entrar" para fazer login.')
           setEnviando(false)
+          setMostrarOverlay(false)
           return
         } else {
           // PASSO 1: Faz login no Supabase PRIMEIRO (para sync funcionar)
@@ -81,6 +86,8 @@ export function LoginForm() {
           const sucesso = await entrar(senha)
           if (!sucesso) {
             setErro('Senha incorreta.')
+            setEnviando(false)
+            setMostrarOverlay(false)
             return
           }
           // PASSO 3: Garante que a wrapped_dek está salva na nuvem (para sync entre dispositivos)
@@ -97,11 +104,14 @@ export function LoginForm() {
           if (!email) {
             setErro('Por favor, informe seu e-mail para buscar sua conta.')
             setEnviando(false)
+            setMostrarOverlay(false)
             return
           }
           const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
           if (error) {
             setErro('E-mail ou senha incorretos.')
+            setEnviando(false)
+            setMostrarOverlay(false)
             return
           }
           let recovered = false
@@ -131,17 +141,25 @@ export function LoginForm() {
             })
             if (error) {
               setErro(error.message)
+              setEnviando(false)
+              setMostrarOverlay(false)
               return
             }
           }
           await criarConta(senha)
         }
       }
+      
+      setTextoOverlay('Concluído!')
+      await new Promise(r => setTimeout(r, 800))
+      
       navigate({ to: '/' })
     } catch (falha) {
+      setMostrarOverlay(false)
+      setEnviando(false)
       setErro(falha instanceof Error ? falha.message : 'Falha inesperada.')
     } finally {
-      setEnviando(false)
+      // Deixado intencionalmente vazio, pois limpamos enviando nos retornos de erro ou antes do navigate
     }
   }
 
@@ -159,6 +177,23 @@ export function LoginForm() {
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-background text-on-surface flex flex-col md:flex-row font-sans">
+      
+      {/* OVERLAY DE LOADING */}
+      {mostrarOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-300">
+          <div className="flex flex-col items-center gap-4 p-8 bg-surface-container rounded-3xl shadow-2xl border border-outline-variant/30 animate-in fade-in zoom-in-95">
+            {textoOverlay === 'Concluído!' ? (
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 text-primary text-2xl">
+                ✓
+              </div>
+            ) : (
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            )}
+            <p className="text-on-surface font-bold tracking-tight text-lg animate-pulse">{textoOverlay}</p>
+          </div>
+        </div>
+      )}
+
       {/* Luzes de Iluminação de Fundo de Suporte (Theme Ambient Glow) */}
       <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[140px] pointer-events-none" />
       <div className="absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 rounded-full bg-surface-container-high/30 blur-[160px] pointer-events-none" />
