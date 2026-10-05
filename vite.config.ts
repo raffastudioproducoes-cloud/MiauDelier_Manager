@@ -18,6 +18,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        clientsClaim: true,
+        skipWaiting: true
+      },
       manifest: {
         name: 'MiauDelier Manager',
         short_name: 'MiauDelier',

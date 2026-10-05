@@ -196,7 +196,12 @@ export function LoginForm() {
     } catch (falha) {
       setMostrarOverlay(false)
       setEnviando(false)
-      setErro(falha instanceof Error ? falha.message : 'Falha inesperada.')
+      let msg = falha instanceof Error ? falha.message : 'Falha inesperada.'
+      if (msg === 'Failed to fetch') {
+        const urlStatus = import.meta.env.VITE_SUPABASE_URL ? 'OK' : 'Ausente (cache antigo)';
+        msg = `Erro de conexão (Failed to fetch). URL Configurada: ${urlStatus}. Seu navegador pode estar usando uma versão antiga salva no cache. Por favor, feche e abra o app novamente, ou limpe o cache do navegador (CTRL + F5).`
+      }
+      setErro(msg)
     } finally {
       // Deixado intencionalmente vazio, pois limpamos enviando nos retornos de erro ou antes do navigate
     }
