@@ -308,7 +308,7 @@ async function detectConflict(perfil_id: number): Promise<ConflictResult> {
   if (lastLocalChange === 0 && lastSyncTs === 0) {
     let totalLocal = 0
     for (const tableName of TABLES_TO_SYNC) {
-      try { totalLocal += await db.table(tableName).count() } catch {}
+      try { totalLocal += await db.table(tableName).count() } catch (e) { console.debug('Ignorado:', e) }
     }
     if (totalLocal > 0) {
       // Temos dados locais que nunca subiram nem tem eventos
@@ -426,7 +426,7 @@ export async function syncWithSupabase() {
         if (localQueueCount === 0) {
           let totalLocal = 0
           for (const tableName of TABLES_TO_SYNC) {
-            try { totalLocal += await db.table(tableName).count() } catch {}
+            try { totalLocal += await db.table(tableName).count() } catch (e) { console.debug('Ignorado:', e) }
           }
           if (totalLocal > 0) {
             console.log('[Sync] Gerando snapshot completo de dados antigos...')
