@@ -283,6 +283,18 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
   }
 }
 
+async function downloadRemoteEventsLoop(perfil_id: number, key: CryptoKey): Promise<void> {
+  let hasMore = true
+  while (hasMore) {
+    const beforeCount = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
+    const beforeTs = beforeCount ? Number(beforeCount.valor) : 0
+    await downloadRemoteEvents(perfil_id, key)
+    const afterCount = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
+    const afterTs = afterCount ? Number(afterCount.valor) : 0
+    hasMore = afterTs > beforeTs
+  }
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Detecção de Conflito — compara timestamps locais vs remotos
 // ──────────────────────────────────────────────────────────────────────────────
@@ -406,8 +418,8 @@ export async function syncWithSupabase() {
     switch (conflict.status) {
       case 'remote_newer':
         // Remoto é mais novo — baixa dados do Supabase para o dispositivo
-        console.log('[Sync] Remoto mais recente — baixando dados...')
-        await downloadRemoteEvents(perfil_id, key)
+        console.log('[Sync] Remoto mais recente — baixando dados em loop...')
+        await downloadRemoteEventsLoop(perfil_id, key)
         break
 
       case 'local_newer':
@@ -506,22 +518,15 @@ export async function syncOnLogin() {
       await db.syncMetadata.update(lastSync.id!, { valor: '0' })
     }
     // Baixa em loop até não ter mais eventos
-    let hasMore = true
-    while (hasMore) {
-      const beforeCount = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-      const beforeTs = beforeCount ? Number(beforeCount.valor) : 0
-      await downloadRemoteEvents(perfil_id, key)
-      const afterCount = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-      const afterTs = afterCount ? Number(afterCount.valor) : 0
-      hasMore = afterTs > beforeTs // Se avançou, pode ter mais
-    }
+    await downloadRemoteEventsLoop(perfil_id, key)
     console.log('[Sync Login] Download completo finalizado.')
   } else if (totalLocalRecords > 0 && (remoteCount ?? 0) > 0) {
     // Tem dados locais E remotos — verifica conflito
     const conflict = await detectConflict(perfil_id)
     if (conflict.status === 'remote_newer') {
-      console.log('[Sync Login] Remoto mais recente — baixando atualizações...')
-      await downloadRemoteEvents(perfil_id, key)
+      console.log('[Sync Login] Remoto mais recente — baixando atualizações em loop...')
+      await downloadRemoteEventsLoop(perfil_id, key)
+      console.log('[Sync Login] Atualizações remotas baixadas com sucesso.')
     } else if (conflict.status === 'local_newer') {
       console.log('[Sync Login] Local mais recente — dados do dispositivo são mais novos que a nuvem.')
       if (onConflictDetected) {
@@ -626,6 +631,6 @@ export async function forceDownload() {
   const perfil_id = await resolvePerfilId()
   if (!perfil_id) throw new Error('Perfil não sincronizado')
 
-  await downloadRemoteEvents(perfil_id, key)
+  await downloadRemoteEventsLoop(perfil_id, key)
 }
 

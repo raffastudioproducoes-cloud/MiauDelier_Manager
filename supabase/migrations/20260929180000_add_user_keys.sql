@@ -11,16 +11,30 @@ CREATE TABLE IF NOT EXISTS public.user_keys (
 -- Ativar RLS
 ALTER TABLE public.user_keys ENABLE ROW LEVEL SECURITY;
 
--- Políticas de RLS: O usuário só pode ver e alterar sua própria chave
-CREATE POLICY "Usuários podem ver suas próprias chaves" 
-    ON public.user_keys FOR SELECT 
-    USING (auth.uid() = user_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE policyname = 'Usuários podem ver suas próprias chaves' AND tablename = 'user_keys'
+    ) THEN
+        CREATE POLICY "Usuários podem ver suas próprias chaves" 
+            ON public.user_keys FOR SELECT 
+            USING (auth.uid() = user_id);
+    END IF;
 
-CREATE POLICY "Usuários podem inserir suas próprias chaves" 
-    ON public.user_keys FOR INSERT 
-    WITH CHECK (auth.uid() = user_id);
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE policyname = 'Usuários podem inserir suas próprias chaves' AND tablename = 'user_keys'
+    ) THEN
+        CREATE POLICY "Usuários podem inserir suas próprias chaves" 
+            ON public.user_keys FOR INSERT 
+            WITH CHECK (auth.uid() = user_id);
+    END IF;
 
-CREATE POLICY "Usuários podem atualizar suas próprias chaves" 
-    ON public.user_keys FOR UPDATE 
-    USING (auth.uid() = user_id) 
-    WITH CHECK (auth.uid() = user_id);
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE policyname = 'Usuários podem atualizar suas próprias chaves' AND tablename = 'user_keys'
+    ) THEN
+        CREATE POLICY "Usuários podem atualizar suas próprias chaves" 
+            ON public.user_keys FOR UPDATE 
+            USING (auth.uid() = user_id) 
+            WITH CHECK (auth.uid() = user_id);
+    END IF;
+END $$;
