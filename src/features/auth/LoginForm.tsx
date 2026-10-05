@@ -383,6 +383,7 @@ export function LoginForm() {
                 placeholder="Seu nome completo"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
+                autoComplete="name"
               />
             )}
 
@@ -393,6 +394,7 @@ export function LoginForm() {
               placeholder="Digite seu usuário ou e-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
 
             <div className="relative">
@@ -404,6 +406,7 @@ export function LoginForm() {
                 value={senha}
                 onChange={(evento) => setSenha(evento.target.value)}
                 erro={erro ?? undefined}
+                autoComplete={modoCadastro ? "new-password" : "current-password"}
               />
               <button
                 type="button"
@@ -423,6 +426,7 @@ export function LoginForm() {
                   placeholder="Confirme sua senha"
                   value={confirmarSenha}
                   onChange={(e) => setConfirmarSenha(e.target.value)}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
