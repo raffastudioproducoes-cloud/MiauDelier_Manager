@@ -48,6 +48,8 @@ export function TransacoesPage() {
   const [transacaoExcluindoId, setTransacaoExcluindoId] = useState<number | null>(null)
   const [dataDe, setDataDe] = useState('')
   const [dataAte, setDataAte] = useState('')
+  const [filtroContaId, setFiltroContaId] = useState('')
+  const [filtroTipo, setFiltroTipo] = useState<'todas' | 'entrada' | 'saida'>('todas')
 
   async function carregarTransacoes(idDaConta: string) {
     let listaTransacoes
@@ -68,7 +70,7 @@ export function TransacoesPage() {
     const listaContas = await listarContas()
     if (!montado.current) return
     setContas(listaContas)
-    await carregarTransacoes(contaId)
+    await carregarTransacoes(filtroContaId)
   }
 
   useEffect(() => {
@@ -91,17 +93,20 @@ export function TransacoesPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    carregarTransacoes(contaId).catch((falha) => {
+    carregarTransacoes(filtroContaId).catch((falha) => {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar transações.', 'erro')
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contaId])
+  }, [filtroContaId])
 
   const faltaConta = contas.length === 0
-  const contaSelecionada = contas.find((conta) => conta.id === Number(contaId))
+  const contaSelecionada = contas.find((conta) => conta.id === Number(filtroContaId))
   const transacoesFiltradas = transacoes.filter(
-    (t) => (!dataDe || t.data >= dataDe) && (!dataAte || t.data <= dataAte),
+    (t) => 
+      (!dataDe || t.data >= dataDe) && 
+      (!dataAte || t.data <= dataAte) &&
+      (filtroTipo === 'todas' || t.tipo === filtroTipo)
   )
 
   if (!carregado) {
@@ -238,14 +243,47 @@ export function TransacoesPage() {
         </form>
       </Card>
 
-      {contaSelecionada && (
+      {contaSelecionada ? (
         <h2 className="text-sm font-medium text-on-surface-variant">
           Movimentações de {contaSelecionada.nome}
         </h2>
+      ) : (
+        <h2 className="text-sm font-medium text-on-surface-variant">
+          Movimentações de Todas as Contas
+        </h2>
       )}
 
-      {transacoes.length > 0 && (
-        <Card className="flex flex-col gap-3 sm:flex-row">
+      {contas.length > 0 && (
+        <Card className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex-1 flex flex-col gap-1">
+            <label htmlFor="filtro-conta" className="text-sm font-medium text-on-surface">Conta</label>
+            <select
+              id="filtro-conta"
+              value={filtroContaId}
+              onChange={(e) => setFiltroContaId(e.target.value)}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              <option value="">Todas</option>
+              {contas.map((conta) => (
+                <option key={conta.id} value={conta.id}>{conta.nome}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex-1 flex flex-col gap-1">
+            <label htmlFor="filtro-tipo" className="text-sm font-medium text-on-surface">Tipo</label>
+            <select
+              id="filtro-tipo"
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value as 'todas' | 'entrada' | 'saida')}
+              className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              <option value="todas">Todos</option>
+              <option value="entrada">Entradas</option>
+              <option value="saida">Saídas</option>
+            </select>
+          </div>
+
           <TextField id="data-de-transacao" rotulo="De" type="date" value={dataDe} onChange={(e) => setDataDe(e.target.value)} />
           <TextField id="data-ate-transacao" rotulo="Até" type="date" value={dataAte} onChange={(e) => setDataAte(e.target.value)} />
         </Card>
