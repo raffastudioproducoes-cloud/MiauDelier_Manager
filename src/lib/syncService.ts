@@ -225,7 +225,7 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
 
 async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<void> {
   const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-  let initialLastTs = lastSync ? Number(lastSync.valor) : 0
+  const initialLastTs = lastSync ? Number(lastSync.valor) : 0
 
   let offset = 0
   const LIMIT = 500
@@ -363,7 +363,7 @@ export async function syncWithSupabase() {
       if (localQueueCount === 0) {
         let totalLocal = 0
         for (const tableName of TABLES_TO_SYNC) {
-          try { totalLocal += await db.table(tableName).count() } catch (e) { /* ignored */ }
+          try { totalLocal += await db.table(tableName).count() } catch { /* ignored */ }
         }
         if (totalLocal > 0) {
           console.log('[Sync] Gerando snapshot completo de dados antigos...')
