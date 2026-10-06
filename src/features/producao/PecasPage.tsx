@@ -736,10 +736,18 @@ export function PecasPage() {
                     </select>
                   </div>
                 </div>
-                <div className="rounded-xl border border-outline-variant/40 bg-surface-container/30 p-3 flex flex-col justify-center">
-                  <span className="text-xs font-semibold text-on-surface">💡 Dica Técnica de Cura</span>
+                <div className="rounded-xl border border-outline-variant/40 bg-surface-container/30 p-4 flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-on-surface">💡 Dica Técnica: O Tempo Real de Cura da Resina Epóxi</span>
+                  <p className="text-[11px] text-on-surface-variant">
+                    A secagem superficial é rápida, mas a <strong className="text-on-surface">cura química total leva dias</strong>. Confira os 3 estágios do processo a 25°C:
+                  </p>
+                  <ul className="text-[11px] text-on-surface-variant list-disc pl-4 space-y-1">
+                    <li><strong className="text-on-surface">12h a 24h (Cura Inicial):</strong> Secagem ao toque. A superfície não gruda mais, mas o interior da peça segue flexível.</li>
+                    <li><strong className="text-on-surface">48h a 72h (Desmolde):</strong> Cura de manuseio. A peça pode ser desenformada e lixada levemente, mas pressão contínua ainda pode deixar marcas.</li>
+                    <li><strong className="text-on-surface">7 a 14 dias (Cura Total):</strong> Reação 100% concluída. A resina atinge sua dureza mecânica, resistência térmica e química máximas.</li>
+                  </ul>
                   <p className="text-[11px] text-on-surface-variant mt-1">
-                    Resinas de baixa viscosidade ou para mesas altas costumam curar em 24h a 7 dias ou mais a 25°C dependendo da espessura e clima. O uso de estufa a 40°C–50°C acelera a cura para 6h–12h.
+                    <strong className="text-on-surface">⚠️ Controle de Temperatura:</strong> O frio (abaixo de 18°C) atrasa o processo químico. Para acelerar a cura de forma segura, o uso de estufas controladas entre 40°C e 50°C reduz o tempo total para uma janela de 6h a 12h.
                   </p>
                 </div>
               </div>
