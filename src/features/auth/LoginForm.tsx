@@ -156,9 +156,25 @@ export function LoginForm() {
             console.warn('Recuperação do cofre falhou:', e)
           }
           if (!recovered) {
-            // Se não encontrou cofre na nuvem, cria um novo localmente
-            // e faz upload da wrapped_dek imediatamente
             await criarConta(senha)
+
+            try {
+              // Recupera o full_name salvo no Supabase durante o signUp
+              const { data: { user } } = await supabase.auth.getUser()
+              const fullName = user?.user_metadata?.full_name
+
+              const { atualizarPerfil, getPerfilAtivo } = await import('../../lib/perfisRepo')
+              const ativo = await getPerfilAtivo()
+              
+              await atualizarPerfil(ativo.id, { 
+                nomeDono: fullName || '',
+                nome: fullName ? `Ateliê de ${fullName}` : 'Ateliê Principal',
+                emailDono: email
+              })
+            } catch (e) {
+              console.warn('Erro ao atualizar nome do perfil com os dados do usuário:', e)
+            }
+
             try {
               const { ensureWrappedDekInCloud } = await import('../../lib/auth')
               await ensureWrappedDekInCloud()
@@ -233,6 +249,22 @@ export function LoginForm() {
             }
           }
           await criarConta(senha)
+
+          try {
+            const { data: { user } } = await supabase.auth.getUser()
+            const fullName = user?.user_metadata?.full_name
+
+            const { atualizarPerfil, getPerfilAtivo } = await import('../../lib/perfisRepo')
+            const ativo = await getPerfilAtivo()
+            
+            await atualizarPerfil(ativo.id, { 
+              nomeDono: fullName || nome || '',
+              nome: fullName ? `Ateliê de ${fullName}` : (nome ? `Ateliê de ${nome}` : 'Ateliê Principal'),
+              emailDono: email
+            })
+          } catch (e) {
+            console.warn('Erro ao atualizar nome do perfil (cadastro):', e)
+          }
         }
       }
       
