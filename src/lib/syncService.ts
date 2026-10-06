@@ -221,7 +221,7 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
     }
 
     console.log("📤 TENTANDO SUBIR LOTE PARA A NUVEM:", payloads)
-    const { data, error } = await supabase.from('sync_events').insert(payloads)
+    const { error } = await supabase.from('sync_events').insert(payloads)
     
     if (error) {
       console.error("🚨 ERRO CRÍTICO SUPABASE:", error)
