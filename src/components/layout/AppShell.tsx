@@ -540,6 +540,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+            <a href="https://www.gitguard.com.br/raffastudioproducoes-cloud" target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity grayscale hover:grayscale-0">
+              <img src="https://img.shields.io/badge/Secured%20by-GitGuard-success?style=flat-square" alt="Secured by GitGuard" className="h-[18px]" />
+            </a>
             <button type="button" onClick={() => irPara('/ajuda')} className="hover:text-primary transition-colors cursor-pointer">
               💡 Ajuda & FAQ
             </button>

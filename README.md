@@ -10,6 +10,7 @@
 [![Vite](https://img.shields.io/badge/Vite-8.2-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
 [![Local-first](https://img.shields.io/badge/Arquitetura-local--first-22C55E)](https://dexie.org)
 [![License](https://img.shields.io/badge/license-proprietary-0F172A)](#licença)
+[![Secured by GitGuard](https://img.shields.io/badge/Secured%20by-GitGuard-success?style=flat-square)](https://www.gitguard.com.br/raffastudioproducoes-cloud)
 
 </div>
 
