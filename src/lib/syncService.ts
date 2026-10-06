@@ -63,6 +63,8 @@ export function registerDexieHooks() {
           dadosString: JSON.stringify(obj),
           timestamp: Date.now(),
           sincronizado: false,
+        }).catch(err => {
+          console.error(`[DEBUG FATAL] ERRO ao adicionar ${tableName} na fila de upload (syncQueue):`, err)
         })
       }
     })
@@ -80,6 +82,8 @@ export function registerDexieHooks() {
           dadosString: JSON.stringify(updatedObj),
           timestamp: Date.now(),
           sincronizado: false,
+        }).catch(err => {
+          console.error(`[DEBUG FATAL] ERRO ao adicionar ${tableName} na fila de upload (syncQueue):`, err)
         })
       }
     })
@@ -97,6 +101,8 @@ export function registerDexieHooks() {
           dadosString: '{}',
           timestamp: Date.now(),
           sincronizado: false,
+        }).catch(err => {
+          console.error(`[DEBUG FATAL] ERRO ao adicionar ${tableName} na fila de upload (syncQueue):`, err)
         })
       }
     })
@@ -174,8 +180,20 @@ async function uploadPendingEvents(): Promise<void> {
 
 async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<void> {
   const pending = await db.syncQueue.toArray()
+  
+  // DIAGNÓSTICO EXTREMO E INCONTESTÁVEL
+  const matCount = await db.table('materiais').count()
+  const transCount = await db.table('transacoes').count()
+  console.log(`\n================= DIAGNÓSTICO DO MOTOR DE UPLOAD =================`)
+  console.log(`[PC -> NUVEM] Materiais Locais: ${matCount} | Transações Locais: ${transCount}`)
+  console.log(`[PC -> NUVEM] Eventos aguardando na fila de Upload (syncQueue): ${pending.length}`)
+  console.log(`==================================================================\n`)
+
   if (pending.length === 0) {
     hasPendingLocalChanges = false
+    if (matCount > 0 || transCount > 0) {
+      console.warn(`[ALERTA FATAL] Existem dados locais no PC, mas a FILA DE UPLOAD ESTÁ VAZIA! Isso prova que o PC não está tentando fazer upload, porque os eventos não foram enfileirados ou já foram limpos. Tente criar um NOVO material agora e veja se o número da fila sobe para 1!`)
+    }
     return
   }
 
@@ -183,27 +201,37 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
   const BATCH_SIZE = 50
   for (let i = 0; i < pending.length; i += BATCH_SIZE) {
     const batch = pending.slice(i, i + BATCH_SIZE)
-    const payloads = await Promise.all(
-      batch.map(async (event) => ({
-        id: event.id,
-        perfil_id,
-        tabela: event.tabela,
-        registro_id: event.registroId,
-        acao: event.acao,
-        dados_criptografados:
-          event.dadosString === '{}' ? '' : await encryptText(key, event.dadosString),
-        timestamp: event.timestamp,
-      })),
-    )
-
-    const { error } = await supabase.from('sync_events').insert(payloads)
-    if (!error) {
-      const ids = batch.map((p) => p.id!)
-      await db.syncQueue.bulkDelete(ids)
-    } else {
-      console.error('[Sync Upload] Erro ao subir lote de eventos:', error)
-      return // Para e tenta de novo na próxima vez
+    let payloads
+    try {
+      payloads = await Promise.all(
+        batch.map(async (event) => ({
+          id: event.id,
+          perfil_id,
+          tabela: event.tabela,
+          registro_id: event.registroId,
+          acao: event.acao,
+          dados_criptografados:
+            event.dadosString === '{}' ? '' : await encryptText(key, event.dadosString),
+          timestamp: event.timestamp,
+        })),
+      )
+    } catch (encErr) {
+      console.error("ERRO CRÍTICO DE CRIPTOGRAFIA ANTES DO UPLOAD:", encErr)
+      return
     }
+
+    console.log("📤 TENTANDO SUBIR LOTE PARA A NUVEM:", payloads)
+    const { data, error } = await supabase.from('sync_events').insert(payloads)
+    
+    if (error) {
+      console.error("🚨 ERRO CRÍTICO SUPABASE:", error)
+      throw error // Arremessa o erro para não ser engolido
+    }
+    
+    // Se não houve erro, apaga da fila local
+    const ids = batch.map((p) => p.id!)
+    await db.syncQueue.bulkDelete(ids)
+    console.log(`✅ SUCESSO: Lote de ${ids.length} eventos salvo na nuvem e removido da fila local.`)
   }
 
   // Salva o hash de verificação anti-tamper no Supabase
@@ -246,9 +274,14 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
         .order('id', { ascending: true })
         .range(offset, offset + LIMIT - 1)
 
-      console.log('SYNC FETCH:', remoteEvents ? remoteEvents.length : 0)
+      const fetchedCount = remoteEvents ? remoteEvents.length : 0
+      console.log('SYNC FETCH:', fetchedCount)
+      
+      // ALERTA VISUAL NO TELEMÓVEL
+      alert(`[DEBUG DOWNLOAD] Puxou ${fetchedCount} eventos da nuvem.`)
 
       if (fetchError) {
+        alert('[DEBUG ERROR] Erro Supabase: ' + JSON.stringify(fetchError))
         console.error('[Sync Download] Erro ao baixar eventos:', fetchError)
         break // Aborta a paginação, tenta novamente no próximo ciclo
       }
@@ -291,7 +324,8 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
               await table.put(obj)
             }
             maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
-          } catch (eventErr) {
+          } catch (eventErr: any) {
+            alert(`[DEBUG FATAL] Falha a inserir/desencriptar evento ${event.tabela}. Erro: ${eventErr.message || eventErr}`)
             console.error('CRITICAL DECRYPT/INSERT ERROR:', eventErr, event)
             throw eventErr // NÃO ENGOLIR O ERRO: Para a execução imediatamente
           }
@@ -454,7 +488,9 @@ export async function syncOnLogin() {
     .select('id', { count: 'exact', head: true })
     .eq('perfil_id', perfil_id)
 
-  console.log(`[Sync Login] Registros locais: ${totalLocalRecords} | Eventos remotos: ${remoteCount ?? 0} | FirstSync: ${isFirstSync}`)
+  const debugMsg = `[Sync Login] Registros locais: ${totalLocalRecords} | Eventos remotos: ${remoteCount ?? 0} | FirstSync: ${isFirstSync}`
+  console.log(debugMsg)
+  alert(debugMsg)
 
   if (isFirstSync && (remoteCount ?? 0) > 0) {
     // 4. Limpeza Preemptiva (Cold Start)
