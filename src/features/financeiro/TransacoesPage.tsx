@@ -256,7 +256,7 @@ export function TransacoesPage() {
       {contas.length > 0 && (
         <Card className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1 flex flex-col gap-1">
-            <label htmlFor="filtro-conta" className="text-sm font-medium text-on-surface">Conta</label>
+            <label htmlFor="filtro-conta" className="text-sm font-medium text-on-surface">Filtrar por conta</label>
             <select
               id="filtro-conta"
               value={filtroContaId}
@@ -271,7 +271,7 @@ export function TransacoesPage() {
           </div>
           
           <div className="flex-1 flex flex-col gap-1">
-            <label htmlFor="filtro-tipo" className="text-sm font-medium text-on-surface">Tipo</label>
+            <label htmlFor="filtro-tipo" className="text-sm font-medium text-on-surface">Filtrar por tipo</label>
             <select
               id="filtro-tipo"
               value={filtroTipo}
