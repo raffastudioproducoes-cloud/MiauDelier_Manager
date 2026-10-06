@@ -225,77 +225,104 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
 
 async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<void> {
   const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-  let lastTs = lastSync ? Number(lastSync.valor) : 0
+  let initialLastTs = lastSync ? Number(lastSync.valor) : 0
 
-  const { data: remoteEvents, error: fetchError } = await supabase
-    .from('sync_events')
-    .select('*')
-    .eq('perfil_id', perfil_id)
-    .gt('timestamp', lastTs)
-    .order('timestamp', { ascending: true })
-    .limit(500) // Limita para não travar com histórico enorme
-
-  if (fetchError) {
-    console.error('[Sync Download] Erro ao baixar eventos:', fetchError)
-    return
-  }
-
-  if (!remoteEvents || remoteEvents.length === 0) return
-
-  console.log(`[Sync Download] Aplicando ${remoteEvents.length} evento(s) remotos...`)
+  let offset = 0
+  const LIMIT = 500
+  let hasMore = true
+  let totalApplied = 0
+  let highestTsSeen = initialLastTs
 
   isApplyingRemote = true
   try {
-    for (const event of remoteEvents) {
-      try {
-        if (event.tabela === 'configuracoes') {
-          lastTs = event.timestamp
-          continue
+    while (hasMore) {
+      // 1. Paginação Segura (Evita saltar eventos que partilhem o mesmo timestamp)
+      const { data: remoteEvents, error: fetchError } = await supabase
+        .from('sync_events')
+        .select('*')
+        .eq('perfil_id', perfil_id)
+        .gt('timestamp', initialLastTs)
+        .order('timestamp', { ascending: true })
+        .order('id', { ascending: true })
+        .range(offset, offset + LIMIT - 1)
+
+      if (fetchError) {
+        console.error('[Sync Download] Erro ao baixar eventos:', fetchError)
+        break // Aborta a paginação, tenta novamente no próximo ciclo
+      }
+
+      if (!remoteEvents || remoteEvents.length === 0) {
+        hasMore = false
+        break
+      }
+
+      // 2. Ordem de Aplicação (Integridade Relacional)
+      // Em caso de empate de timestamp, ordena pela hierarquia estrutural das tabelas
+      const sortedEvents = remoteEvents.sort((a, b) => {
+        if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp
+        const idxA = TABLES_TO_SYNC.indexOf(a.tabela)
+        const idxB = TABLES_TO_SYNC.indexOf(b.tabela)
+        return (idxA > -1 ? idxA : 99) - (idxB > -1 ? idxB : 99)
+      })
+
+      // 3. Atomicidade do Timestamp
+      // Executamos a aplicação do lote E a atualização do timestamp dentro de UMA ÚNICA transação
+      await db.transaction('rw', [...TABLES_TO_SYNC, 'syncMetadata'], async () => {
+        let maxTsInBatch = highestTsSeen
+
+        for (const event of sortedEvents) {
+          try {
+            if (event.tabela === 'configuracoes') {
+              maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
+              continue
+            }
+
+            const table = db.table(event.tabela)
+            const id = isNaN(Number(event.registro_id)) ? event.registro_id : Number(event.registro_id)
+
+            if (event.acao === 'delete') {
+              await table.delete(id)
+            } else if (event.dados_criptografados) {
+              const jsonStr = await decryptText(key, event.dados_criptografados)
+              const obj = JSON.parse(jsonStr)
+              await table.put(obj)
+            }
+            maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
+          } catch (eventErr) {
+            logWarn('syncService', `[Sync Download] Erro ao aplicar evento ${String(event.id)}`, eventErr)
+            // Se falhar num evento específico, o maxTs ainda avança para não encravar o loop
+            maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
+          }
         }
 
-        const table = db.table(event.tabela)
-        const id = isNaN(Number(event.registro_id)) ? event.registro_id : Number(event.registro_id)
-
-        if (event.acao === 'delete') {
-          await table.delete(id)
-        } else if (event.dados_criptografados) {
-          const jsonStr = await decryptText(key, event.dados_criptografados)
-          const obj = JSON.parse(jsonStr)
-          await table.put(obj)
+        const currentMeta = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
+        if (currentMeta && currentMeta.id) {
+          await db.syncMetadata.update(currentMeta.id, { valor: String(maxTsInBatch) })
+        } else {
+          await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: String(maxTsInBatch) })
         }
-        lastTs = event.timestamp
-      } catch (eventErr) {
-        logWarn('syncService', `[Sync Download] Erro ao aplicar evento ${String(event.id)}`, eventErr)
-        // Continua com os próximos eventos em vez de abortar tudo
-        lastTs = event.timestamp
+        
+        highestTsSeen = maxTsInBatch
+      })
+
+      totalApplied += sortedEvents.length
+      offset += LIMIT
+
+      // Se devolveu menos do que o limite estipulado, atingimos o fim
+      if (remoteEvents.length < LIMIT) {
+        hasMore = false
       }
     }
 
-    // Verifica integridade do ledger após aplicar eventos remotos
-    import('./ledgerVerification').then(({ verificarIntegridadeDoLedger }) => {
-      verificarIntegridadeDoLedger()
-    }).catch(() => {})
+    if (totalApplied > 0) {
+      console.log(`[Sync Download] ${totalApplied} evento(s) aplicado(s) com sucesso.`)
+      // Verifica integridade do ledger após aplicar eventos remotos
+      import('./ledgerVerification').then(({ verificarIntegridadeDoLedger }) => {
+        verificarIntegridadeDoLedger()
+      }).catch(() => {})
+    }
   } finally {
     isApplyingRemote = false
-  }
-
-  // Atualiza o lastSyncTimestamp
-  if (lastSync) {
-    await db.syncMetadata.update(lastSync.id!, { valor: String(lastTs) })
-  } else {
-    await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: String(lastTs) })
-  }
-}
-
-async function downloadRemoteEventsLoop(perfil_id: number, key: CryptoKey): Promise<void> {
-  let hasMore = true
-  while (hasMore) {
-    const beforeCount = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-    const beforeTs = beforeCount ? Number(beforeCount.valor) : 0
-    await downloadRemoteEvents(perfil_id, key)
-    const afterCount = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-    const afterTs = afterCount ? Number(afterCount.valor) : 0
-    hasMore = afterTs > beforeTs
   }
 }
 
@@ -359,7 +386,7 @@ export async function syncWithSupabase() {
     // 5. Download de eventos mais novos que o nosso último sync
     if (remoteLastChange > lastSyncTs) {
       console.log(`[Sync] Remoto tem eventos novos (${remoteLastChange} > ${lastSyncTs}) — baixando...`)
-      await downloadRemoteEventsLoop(perfil_id, key)
+      await downloadRemoteEvents(perfil_id, key)
     }
 
     // 6. Upload de eventos locais pendentes
@@ -406,7 +433,10 @@ export async function syncOnLogin() {
     return
   }
 
-  // 3. Verifica se o dispositivo local tem dados
+  // 3. Verifica estado do dispositivo (First Sync?)
+  const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
+  const isFirstSync = !lastSync || Number(lastSync.valor) === 0
+
   let totalLocalRecords = 0
   for (const tableName of TABLES_TO_SYNC) {
     try {
@@ -422,18 +452,26 @@ export async function syncOnLogin() {
     .select('id', { count: 'exact', head: true })
     .eq('perfil_id', perfil_id)
 
-  console.log(`[Sync Login] Registros locais: ${totalLocalRecords} | Eventos remotos: ${remoteCount ?? 0}`)
+  console.log(`[Sync Login] Registros locais: ${totalLocalRecords} | Eventos remotos: ${remoteCount ?? 0} | FirstSync: ${isFirstSync}`)
 
-  if (totalLocalRecords === 0 && (remoteCount ?? 0) > 0) {
-    // Dispositivo vazio com dados na nuvem — faz download completo
-    console.log('[Sync Login] Dispositivo vazio — preparando para baixar todos os dados da nuvem...')
-    // Reseta o lastSyncTimestamp para garantir que baixe tudo
-    const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-    if (lastSync) {
-      await db.syncMetadata.update(lastSync.id!, { valor: '0' })
+  if (isFirstSync && (remoteCount ?? 0) > 0) {
+    // 4. Limpeza Preemptiva (Cold Start)
+    console.log('[Sync Login] Dispositivo vazio (Cold Start) — limpando base local e preparando download massivo...')
+    
+    // Limpa todas as tabelas transacionais ativamente antes do download
+    await db.transaction('rw', TABLES_TO_SYNC, async () => {
+      for (const tableName of TABLES_TO_SYNC) {
+        await db.table(tableName).clear()
+      }
+    })
+    
+    if (lastSync && lastSync.id) {
+      await db.syncMetadata.update(lastSync.id, { valor: '0' })
     } else {
       await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: '0' })
     }
+    
+    console.log('[Sync Login] Base de dados local limpa. Iniciando sync...')
   }
 
   // Depois do ajuste de lastSyncTs, chamamos o fluxo normal de sync
@@ -526,6 +564,6 @@ export async function forceDownload() {
   const perfil_id = await resolvePerfilId()
   if (!perfil_id) throw new Error('Perfil não sincronizado')
 
-  await downloadRemoteEventsLoop(perfil_id, key)
+  await downloadRemoteEvents(perfil_id, key)
 }
 
