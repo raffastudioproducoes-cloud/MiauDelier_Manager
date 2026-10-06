@@ -736,20 +736,36 @@ export function PecasPage() {
                     </select>
                   </div>
                 </div>
-                <div className="rounded-xl border border-outline-variant/40 bg-surface-container/30 p-4 flex flex-col gap-2">
-                  <span className="text-sm font-semibold text-on-surface">💡 Dica Técnica: O Tempo Real de Cura da Resina Epóxi</span>
-                  <p className="text-[11px] text-on-surface-variant">
-                    A secagem superficial é rápida, mas a <strong className="text-on-surface">cura química total leva dias</strong>. Confira os 3 estágios do processo a 25°C:
-                  </p>
-                  <ul className="text-[11px] text-on-surface-variant list-disc pl-4 space-y-1">
-                    <li><strong className="text-on-surface">12h a 24h (Cura Inicial):</strong> Secagem ao toque. A superfície não gruda mais, mas o interior da peça segue flexível.</li>
-                    <li><strong className="text-on-surface">48h a 72h (Desmolde):</strong> Cura de manuseio. A peça pode ser desenformada e lixada levemente, mas pressão contínua ainda pode deixar marcas.</li>
-                    <li><strong className="text-on-surface">7 a 14 dias (Cura Total):</strong> Reação 100% concluída. A resina atinge sua dureza mecânica, resistência térmica e química máximas.</li>
-                  </ul>
-                  <p className="text-[11px] text-on-surface-variant mt-1">
-                    <strong className="text-on-surface">⚠️ Controle de Temperatura:</strong> O frio (abaixo de 18°C) atrasa o processo químico. Para acelerar a cura de forma segura, o uso de estufas controladas entre 40°C e 50°C reduz o tempo total para uma janela de 6h a 12h.
-                  </p>
-                </div>
+                <details className="group rounded-xl border border-outline-variant/40 bg-surface-container/30 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer items-center justify-between p-4 font-semibold text-sm text-on-surface select-none">
+                    <div className="flex items-center gap-2">
+                      <span>💡</span>
+                      <span>Dica Técnica: O Tempo Real de Cura da Resina Epóxi</span>
+                    </div>
+                    <svg
+                      className="h-5 w-5 text-on-surface-variant transition duration-300 group-open:-rotate-180"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="px-4 pb-4 pt-0 flex flex-col gap-2">
+                    <p className="text-[11px] text-on-surface-variant pt-2 border-t border-outline-variant/20">
+                      A secagem superficial é rápida, mas a <strong className="text-on-surface">cura química total leva dias</strong>. Confira os 3 estágios do processo a 25°C:
+                    </p>
+                    <ul className="text-[11px] text-on-surface-variant list-disc pl-4 space-y-1">
+                      <li><strong className="text-on-surface">12h a 24h (Cura Inicial):</strong> Secagem ao toque. A superfície não gruda mais, mas o interior da peça segue flexível.</li>
+                      <li><strong className="text-on-surface">48h a 72h (Desmolde):</strong> Cura de manuseio. A peça pode ser desenformada e lixada levemente, mas pressão contínua ainda pode deixar marcas.</li>
+                      <li><strong className="text-on-surface">7 a 14 dias (Cura Total):</strong> Reação 100% concluída. A resina atinge sua dureza mecânica, resistência térmica e química máximas.</li>
+                    </ul>
+                    <p className="text-[11px] text-on-surface-variant mt-1">
+                      <strong className="text-on-surface">⚠️ Controle de Temperatura:</strong> O frio (abaixo de 18°C) atrasa o processo químico. Para acelerar a cura de forma segura, o uso de estufas controladas entre 40°C e 50°C reduz o tempo total para uma janela de 6h a 12h.
+                    </p>
+                  </div>
+                </details>
               </div>
 
               <div className="border-t border-outline-variant/30 pt-3">
