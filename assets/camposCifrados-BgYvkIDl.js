@@ -1,1 +1,0 @@
-import{c as e,h as t,m as n}from"./auth-D4t7qG7m.js";var r=class extends Error{constructor(){super(`sessão fechada — não é possível cifrar ou decifrar sem login`),this.name=`SessaoFechadaError`}};async function i(n){let i=e();if(!i)throw new r;return t(i,n)}async function a(t){let i=e();if(!i)throw new r;return n(i,t)}export{a as n,i as t};

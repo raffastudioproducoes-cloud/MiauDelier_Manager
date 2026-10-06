@@ -1,1 +1,0 @@
-import{n as e}from"./schema-BQlE1pdk.js";async function t(t,n,r,i,a){await e.auditoria.add({entidade:t,entidadeId:n,acao:r,quem:`usuário`,quando:new Date().toISOString(),valorAnterior:i,valorNovo:a})}async function n(){return(await e.auditoria.toArray()).sort((e,t)=>t.quando.localeCompare(e.quando))}export{t as n,n as t};
