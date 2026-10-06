@@ -275,7 +275,9 @@ export async function recuperarCofreComNuvem(novaSenha: string): Promise<CryptoK
     .single()
 
   if (error || !userKeys?.wrapped_dek) {
-    throw new Error('Chave de recuperação não encontrada na nuvem.')
+    console.warn('Chave de recuperação não encontrada na nuvem. Consertando o perfil e criando nova chave...')
+    const { key } = await setupAccount(novaSenha, { apagandoDadosExistentes: true })
+    return key
   }
 
   // 2. Deriva a KEK de Recuperação (usando user_id + pepper local)
