@@ -5,7 +5,6 @@ import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { RequireAuth } from '../features/auth/RequireAuth'
 import { AppShell } from '../components/layout/AppShell'
 import { ToastProvider } from '../components/ui/ToastProvider'
-import { CheckCircle2 } from 'lucide-react'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -39,7 +38,10 @@ function RootComponent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-on-surface p-4">
         <div className="flex flex-col items-center justify-center p-8 rounded-3xl bg-surface-container-high border border-outline-variant shadow-xl text-center space-y-4 max-w-sm">
-          <CheckCircle2 className="w-16 h-16 text-primary animate-bounce" />
+          <svg className="w-16 h-16 text-primary animate-bounce" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
           <h1 className="text-2xl font-extrabold tracking-tight text-on-surface">Tudo certo!</h1>
           <p className="text-sm font-medium text-on-surface-variant">
             {mensagemHash}
