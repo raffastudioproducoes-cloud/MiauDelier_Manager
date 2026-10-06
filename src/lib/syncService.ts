@@ -246,6 +246,8 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
         .order('id', { ascending: true })
         .range(offset, offset + LIMIT - 1)
 
+      console.log('SYNC FETCH:', remoteEvents ? remoteEvents.length : 0)
+
       if (fetchError) {
         console.error('[Sync Download] Erro ao baixar eventos:', fetchError)
         break // Aborta a paginação, tenta novamente no próximo ciclo
@@ -285,13 +287,13 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
             } else if (event.dados_criptografados) {
               const jsonStr = await decryptText(key, event.dados_criptografados)
               const obj = JSON.parse(jsonStr)
+              console.log('SYNC DEXIE INSERT:', obj)
               await table.put(obj)
             }
             maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
           } catch (eventErr) {
-            logWarn('syncService', `[Sync Download] Erro ao aplicar evento ${String(event.id)}`, eventErr)
-            // Se falhar num evento específico, o maxTs ainda avança para não encravar o loop
-            maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
+            console.error('CRITICAL DECRYPT/INSERT ERROR:', eventErr, event)
+            throw eventErr // NÃO ENGOLIR O ERRO: Para a execução imediatamente
           }
         }
 
