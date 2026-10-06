@@ -37,7 +37,6 @@ const TABLES_TO_SYNC = [
   'pedidos',
   'transacoes',
   'contas',
-  'configuracoes',
   'auditoria',
   'equipamentos',
   'taxas',
@@ -249,6 +248,11 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
   try {
     for (const event of remoteEvents) {
       try {
+        if (event.tabela === 'configuracoes') {
+          lastTs = event.timestamp
+          continue
+        }
+
         const table = db.table(event.tabela)
         const id = isNaN(Number(event.registro_id)) ? event.registro_id : Number(event.registro_id)
 
@@ -296,98 +300,9 @@ async function downloadRemoteEventsLoop(perfil_id: number, key: CryptoKey): Prom
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Detecção de Conflito — compara timestamps locais vs remotos
-// ──────────────────────────────────────────────────────────────────────────────
-
-export interface ConflictResult {
-  status: 'remote_newer' | 'local_newer' | 'in_sync' | 'no_remote'
-  localLastChange: number
-  remoteLastChange: number
-}
-
-/** Compara o estado local com o remoto para decidir quem é mais novo */
-async function detectConflict(perfil_id: number): Promise<ConflictResult> {
-  // Último evento local pendente (se há dados locais mais novos que o último sync)
-  const localQueue = await db.syncQueue.toArray()
-  let lastLocalChange = localQueue.length > 0
-    ? Math.max(...localQueue.map((e) => e.timestamp))
-    : 0
-
-  // Verifica se há dados legados (antes do event sourcing) que nunca foram salvos
-  const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-  const lastSyncTs = lastSync ? Number(lastSync.valor) : 0
-
-  if (lastLocalChange === 0 && lastSyncTs === 0) {
-    let totalLocal = 0
-    for (const tableName of TABLES_TO_SYNC) {
-      try { totalLocal += await db.table(tableName).count() } catch (e) { console.debug('Ignorado:', e) }
-    }
-    if (totalLocal > 0) {
-      // Temos dados locais que nunca subiram nem tem eventos
-      lastLocalChange = Date.now() // Força ser considerado "mais novo" que o nada
-    }
-  }
-
-  // Último evento remoto
-  const { data: remoteLatest } = await supabase
-    .from('sync_events')
-    .select('timestamp')
-    .eq('perfil_id', perfil_id)
-    .order('timestamp', { ascending: false })
-    .limit(1)
-    .single()
-
-  const remoteLastChange = remoteLatest?.timestamp ?? 0
-
-  if (remoteLastChange === 0 && lastLocalChange === 0) {
-    return { status: 'in_sync', localLastChange: 0, remoteLastChange: 0 }
-  }
-  if (remoteLastChange === 0) {
-    return { status: 'no_remote', localLastChange: lastLocalChange, remoteLastChange: 0 }
-  }
-
-  // Se o local nunca syncou, mas tem dados legados, e o remoto TEM dados... CONFLITO
-  if (lastSyncTs === 0 && lastLocalChange > 0 && remoteLastChange > 0) {
-    return { status: 'local_newer', localLastChange: lastLocalChange, remoteLastChange }
-  }
-
-  // Se há eventos locais não enviados que são mais recentes que o remoto
-  if (lastLocalChange > remoteLastChange) {
-    return { status: 'local_newer', localLastChange: lastLocalChange, remoteLastChange }
-  }
-
-  // Se o remoto tem eventos mais novos do que o nosso último sync
-  if (remoteLastChange > lastSyncTs) {
-    return { status: 'remote_newer', localLastChange: lastLocalChange, remoteLastChange }
-  }
-
-  return { status: 'in_sync', localLastChange: lastLocalChange, remoteLastChange }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Callback de conflito — registrado pela UI para mostrar aviso ao usuário
-// ──────────────────────────────────────────────────────────────────────────────
-
-type ConflictCallback = (conflict: ConflictResult) => void
-let onConflictDetected: ConflictCallback | null = null
-
-/** A UI registra um callback para ser notificada de conflitos */
-export function setConflictCallback(cb: ConflictCallback | null) {
-  onConflictDetected = cb
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
 // Sync Principal — chamado no login e periodicamente
 // ──────────────────────────────────────────────────────────────────────────────
 
-/**
- * Sincronização completa:
- * 1. Sincroniza perfis (metadados)
- * 2. Detecta conflitos (local vs remoto)
- * 3. Se remoto é mais novo → baixa eventos
- * 4. Se local é mais novo → avisa o usuário (não sobrescreve)
- * 5. Se está em sincronia → faz upload de pendentes se houver
- */
 export async function syncWithSupabase() {
   if (isSyncing) return
   isSyncing = true
@@ -411,51 +326,51 @@ export async function syncWithSupabase() {
       return
     }
 
-    // 3. Detecção de conflitos
-    const conflict = await detectConflict(perfil_id)
-    console.log(`[Sync] Estado: ${conflict.status} | Local: ${conflict.localLastChange} | Remoto: ${conflict.remoteLastChange}`)
+    // 3. Verifica último sync local
+    const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
+    const lastSyncTs = lastSync ? Number(lastSync.valor) : 0
 
-    switch (conflict.status) {
-      case 'remote_newer':
-        // Remoto é mais novo — baixa dados do Supabase para o dispositivo
-        console.log('[Sync] Remoto mais recente — baixando dados em loop...')
-        await downloadRemoteEventsLoop(perfil_id, key)
-        break
-
-      case 'local_newer':
-        // Local é mais novo — avisa o usuário e NÃO sobrescreve
-        console.log('[Sync] Local mais recente — aguardando auto-save ou ação do usuário.')
-        if (onConflictDetected) {
-          onConflictDetected(conflict)
+    // Se temos dados legados, geramos o snapshot
+    if (lastSyncTs === 0) {
+      const localQueueCount = await db.syncQueue.count()
+      if (localQueueCount === 0) {
+        let totalLocal = 0
+        for (const tableName of TABLES_TO_SYNC) {
+          try { totalLocal += await db.table(tableName).count() } catch (e) { /* ignored */ }
         }
-        // Não faz upload automático aqui — espera o timer de inatividade
-        break
-
-      case 'no_remote': {
-        // Não há dados remotos — faz upload
-        console.log('[Sync] Sem dados remotos — enviando dados locais...')
-        const localQueueCount = await db.syncQueue.count()
-        if (localQueueCount === 0) {
-          let totalLocal = 0
-          for (const tableName of TABLES_TO_SYNC) {
-            try { totalLocal += await db.table(tableName).count() } catch (e) { console.debug('Ignorado:', e) }
-          }
-          if (totalLocal > 0) {
-            console.log('[Sync] Gerando snapshot completo de dados antigos...')
-            await createFullSnapshot()
-          }
+        if (totalLocal > 0) {
+          console.log('[Sync] Gerando snapshot completo de dados antigos...')
+          await createFullSnapshot()
         }
-        await uploadPendingEvents()
-        break
       }
-
-      case 'in_sync':
-        // Tudo sincronizado — faz upload de pendentes restantes (se houver)
-        if (hasPendingLocalChanges) {
-          await uploadPendingEvents()
-        }
-        break
     }
+
+    // 4. Último evento remoto
+    const { data: remoteLatest } = await supabase
+      .from('sync_events')
+      .select('timestamp')
+      .eq('perfil_id', perfil_id)
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const remoteLastChange = remoteLatest?.timestamp ?? 0
+
+    // 5. Download de eventos mais novos que o nosso último sync
+    if (remoteLastChange > lastSyncTs) {
+      console.log(`[Sync] Remoto tem eventos novos (${remoteLastChange} > ${lastSyncTs}) — baixando...`)
+      await downloadRemoteEventsLoop(perfil_id, key)
+    }
+
+    // 6. Upload de eventos locais pendentes
+    const queueCount = await db.syncQueue.count()
+    if (queueCount > 0) {
+      console.log(`[Sync] Temos ${queueCount} eventos locais pendentes — fazendo upload...`)
+      await uploadPendingEvents()
+    } else {
+      console.log('[Sync] Tudo sincronizado.')
+    }
+
   } catch (err) {
     console.error('[Sync] Erro geral na sincronização:', err)
   } finally {
@@ -511,39 +426,19 @@ export async function syncOnLogin() {
 
   if (totalLocalRecords === 0 && (remoteCount ?? 0) > 0) {
     // Dispositivo vazio com dados na nuvem — faz download completo
-    console.log('[Sync Login] Dispositivo vazio — baixando todos os dados da nuvem...')
-    // Reseta o lastSyncTimestamp para baixar tudo
+    console.log('[Sync Login] Dispositivo vazio — preparando para baixar todos os dados da nuvem...')
+    // Reseta o lastSyncTimestamp para garantir que baixe tudo
     const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
     if (lastSync) {
       await db.syncMetadata.update(lastSync.id!, { valor: '0' })
+    } else {
+      await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: '0' })
     }
-    // Baixa em loop até não ter mais eventos
-    await downloadRemoteEventsLoop(perfil_id, key)
-    console.log('[Sync Login] Download completo finalizado.')
-  } else if (totalLocalRecords > 0 && (remoteCount ?? 0) > 0) {
-    // Tem dados locais E remotos — verifica conflito
-    const conflict = await detectConflict(perfil_id)
-    if (conflict.status === 'remote_newer') {
-      console.log('[Sync Login] Remoto mais recente — baixando atualizações em loop...')
-      await downloadRemoteEventsLoop(perfil_id, key)
-      console.log('[Sync Login] Atualizações remotas baixadas com sucesso.')
-    } else if (conflict.status === 'local_newer') {
-      console.log('[Sync Login] Local mais recente — dados do dispositivo são mais novos que a nuvem.')
-      if (onConflictDetected) {
-        onConflictDetected(conflict)
-      }
-    }
-  } else if (totalLocalRecords > 0 && (remoteCount ?? 0) === 0) {
-    // Tem dados locais mas nada na nuvem — faz primeiro upload
-    console.log('[Sync Login] Nuvem vazia — criando snapshot completo e enviando...')
-    // Primeiro verifica se a syncQueue está vazia (dados criados antes do event-sourcing)
-    const queueCount = await db.syncQueue.count()
-    if (queueCount === 0 && totalLocalRecords > 0) {
-      console.log('[Sync Login] syncQueue vazia com dados existentes — gerando snapshot completo...')
-      await createFullSnapshot()
-    }
-    await uploadPendingEvents()
   }
+
+  // Depois do ajuste de lastSyncTs, chamamos o fluxo normal de sync
+  // Ele lidará tanto com download quanto com upload, resolvendo offline merge
+  await syncWithSupabase()
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
