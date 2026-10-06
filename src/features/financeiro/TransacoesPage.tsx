@@ -9,6 +9,7 @@ import { useToast } from '../../components/ui/useToast'
 import {
   criarTransacao,
   listarTransacoesDaConta,
+  listarTodasTransacoes,
   atualizarTransacao,
   excluirTransacao,
   type TransacaoDecifrada,
@@ -49,11 +50,16 @@ export function TransacoesPage() {
   const [dataAte, setDataAte] = useState('')
 
   async function carregarTransacoes(idDaConta: string) {
+    let listaTransacoes
     if (!idDaConta) {
-      setTransacoes([])
-      return
+      listaTransacoes = await listarTodasTransacoes()
+    } else {
+      listaTransacoes = await listarTransacoesDaConta(Number(idDaConta))
     }
-    const listaTransacoes = await listarTransacoesDaConta(Number(idDaConta))
+    
+    // Ordenar as transações pela data (mais recente primeiro)
+    listaTransacoes.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+    
     if (!montado.current) return
     setTransacoes(listaTransacoes)
   }
@@ -289,11 +295,9 @@ export function TransacoesPage() {
                         }`}>
                           {entrada ? '📈 Entrada (+)' : '📉 Saída (-)'}
                         </span>
-                        {contaSelecionada && (
-                          <span className="text-xs text-on-surface-variant font-medium">
-                            {contaSelecionada.nome}
-                          </span>
-                        )}
+                        <span className="text-xs text-on-surface-variant font-medium">
+                          {contas.find(c => c.id === transacao.contaId)?.nome || 'Conta Desconhecida'}
+                        </span>
                       </div>
                       <p className={`text-base font-bold ${entrada ? 'text-primary' : 'text-error'}`}>
                         {entrada ? '+' : '-'} {transacao.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
