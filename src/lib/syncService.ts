@@ -3,7 +3,7 @@ import { getSessionKey } from './auth'
 import { encryptText, decryptText } from './crypto'
 import { supabase } from './supabase'
 import { syncPerfisFromSupabase } from './perfisRepo'
-
+import { logWarn } from './logger'
 export let isApplyingRemote = false
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -261,7 +261,7 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
         }
         lastTs = event.timestamp
       } catch (eventErr) {
-        console.warn(`[Sync Download] Erro ao aplicar evento ${event.id}:`, eventErr)
+        logWarn('syncService', `[Sync Download] Erro ao aplicar evento ${String(event.id)}`, eventErr)
         // Continua com os próximos eventos em vez de abortar tudo
         lastTs = event.timestamp
       }
@@ -592,7 +592,7 @@ export async function createFullSnapshot(): Promise<number> {
 
       console.log(`[Snapshot] ${tableName}: ${allRecords.length} registro(s) capturado(s).`)
     } catch (err) {
-      console.warn(`[Snapshot] Erro ao capturar tabela ${tableName}:`, err)
+      logWarn('syncService', `[Snapshot] Erro ao capturar tabela ${tableName}`, err)
     }
   }
 

@@ -461,7 +461,7 @@ export function PrecificacaoPage() {
 
     const qte = Number(quantidadeInsumo) || 1
     const novoItem: InsumoGraficoEmbalagem = {
-      id: String(Date.now() + Math.random()),
+      id: String(Date.now() + '-' + crypto.randomUUID()),
       materialId: mat.id!,
       nome: mat.nome,
       quantidade: qte,

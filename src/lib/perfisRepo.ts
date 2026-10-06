@@ -99,7 +99,7 @@ export async function criarPerfil(dados: string | DadosNovoPerfil): Promise<Perf
   const now = new Date().toISOString()
 
   const novoPerfil: PerfilAtelie = {
-    id: `atelie_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    id: `atelie_${Date.now()}_${crypto.randomUUID().substring(0, 4)}`,
     nome: info.nome.trim() || 'Novo Ateliê',
     nomeDono: info.nomeDono?.trim() || undefined,
     emailDono: info.emailDono?.trim() || undefined,
@@ -264,7 +264,7 @@ export async function syncPerfisFromSupabase(): Promise<void> {
 
       const localId = isDefaultSlot
         ? RESERVED_DEFAULT_PROFILE_ID
-        : `atelie_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+        : `atelie_${Date.now()}_${crypto.randomUUID().substring(0, 4)}`
 
       await db.perfisAtelie.put({
         id: localId,

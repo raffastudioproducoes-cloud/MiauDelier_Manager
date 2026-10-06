@@ -5,7 +5,7 @@ const CHAVES_SENSIVEIS_REGEX =
   /(senha|password|hash|salt|key|token|secret|sessao|session|cifrado|chavedesessao|auth|authorization|pin|jwt|private|credenciais|creditcard|cartao|cvv|cpf|rg|saldoCriptografado|valorCriptografado)/i
 
 const CHAVE_HEX_REGEX = /^[0-9a-fA-F]{64}$/
-const BASE64_CIPHERTEXT_REGEX = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
+const BASE64_CIPHERTEXT_REGEX = /^[A-Za-z0-9+/]+={0,2}$/
 
 const LIMITE_MAXIMO_LOGS = 1000
 const bufferLogsMemoria: LogSistema[] = []

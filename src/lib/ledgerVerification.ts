@@ -1,7 +1,7 @@
 import { db } from '../db/schema'
 import { getSessionKey } from './auth'
 import { encryptText, decryptText } from './crypto'
-
+import { logWarn } from './logger'
 export async function verificarIntegridadeDoLedger(): Promise<void> {
   const key = getSessionKey()
   if (!key) return
@@ -28,7 +28,7 @@ export async function verificarIntegridadeDoLedger(): Promise<void> {
           }
         }
       } catch (err) {
-        console.warn(`Transação inválida/corrompida ignorada (ID: ${tx.id})`, err)
+        logWarn('ledger', `Transação inválida/corrompida ignorada (ID: ${String(tx.id)})`, err)
       }
     }
 
@@ -44,9 +44,7 @@ export async function verificarIntegridadeDoLedger(): Promise<void> {
 
     // Usamos toFixed(2) para evitar problemas de ponto flutuante
     if (saldoCalculado.toFixed(2) !== saldoAtual.toFixed(2) || isNaN(saldoAtual)) {
-      console.warn(
-        `Inconsistência detectada na conta "${conta.nome}". Saldo registrado: ${saldoAtual}, Saldo real (Transações): ${saldoCalculado}. Corrigindo...`,
-      )
+      logWarn('ledger', `Inconsistência detectada na conta "${conta.nome}".`, { saldoAtual, saldoCalculado })
 
       // Corrige a conta para refletir a verdade do Ledger
       const novoSaldoCriptografado = await encryptText(key, saldoCalculado.toFixed(2))

@@ -254,7 +254,7 @@ export function FormasPage() {
     setFuros((prev) => [
       ...prev,
       {
-        id: String(Date.now() + Math.random()),
+        id: String(Date.now() + '-' + crypto.randomUUID()),
         quantidade: '2',
         diametroCm: '13',
         comprimentoCm: '10',
@@ -320,7 +320,7 @@ export function FormasPage() {
     if (forma.furosVazados && forma.furosVazados.length > 0) {
       setFuros(
         forma.furosVazados.map((f) => ({
-          id: f.id || String(Math.random()),
+          id: f.id || crypto.randomUUID(),
           quantidade: String(f.quantidade || 1),
           diametroCm: f.diametroCm !== undefined ? String(f.diametroCm) : '13',
           comprimentoCm: f.comprimentoCm !== undefined ? String(f.comprimentoCm) : '',
