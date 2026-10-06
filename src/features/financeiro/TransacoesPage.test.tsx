@@ -37,7 +37,10 @@ describe('TransacoesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /registrar transação/i }))
 
     await waitFor(() => expect(screen.getByText('Pix recebido')).toBeInTheDocument())
-    expect(screen.getByText(/movimentações de banco/i)).toBeInTheDocument()
+    
+    // Filtra pela segunda conta para ver as movimentações dela
+    fireEvent.change(screen.getByLabelText(/filtrar por conta/i), { target: { value: String(segundaConta) } })
+    await waitFor(() => expect(screen.getByText(/movimentações de banco/i)).toBeInTheDocument())
   })
 
   it('desabilita o registro quando não há conta cadastrada', async () => {
