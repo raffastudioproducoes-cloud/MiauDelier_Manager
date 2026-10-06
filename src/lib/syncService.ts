@@ -1,4 +1,5 @@
-import { db } from '../db/schema'
+import Dexie from 'dexie'
+import { db, type SyncEvent } from '../db/schema'
 import { getSessionKey } from './auth'
 import { encryptText, decryptText } from './crypto'
 import { supabase } from './supabase'
@@ -21,6 +22,12 @@ let hasPendingLocalChanges = false
 
 /** Flag para evitar sync concorrente */
 let isSyncing = false
+
+function addSyncQueueEvent(event: SyncEvent) {
+  Dexie.ignoreTransaction(() => db.syncQueue.add(event)).catch(err => {
+    console.error(`[DEBUG FATAL] ERRO ao adicionar ${event.tabela} na fila de upload (syncQueue):`, err)
+  })
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Tabelas sincronizáveis
@@ -55,33 +62,37 @@ export function registerDexieHooks() {
       this.onsuccess = function (realPrimKey) {
         hasPendingLocalChanges = true
         resetInactivityTimer()
-        db.syncQueue.add({
+        addSyncQueueEvent({
           id: crypto.randomUUID(),
           tabela: tableName,
           registroId: String(realPrimKey),
           acao: 'insert',
-          dadosString: JSON.stringify(obj),
+          dadosString: JSON.stringify({ ...obj, id: realPrimKey }),
           timestamp: Date.now(),
           sincronizado: false,
-        }).catch(err => {
-          console.error(`[DEBUG FATAL] ERRO ao adicionar ${tableName} na fila de upload (syncQueue):`, err)
         })
       }
     })
 
-    table.hook('updating', function (_modifications, primKey, _obj) {
+    table.hook('updating', function (_modifications, primKey) {
       if (isApplyingRemote) return
       this.onsuccess = function (updatedObj) {
         hasPendingLocalChanges = true
         resetInactivityTimer()
-        db.syncQueue.add({
-          id: crypto.randomUUID(),
-          tabela: tableName,
-          registroId: String(primKey),
-          acao: 'update',
-          dadosString: JSON.stringify(updatedObj),
-          timestamp: Date.now(),
-          sincronizado: false,
+        if (!updatedObj) return
+
+        Dexie.ignoreTransaction(async () => {
+          const currentObj = await table.get(primKey)
+          if (!currentObj) return
+          await db.syncQueue.add({
+            id: crypto.randomUUID(),
+            tabela: tableName,
+            registroId: String(primKey),
+            acao: 'update',
+            dadosString: JSON.stringify(currentObj),
+            timestamp: Date.now(),
+            sincronizado: false,
+          })
         }).catch(err => {
           console.error(`[DEBUG FATAL] ERRO ao adicionar ${tableName} na fila de upload (syncQueue):`, err)
         })
@@ -93,7 +104,7 @@ export function registerDexieHooks() {
       this.onsuccess = function () {
         hasPendingLocalChanges = true
         resetInactivityTimer()
-        db.syncQueue.add({
+        addSyncQueueEvent({
           id: crypto.randomUUID(),
           tabela: tableName,
           registroId: String(primKey),
@@ -101,8 +112,6 @@ export function registerDexieHooks() {
           dadosString: '{}',
           timestamp: Date.now(),
           sincronizado: false,
-        }).catch(err => {
-          console.error(`[DEBUG FATAL] ERRO ao adicionar ${tableName} na fila de upload (syncQueue):`, err)
         })
       }
     })
@@ -150,6 +159,18 @@ async function computeLocalDataHash(): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(allData))
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+export function normalizeRemoteSyncObject(obj: unknown, registroId: string): unknown {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj) || 'id' in obj) {
+    return obj
+  }
+
+  const numericId = Number(registroId)
+  return {
+    ...obj,
+    id: Number.isNaN(numericId) ? registroId : numericId,
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -276,12 +297,8 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
 
       const fetchedCount = remoteEvents ? remoteEvents.length : 0
       console.log('SYNC FETCH:', fetchedCount)
-      
-      // ALERTA VISUAL NO TELEMÓVEL
-      alert(`[DEBUG DOWNLOAD] Puxou ${fetchedCount} eventos da nuvem.`)
 
       if (fetchError) {
-        alert('[DEBUG ERROR] Erro Supabase: ' + JSON.stringify(fetchError))
         console.error('[Sync Download] Erro ao baixar eventos:', fetchError)
         break // Aborta a paginação, tenta novamente no próximo ciclo
       }
@@ -319,13 +336,12 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
               await table.delete(id)
             } else if (event.dados_criptografados) {
               const jsonStr = await decryptText(key, event.dados_criptografados)
-              const obj = JSON.parse(jsonStr)
+              const obj = normalizeRemoteSyncObject(JSON.parse(jsonStr), event.registro_id)
               console.log('SYNC DEXIE INSERT:', obj)
               await table.put(obj)
             }
             maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
           } catch (eventErr: any) {
-            alert(`[DEBUG FATAL] Falha a inserir/desencriptar evento ${event.tabela}. Erro: ${eventErr.message || eventErr}`)
             console.error('CRITICAL DECRYPT/INSERT ERROR:', eventErr, event)
             throw eventErr // NÃO ENGOLIR O ERRO: Para a execução imediatamente
           }
@@ -490,7 +506,6 @@ export async function syncOnLogin() {
 
   const debugMsg = `[Sync Login] Registros locais: ${totalLocalRecords} | Eventos remotos: ${remoteCount ?? 0} | FirstSync: ${isFirstSync}`
   console.log(debugMsg)
-  alert(debugMsg)
 
   if (isFirstSync && (remoteCount ?? 0) > 0) {
     // 4. Limpeza Preemptiva (Cold Start)
@@ -604,4 +619,3 @@ export async function forceDownload() {
 
   await downloadRemoteEvents(perfil_id, key)
 }
-
