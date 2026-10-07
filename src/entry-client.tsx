@@ -32,7 +32,15 @@ window.addEventListener('beforeunload', () => {
 })
 
 import { registerSW } from 'virtual:pwa-register'
-registerSW({ immediate: true })
+registerSW({
+  immediate: true,
+  onRegisteredSW(_url, registration) {
+    if (!registration) return
+
+    void registration.update()
+    window.setInterval(() => void registration.update(), 60 * 60 * 1000)
+  },
+})
 
 const router = getRouter()
 
