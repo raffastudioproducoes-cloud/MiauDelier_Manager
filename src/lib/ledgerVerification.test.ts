@@ -10,6 +10,7 @@ describe('ledger verification', () => {
 
   it('calcula somente o movimento e nunca altera o saldo inicial da conta', async () => {
     const contaId = await db.contas.add({ nome: 'Nubank', saldoCriptografado: '551.63' })
+    if (contaId === undefined) throw new Error('Conta não criada')
     await db.transacoes.add({ contaId, tipo: 'saida', valorCriptografado: '38.16', descricao: 'Compra', data: '2026-10-07' })
 
     expect(await calcularMovimentoDoLedger(contaId)).toBe(-38.16)
