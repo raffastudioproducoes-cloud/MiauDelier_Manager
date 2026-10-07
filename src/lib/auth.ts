@@ -376,6 +376,24 @@ export async function ensureWrappedDekInCloud(): Promise<void> {
   }
 }
 
+/** Replaces the cloud recovery wrapper with the DEK currently open on this device. */
+export async function repairWrappedDekInCloud(): Promise<void> {
+  if (!sessionKey) throw new Error('Usuário não está logado neste dispositivo')
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user?.email) throw new Error('Sessão autenticada não encontrada')
+
+  const recoveryKek = await deriveRecoveryKEK(session.user.id, session.user.email)
+  const wrappedDek = await wrapDEK(sessionKey, recoveryKek)
+  const { error } = await supabase.from('user_keys').upsert({
+    user_id: session.user.id,
+    wrapped_dek: wrappedDek,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' })
+
+  if (error) throw new Error(`Falha ao atualizar a chave de recuperação: ${error.message}`)
+}
+
 export function clearSession(): void {
   sessionKey = null
   try {

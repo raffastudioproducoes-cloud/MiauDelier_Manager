@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { repairWrappedDekInCloud } from '../../lib/auth'
 import {
   gerarDiagnosticoFinanceiro,
   type DiagnosticoFinanceiro,
@@ -25,6 +27,23 @@ function badgeVariante(sev: SeveridadeInconsistencia): 'neutral' | 'success' | '
 export function DiagnosticoPage() {
   const [diag, setDiag] = useState<DiagnosticoFinanceiro | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [confirmandoReparo, setConfirmandoReparo] = useState(false)
+  const [reparando, setReparando] = useState(false)
+  const [mensagemReparo, setMensagemReparo] = useState<string | null>(null)
+
+  async function repararChave() {
+    setReparando(true)
+    setMensagemReparo(null)
+    try {
+      await repairWrappedDekInCloud()
+      setMensagemReparo('Chave de recuperação atualizada. Faça login no outro dispositivo para baixar os dados.')
+    } catch (error) {
+      setMensagemReparo(error instanceof Error ? error.message : 'Não foi possível atualizar a chave de recuperação.')
+    } finally {
+      setReparando(false)
+      setConfirmandoReparo(false)
+    }
+  }
 
   useEffect(() => {
     gerarDiagnosticoFinanceiro()
@@ -117,6 +136,25 @@ export function DiagnosticoPage() {
           </ul>
         )}
       </section>
+
+      <Card className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold text-on-surface">Recuperação da sincronização</h2>
+        <p className="text-sm text-on-surface-variant">
+          Use somente neste dispositivo se os dados antigos aparecem aqui. Isso substitui a chave de recuperação na nuvem sem apagar registros.
+        </p>
+        <Button variante="ghost" onClick={() => setConfirmandoReparo(true)} disabled={reparando}>
+          {reparando ? 'Atualizando chave...' : 'Reparar chave na nuvem'}
+        </Button>
+        {mensagemReparo && <p className="text-sm text-on-surface-variant">{mensagemReparo}</p>}
+      </Card>
+
+      <ConfirmModal
+        aberto={confirmandoReparo}
+        titulo="Reparar chave de sincronização?"
+        descricao="Confirme apenas se este dispositivo ainda mostra os dados corretos. A chave atual da nuvem será substituída; nenhum registro será apagado."
+        onConfirmar={repararChave}
+        onCancelar={() => setConfirmandoReparo(false)}
+      />
     </div>
   )
 }
