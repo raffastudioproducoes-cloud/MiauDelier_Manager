@@ -453,18 +453,21 @@ export async function syncWithSupabase() {
 
     const remoteLastChange = remoteLatest?.timestamp ?? 0
 
-    // 5. Download de eventos mais novos que o nosso último sync
+    // 5. Upload primeiro: um evento remoto indecifrável não pode prender
+    // alterações locais legítimas na fila para sempre.
+    const queueCount = await db.syncQueue.count()
+    if (queueCount > 0) {
+      console.log(`[Sync] Temos ${queueCount} eventos locais pendentes — fazendo upload...`)
+      await uploadPendingEvents()
+    }
+
+    // 6. Download depois. Falha de chave sobe ao chamador e não descarta o evento.
     if (remoteLatest && remoteLastChange >= lastSyncTs) {
       console.log(`[Sync] Remoto tem eventos no timestamp ${remoteLastChange} — baixando...`)
       await downloadRemoteEvents(perfil_id, key)
     }
 
-    // 6. Upload de eventos locais pendentes
-    const queueCount = await db.syncQueue.count()
-    if (queueCount > 0) {
-      console.log(`[Sync] Temos ${queueCount} eventos locais pendentes — fazendo upload...`)
-      await uploadPendingEvents()
-    } else {
+    if (await db.syncQueue.count() === 0) {
       console.log('[Sync] Tudo sincronizado.')
     }
 
