@@ -95,6 +95,12 @@ export function LoginForm() {
               setErro(supaErr.message.toLowerCase().includes('email not confirmed')
                 ? 'Por favor, confirme sua conta pelo e-mail antes de fazer login.'
                 : 'Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
+              if (!supaErr.message.toLowerCase().includes('email not confirmed')) {
+                setTimeout(() => {
+                  setErro('Complete os dados para criar sua conta.')
+                  setModoCadastro(true)
+                }, 2500)
+              }
               setEnviando(false)
               setMostrarOverlay(false)
               return
@@ -119,6 +125,10 @@ export function LoginForm() {
               setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
             } else {
               setErro('Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
+              setTimeout(() => {
+                setErro('Complete os dados para criar sua conta.')
+                setModoCadastro(true)
+              }, 2500)
             }
             setEnviando(false)
             setMostrarOverlay(false)

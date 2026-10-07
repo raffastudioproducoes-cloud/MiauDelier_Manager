@@ -120,4 +120,26 @@ describe('LoginForm', () => {
     expect(supabase.auth.signUp).not.toHaveBeenCalled()
     expect(navegarMock).not.toHaveBeenCalled()
   })
+
+  it('após login inexistente encaminha para cadastro preservando e-mail e senha', async () => {
+    useAuthStore.setState({ autenticado: false, contaConfigurada: false })
+    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: 'Invalid login credentials' },
+    } as any)
+    render(<LoginForm />)
+
+    const inputEmail = await screen.findByPlaceholderText('Digite seu usuário ou e-mail')
+    const inputSenha = screen.getByPlaceholderText('Digite sua senha')
+    fireEvent.change(inputEmail, { target: { value: 'novo@example.com' } })
+    fireEvent.change(inputSenha, { target: { value: 'senha-nova-123' } })
+    fireEvent.click(screen.getAllByRole('button', { name: /^Entrar$/ }).at(-1)!)
+
+    expect(await screen.findByText(/conta não encontrada/i)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Cadastrar$/ }, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.getByDisplayValue('novo@example.com')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('senha-nova-123')).toBeInTheDocument()
+    expect(screen.getByText('Complete os dados para criar sua conta.')).toBeInTheDocument()
+    expect(supabase.auth.signUp).not.toHaveBeenCalled()
+  })
 })
