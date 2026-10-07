@@ -132,9 +132,9 @@ export function AssistenteIAPage() {
           rows={3}
           value={pergunta}
           onChange={(evento) => setPergunta(evento.target.value)}
-          disabled={enviando || chaveConfigurada === false}
+          disabled
         />
-        <Button onClick={handleEnviar} disabled={enviando || chaveConfigurada === false}>
+        <Button onClick={handleEnviar} disabled>
           {enviando ? 'Enviando...' : 'Enviar'}
         </Button>
       </div>
