@@ -173,6 +173,28 @@ export function normalizeRemoteSyncObject(obj: unknown, registroId: string): unk
   }
 }
 
+async function getSyncMetadataValue(chave: string): Promise<string | null> {
+  const row = await db.syncMetadata.where('chave').equals(chave).first()
+  return row?.valor ?? null
+}
+
+async function setSyncMetadataValue(chave: string, valor: string): Promise<void> {
+  const row = await db.syncMetadata.where('chave').equals(chave).first()
+  if (row?.id) {
+    await db.syncMetadata.update(row.id, { valor })
+  } else {
+    await db.syncMetadata.add({ chave, valor })
+  }
+}
+
+function isRemoteEventAfterCursor(
+  event: { timestamp: number; id: string },
+  timestamp: number,
+  eventId: string,
+): boolean {
+  return event.timestamp > timestamp || (event.timestamp === timestamp && (!eventId || event.id > eventId))
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Upload — envia eventos locais pendentes para o Supabase
 // ──────────────────────────────────────────────────────────────────────────────
@@ -273,14 +295,15 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<void> {
-  const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-  const initialLastTs = lastSync ? Number(lastSync.valor) : 0
+  const initialLastTs = Number(await getSyncMetadataValue('lastSyncTimestamp') ?? 0)
+  const initialLastEventId = await getSyncMetadataValue('lastSyncEventId') ?? ''
 
   let offset = 0
   const LIMIT = 500
   let hasMore = true
   let totalApplied = 0
   let highestTsSeen = initialLastTs
+  let highestEventIdSeen = initialLastEventId
 
   isApplyingRemote = true
   try {
@@ -290,7 +313,7 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
         .from('sync_events')
         .select('*')
         .eq('perfil_id', perfil_id)
-        .gt('timestamp', initialLastTs)
+        .gte('timestamp', initialLastTs)
         .order('timestamp', { ascending: true })
         .order('id', { ascending: true })
         .range(offset, offset + LIMIT - 1)
@@ -310,22 +333,41 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
 
       // 2. Ordem de Aplicação (Integridade Relacional)
       // Em caso de empate de timestamp, ordena pela hierarquia estrutural das tabelas
-      const sortedEvents = remoteEvents.sort((a, b) => {
-        if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp
-        const idxA = TABLES_TO_SYNC.indexOf(a.tabela)
-        const idxB = TABLES_TO_SYNC.indexOf(b.tabela)
-        return (idxA > -1 ? idxA : 99) - (idxB > -1 ? idxB : 99)
-      })
+      const sortedEvents = remoteEvents
+        .filter((event) => isRemoteEventAfterCursor(event, initialLastTs, initialLastEventId))
+        .sort((a, b) => {
+          if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp
+          const idxA = TABLES_TO_SYNC.indexOf(a.tabela)
+          const idxB = TABLES_TO_SYNC.indexOf(b.tabela)
+          const tableOrder = (idxA > -1 ? idxA : 99) - (idxB > -1 ? idxB : 99)
+          return tableOrder || a.id.localeCompare(b.id)
+        })
+
+      const preparedEvents = await Promise.all(sortedEvents.map(async (event) => {
+        if (event.acao === 'delete' || event.tabela === 'configuracoes' || !event.dados_criptografados) {
+          return { event, obj: null }
+        }
+
+        const jsonStr = await decryptText(key, event.dados_criptografados)
+        return {
+          event,
+          obj: normalizeRemoteSyncObject(JSON.parse(jsonStr), event.registro_id),
+        }
+      }))
 
       // 3. Atomicidade do Timestamp
       // Executamos a aplicação do lote E a atualização do timestamp dentro de UMA ÚNICA transação
       await db.transaction('rw', [...TABLES_TO_SYNC, 'syncMetadata'], async () => {
         let maxTsInBatch = highestTsSeen
+        let maxEventIdInBatch = highestEventIdSeen
 
-        for (const event of sortedEvents) {
+        for (const { event, obj } of preparedEvents) {
           try {
             if (event.tabela === 'configuracoes') {
-              maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
+              if (isRemoteEventAfterCursor(event, maxTsInBatch, maxEventIdInBatch)) {
+                maxTsInBatch = event.timestamp
+                maxEventIdInBatch = event.id
+              }
               continue
             }
 
@@ -334,27 +376,27 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
 
             if (event.acao === 'delete') {
               await table.delete(id)
-            } else if (event.dados_criptografados) {
-              const jsonStr = await decryptText(key, event.dados_criptografados)
-              const obj = normalizeRemoteSyncObject(JSON.parse(jsonStr), event.registro_id)
+            } else if (obj) {
               console.log('SYNC DEXIE INSERT:', obj)
               await table.put(obj)
             }
-            maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
+            if (isRemoteEventAfterCursor(event, maxTsInBatch, maxEventIdInBatch)) {
+              maxTsInBatch = event.timestamp
+              maxEventIdInBatch = event.id
+            }
           } catch (eventErr: any) {
             console.error('CRITICAL DECRYPT/INSERT ERROR:', eventErr, event)
             throw eventErr // NÃO ENGOLIR O ERRO: Para a execução imediatamente
           }
         }
 
-        const currentMeta = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-        if (currentMeta && currentMeta.id) {
-          await db.syncMetadata.update(currentMeta.id, { valor: String(maxTsInBatch) })
-        } else {
-          await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: String(maxTsInBatch) })
+        if (sortedEvents.length > 0) {
+          await setSyncMetadataValue('lastSyncTimestamp', String(maxTsInBatch))
+          await setSyncMetadataValue('lastSyncEventId', maxEventIdInBatch)
         }
         
         highestTsSeen = maxTsInBatch
+        highestEventIdSeen = maxEventIdInBatch
       })
 
       totalApplied += sortedEvents.length
@@ -427,17 +469,24 @@ export async function syncWithSupabase() {
     // 4. Último evento remoto
     const { data: remoteLatest } = await supabase
       .from('sync_events')
-      .select('timestamp')
+      .select('timestamp, id')
       .eq('perfil_id', perfil_id)
       .order('timestamp', { ascending: false })
+      .order('id', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     const remoteLastChange = remoteLatest?.timestamp ?? 0
 
     // 5. Download de eventos mais novos que o nosso último sync
-    if (remoteLastChange > lastSyncTs) {
-      console.log(`[Sync] Remoto tem eventos novos (${remoteLastChange} > ${lastSyncTs}) — baixando...`)
+    const lastSyncEventId = await getSyncMetadataValue('lastSyncEventId') ?? ''
+    const remoteLatestId = remoteLatest?.id ?? ''
+    if (remoteLatest && isRemoteEventAfterCursor(
+      { timestamp: remoteLastChange, id: remoteLatestId },
+      lastSyncTs,
+      lastSyncEventId,
+    )) {
+      console.log(`[Sync] Remoto tem eventos novos (${remoteLastChange}/${remoteLatestId} > ${lastSyncTs}/${lastSyncEventId}) — baixando...`)
       await downloadRemoteEvents(perfil_id, key)
     }
 

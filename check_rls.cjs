@@ -1,17 +1,25 @@
-const { Client } = require('pg');
+const { Client } = require('pg')
 
-const client = new Client({ 
-    connectionString: 'postgresql://postgres.dimjnihremxztedueoob:ao5fPMgr9QY5G2Oi@aws-0-sa-east-1.pooler.supabase.com:6543/postgres' 
-});
+const connectionString = process.env.SUPABASE_DB_URL
 
-async function main() {
-    await client.connect();
-    console.log('Connected.');
-    
-    const res = await client.query("SELECT * FROM pg_policies WHERE tablename = 'perfisAtelie'");
-    console.log(JSON.stringify(res.rows, null, 2));
-    
-    await client.end();
+if (!connectionString) {
+  console.error('Defina SUPABASE_DB_URL para executar esta checagem.')
+  process.exit(1)
 }
 
-main().catch(console.error);
+const client = new Client({ connectionString })
+
+async function main() {
+  await client.connect()
+  console.log('Connected.')
+
+  const res = await client.query("SELECT * FROM pg_policies WHERE tablename = 'perfisAtelie'")
+  console.log(JSON.stringify(res.rows, null, 2))
+
+  await client.end()
+}
+
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})
