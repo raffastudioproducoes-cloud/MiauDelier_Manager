@@ -13,7 +13,6 @@ export function LoginForm() {
   const carregarEstadoInicial = useAuthStore((estado) => estado.carregarEstadoInicial)
   const entrar = useAuthStore((estado) => estado.entrar)
   const criarConta = useAuthStore((estado) => estado.criarConta)
-  const recuperarConta = useAuthStore((estado) => estado.recuperarConta)
 
   const [modoCadastro, setModoCadastro] = useState(false)
   const [nome, setNome] = useState('')
@@ -117,13 +116,6 @@ export function LoginForm() {
             }
           }
 
-          // PASSO 3: Garante que a wrapped_dek está salva na nuvem (para sync entre dispositivos)
-          try {
-            const { ensureWrappedDekInCloud } = await import('../../lib/auth')
-            await ensureWrappedDekInCloud()
-          } catch (e) {
-            console.warn('Não foi possível garantir DEK na nuvem:', e)
-          }
         }
       } else {
         if (!modoCadastro) {
@@ -149,18 +141,8 @@ export function LoginForm() {
             setMostrarOverlay(false)
             return
           }
-          let recovered = false
-          try {
-            recovered = await recuperarConta(senha)
-          } catch (e) {
-            console.warn('Recuperação do cofre falhou:', e)
-          }
-          if (!recovered) {
-            setErro('Não foi possível recuperar a chave desta conta. Nenhum dado local foi criado ou apagado; tente novamente no dispositivo original.')
-            setEnviando(false)
-            setMostrarOverlay(false)
-            return
-          }
+          // O Supabase autentica o usuário; o dispositivo apenas inicializa o banco local.
+          await criarConta(senha)
         } else {
           // Cria a conta na nuvem e o cofre local
           if (email) {

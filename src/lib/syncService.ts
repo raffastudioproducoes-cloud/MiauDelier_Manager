@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
 import { db, type SyncEvent } from '../db/schema'
 import { getSessionKey } from './auth'
-import { encryptText, decryptText } from './crypto'
+import { decryptText } from './crypto'
 import { supabase } from './supabase'
 import { syncPerfisFromSupabase } from './perfisRepo'
 import { logError, logWarn } from './logger'
@@ -199,9 +199,6 @@ function isRemoteEventAtOrAfterTimestamp(
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function uploadPendingEvents(): Promise<void> {
-  const key = getSessionKey()
-  if (!key) return
-
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
@@ -214,13 +211,13 @@ async function uploadPendingEvents(): Promise<void> {
       console.warn('[Sync Upload] Perfil ainda sem supabaseId após sync, abortando upload.')
       return
     }
-    return uploadWithPerfilId(retryId, key)
+    return uploadWithPerfilId(retryId)
   }
 
-  return uploadWithPerfilId(perfil_id, key)
+  return uploadWithPerfilId(perfil_id)
 }
 
-async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<void> {
+async function uploadWithPerfilId(perfil_id: number): Promise<void> {
   const pending = await db.syncQueue.toArray()
 
   if (pending.length === 0) {
@@ -241,8 +238,7 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
           tabela: event.tabela,
           registro_id: event.registroId,
           acao: event.acao,
-          dados_criptografados:
-            event.dadosString === '{}' ? '' : await encryptText(key, event.dadosString),
+            dados_criptografados: event.dadosString === '{}' ? '' : event.dadosString,
           timestamp: event.timestamp,
         })),
       )
@@ -281,7 +277,7 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
 // Download — baixa eventos remotos mais novos que os locais
 // ──────────────────────────────────────────────────────────────────────────────
 
-async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<void> {
+async function downloadRemoteEvents(perfil_id: number, key: CryptoKey | null): Promise<void> {
   const initialLastTs = Number(await getSyncMetadataValue('lastSyncTimestamp') ?? 0)
 
   let offset = 0
@@ -332,7 +328,11 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
           return { event, obj: null }
         }
 
-        const jsonStr = await decryptText(key, event.dados_criptografados)
+        const jsonStr = event.dados_criptografados.trimStart().startsWith('{')
+          ? event.dados_criptografados
+          : key
+            ? await decryptText(key, event.dados_criptografados)
+            : (() => { throw new Error('Evento legado cifrado sem compatibilidade com o modo sem criptografia') })()
         return {
           event,
           obj: normalizeRemoteSyncObject(JSON.parse(jsonStr), event.registro_id),
@@ -405,7 +405,6 @@ export async function syncWithSupabase() {
 
   try {
     const key = getSessionKey()
-    if (!key) return
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -464,7 +463,7 @@ export async function syncWithSupabase() {
     // 6. Download depois. Falha de chave sobe ao chamador e não descarta o evento.
     if (remoteLatest && remoteLastChange >= lastSyncTs) {
       console.log(`[Sync] Remoto tem eventos no timestamp ${remoteLastChange} — baixando...`)
-      await downloadRemoteEvents(perfil_id, key)
+    await downloadRemoteEvents(perfil_id, key)
     }
 
     if (await db.syncQueue.count() === 0) {
@@ -490,9 +489,6 @@ export async function syncWithSupabase() {
  * não pode transformar uma tentativa de recuperação em perda de dados.
  */
 export async function syncOnLogin() {
-  const key = getSessionKey()
-  if (!key) return
-
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
@@ -592,7 +588,6 @@ export async function forceUpload() {
 
 export async function forceDownload() {
   const key = getSessionKey()
-  if (!key) throw new Error('Sessão não encontrada')
 
   const perfil_id = await resolvePerfilId()
   if (!perfil_id) throw new Error('Perfil não sincronizado')
