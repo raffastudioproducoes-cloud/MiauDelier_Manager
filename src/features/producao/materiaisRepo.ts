@@ -1,5 +1,4 @@
 import { db, type Material, type TipoClassificacaoMaterial } from '../../db/schema'
-import { cifrarCampo } from '../../lib/camposCifrados'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovoMaterial {
@@ -48,7 +47,7 @@ export async function registrarCompraMaterial(params: RegistrarCompraParams): Pr
   const data = params.dataCompra ?? new Date().toISOString()
   const valorCifrado =
     params.contaIdFinanceira && params.valorTotalPago > 0
-      ? await cifrarCampo(params.valorTotalPago.toString())
+      ? params.valorTotalPago.toString()
       : ''
 
   return db.transaction(

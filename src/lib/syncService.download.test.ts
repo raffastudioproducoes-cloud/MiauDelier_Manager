@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '../db/schema'
-import { encryptText } from './crypto'
-
-const getSessionKeyMock = vi.fn()
 const syncPerfisFromSupabaseMock = vi.fn()
 
 type RemoteEvent = {
@@ -16,10 +13,6 @@ type RemoteEvent = {
 }
 
 const remoteEvents: RemoteEvent[] = []
-
-vi.mock('./auth', () => ({
-  getSessionKey: getSessionKeyMock,
-}))
 
 vi.mock('./perfisRepo', () => ({
   getPerfilAtivo: vi.fn(async () => ({ id: 'padrao', supabaseId: 1 })),
@@ -94,24 +87,16 @@ describe('syncService download ordering', () => {
     await db.open()
     syncPerfisFromSupabaseMock.mockResolvedValue(undefined)
 
-    const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, [
-      'encrypt',
-      'decrypt',
-    ])
-    getSessionKeyMock.mockReturnValue(key)
   })
 
   it('baixa eventos remotos empatados no timestamp do ultimo sync local', async () => {
-    const key = getSessionKeyMock()
     remoteEvents.push({
       id: '00000000-0000-4000-8000-000000000002',
       perfil_id: 1,
       tabela: 'materiais',
       registro_id: '2',
       acao: 'insert',
-      dados_criptografados: await encryptText(
-        key,
-        JSON.stringify({
+      dados_criptografados: JSON.stringify({
           id: 2,
           nome: 'Pigmento remoto',
           categoriaId: 1,
@@ -119,7 +104,6 @@ describe('syncService download ordering', () => {
           quantidadeEstoque: 15,
           custoUnitario: 0.9,
         }),
-      ),
       timestamp: 1000,
     })
 
@@ -135,16 +119,13 @@ describe('syncService download ordering', () => {
   })
 
   it('nao descarta evento do mesmo timestamp por causa da ordem aleatoria do UUID', async () => {
-    const key = getSessionKeyMock()
     remoteEvents.push({
       id: '00000000-0000-4000-8000-000000000001',
       perfil_id: 1,
       tabela: 'materiais',
       registro_id: '3',
       acao: 'insert',
-      dados_criptografados: await encryptText(
-        key,
-        JSON.stringify({
+      dados_criptografados: JSON.stringify({
           id: 3,
           nome: 'Evento remoto posterior',
           categoriaId: 1,
@@ -152,7 +133,6 @@ describe('syncService download ordering', () => {
           quantidadeEstoque: 5,
           custoUnitario: 1.2,
         }),
-      ),
       timestamp: 2000,
     })
 

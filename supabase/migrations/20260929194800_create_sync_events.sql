@@ -5,7 +5,7 @@ CREATE TABLE sync_events (
   tabela text NOT NULL, -- ex: 'transacoes', 'clientes', 'pecas'
   registro_id text NOT NULL, -- ID original no Dexie (convertido para string se for number)
   acao text NOT NULL, -- 'insert', 'update', 'delete'
-  dados_criptografados text, -- O conteúdo cifrado/assinado (AES-GCM) da operação
+  dados_criptografados text, -- Nome legado da coluna; o conteúdo atual é JSON em texto
   timestamp bigint NOT NULL, -- Timestamp ou Logical Clock de quando a ação ocorreu no cliente
   criado_em timestamptz DEFAULT now()
 );

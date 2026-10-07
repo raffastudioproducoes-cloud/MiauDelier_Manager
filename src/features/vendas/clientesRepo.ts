@@ -1,5 +1,4 @@
 import { db } from '../../db/schema'
-import { cifrarCampo, decifrarCampo } from '../../lib/camposCifrados'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovoCliente {
@@ -14,8 +13,7 @@ export interface ClienteDecifrado {
 }
 
 export async function criarCliente(novo: NovoCliente): Promise<number> {
-  const contatoCifrado = novo.contato ? await cifrarCampo(novo.contato) : undefined
-  const id = await db.clientes.add({ nome: novo.nome, contato: contatoCifrado })
+  const id = await db.clientes.add(novo)
   return id as number
 }
 
@@ -25,14 +23,13 @@ export async function listarClientes(): Promise<ClienteDecifrado[]> {
     registros.map(async (registro) => ({
       id: registro.id as number,
       nome: registro.nome,
-      contato: registro.contato ? await decifrarCampo(registro.contato) : undefined,
+      contato: registro.contato,
     })),
   )
 }
 
 export async function atualizarCliente(clienteId: number, novo: NovoCliente): Promise<void> {
-  const contatoCifrado = novo.contato ? await cifrarCampo(novo.contato) : undefined
-  await db.clientes.update(clienteId, { nome: novo.nome, contato: contatoCifrado })
+  await db.clientes.update(clienteId, novo)
 }
 
 export async function excluirCliente(clienteId: number): Promise<void> {

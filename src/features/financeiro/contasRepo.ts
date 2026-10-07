@@ -1,5 +1,4 @@
 import { db } from '../../db/schema'
-import { cifrarCampo, decifrarCampo } from '../../lib/camposCifrados'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovaConta {
@@ -14,8 +13,7 @@ export interface ContaDecifrada {
 }
 
 export async function criarConta(nova: NovaConta): Promise<number> {
-  const saldoCriptografado = await cifrarCampo(nova.saldoInicial.toString())
-  const id = await db.contas.add({ nome: nova.nome, saldoCriptografado })
+  const id = await db.contas.add({ nome: nova.nome, saldoCriptografado: nova.saldoInicial.toString() })
   return id as number
 }
 
@@ -24,12 +22,12 @@ export async function listarContas(): Promise<ContaDecifrada[]> {
   return Promise.all(
     registros.map(async (registro) => {
       const id = registro.id as number
-      const saldoInicial = Number(await decifrarCampo(registro.saldoCriptografado))
+      const saldoInicial = Number(registro.saldoCriptografado)
       // Acesso direto à tabela (em vez de importar transacoesRepo) evita import circular.
       const transacoes = await db.transacoes.where('contaId').equals(id).toArray()
       let movimento = 0
       for (const transacao of transacoes) {
-        const valor = Number(await decifrarCampo(transacao.valorCriptografado))
+        const valor = Number(transacao.valorCriptografado)
         movimento += transacao.tipo === 'entrada' ? valor : -valor
       }
       return { id, nome: registro.nome, saldo: saldoInicial + movimento }

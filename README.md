@@ -51,8 +51,8 @@ Transformar o controle manual do ofício de resina em decisões de produção e 
 - controlar estoque de insumos e moldes;
 - acompanhar peças em produção com histórico de eventos;
 - gerenciar clientes e pedidos;
-- manter o financeiro do ateliê (contas, transações) protegido por criptografia de ponta-a-ponta, acessível mesmo offline;
-- exportar e restaurar os dados, além de contar com sincronização segura (Zero-Knowledge) na nuvem (Supabase).
+- manter o financeiro do ateliê (contas, transações) protegido por Supabase Auth, RLS e HTTPS;
+- exportar e restaurar os dados, além de contar com sincronização na nuvem (Supabase).
 
 ## Público-alvo
 
@@ -66,15 +66,15 @@ Transformar o controle manual do ofício de resina em decisões de produção e 
 | Módulo | Recursos | Status |
 | --- | --- | --- |
 | **Autenticação** | Login de usuário único, senha nunca gravada em claro, bloqueio temporário após tentativas erradas | ✅ Disponível |
-| **Segurança de dados** | Valor de conta/transação cifrado em repouso (AES-GCM), ilegível sem a senha | ✅ Disponível |
+| **Segurança de dados** | Supabase Auth, políticas RLS e HTTPS para cada conta | ✅ Disponível |
 | **Calculadora de volume** | Geometria retangular, cilíndrica, esférica e medida direta; proporções 2:1, 3:1, 1:1 e 100:3; margem de segurança | ✅ Disponível (motor) |
 | **Precificação** | Motor de precificação inteligente (Custo direto + mão de obra + rateio fixo + margem → preço sugerido) | ✅ Disponível |
 | **Backup** | Exportação/importação em JSON com checksum validado antes de qualquer escrita | ✅ Disponível |
 | **Design system e navegação** | Componentes visuais e shell de navegação responsivo adaptável | ✅ Disponível |
 | **Produção e estoque** | Controle de materiais, formas, peças e ledger imutável de eventos/consumo | ✅ Disponível |
 | **Vendas** | Gerenciamento de clientes, controle de pedidos e orçamentos na tela | ✅ Disponível |
-| **Financeiro** | Contas bancárias criptografadas e transações via ledger verificado | ✅ Disponível |
-| **Assistente de IA** | Assistente inteligente via Gemini API para apoio, dicas e suporte técnico sobre resina e uso da plataforma | ✅ Disponível |
+| **Financeiro** | Contas bancárias e transações via ledger verificado | ✅ Disponível |
+| **Assistente de IA** | Integração aguardando API segura no backend | ⏳ Pendente |
 
 ## Tecnologias
 
@@ -85,7 +85,6 @@ Transformar o controle manual do ofício de resina em decisões de produção e 
 - **Dexie 4.4** sobre **IndexedDB** — persistência local-first sincronizada via Event Sourcing
 - **Zustand 5.0** para estado de sessão reativo
 - **zod** + **react-hook-form** — validação (a entrar nos formulários das próximas fases)
-- **WebCrypto** nativo (PBKDF2-SHA256 600.000 iterações + AES-GCM-256) — sem biblioteca de criptografia externa
 - **Testing Library** + **fake-indexeddb** para testes de comportamento real sobre banco simulado
 
 ## Arquitetura e estrutura
@@ -97,15 +96,13 @@ MiauDelier-Manager/
 │   ├── db/schema.ts                # schema Dexie (todas as tabelas do produto, desde a v1)
 │   ├── lib/
 │   │   ├── auth.ts                 # login de usuário único, bloqueio por tentativas
-│   │   ├── crypto.ts                # primitivas WebCrypto (derivação de chave, cifra/decifra)
-│   │   ├── camposCifrados.ts       # camada que cifra/decifra campo de domínio usando a sessão
 │   │   └── backup.ts                # export/import de backup JSON com checksum
 │   ├── stores/authStore.ts         # estado de sessão reativo (Zustand)
 │   ├── features/
 │   │   ├── auth/                   # tela de login e guard de rota
 │   │   ├── calculator/              # motor de volume e proporção de mistura
 │   │   ├── pricing/                 # motor de precificação
-│   │   └── financeiro/              # repositórios de contas e transações (dado cifrado)
+│   │   └── financeiro/              # repositórios de contas e transações
 │   ├── routes/                      # rotas por arquivo (TanStack Router)
 │   └── router.tsx
 └── vitest.config.ts / vite.config.ts
@@ -114,8 +111,8 @@ MiauDelier-Manager/
 Princípios adotados:
 
 - **Local-first**: os dados vivem primeiro no dispositivo e são sincronizados via Event Sourcing com o backend (Supabase);
-- dado sensível cifrado em repouso com chave derivada da senha, nunca persistida;
-- toda leitura/escrita de campo cifrado passa por uma única camada (`camposCifrados.ts`) — nenhum acesso direto ao Dexie por fora dela;
+- a proteção de acesso é responsabilidade do Supabase Auth, RLS e HTTPS;
+- o IndexedDB funciona como cache local de dados sincronizáveis, sem chaves ou cifras internas;
 - schema de banco cobre todos os módulos do produto desde a primeira versão, para nunca precisar de migração dolorosa;
 - backup nunca escreve no banco sem validar checksum e formato antes.
 
@@ -134,7 +131,7 @@ cd MiauDelier_Manager
 npm install
 ```
 
-Para rodar com sincronização de nuvem, é necessário configurar as chaves do Supabase no arquivo `.env.local` (crie a partir do `.env.example`). O app também pode operar de modo 100% offline se configurado. A chave da API do Gemini (IA) fica configurada pela própria usuária na interface.
+Para rodar com sincronização de nuvem, configure `VITE_SUPABASE_URL` e a chave publicável `VITE_SUPABASE_ANON_KEY` no `.env.local`. Nunca use `service_role` ou chaves de provedores no frontend.
 
 ## Desenvolvimento e testes
 

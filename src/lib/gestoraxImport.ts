@@ -1,5 +1,4 @@
 import { db, type StatusPeca, type TipoTransacao, type CavidadeForma } from '../db/schema'
-import { cifrarCampo } from './camposCifrados'
 import { logInfo, logWarn, logError } from './logger'
 
 export interface RelatorioImportacaoGestoraX {
@@ -129,10 +128,10 @@ export async function importarBackupGestoraX(json: string): Promise<RelatorioImp
 
   // Criptografia WebCrypto de contas e transações fora do bloco de transação Dexie
   const saldosCifrados = await Promise.all(
-    contasOrigem.map((conta) => cifrarCampo(String(Number(conta.saldoInicial) || 0))),
+    contasOrigem.map((conta) => String(Number(conta.saldoInicial) || 0)),
   )
   const valoresCifrados = await Promise.all(
-    transacoesOrigem.map((transacao) => cifrarCampo(String(Number(transacao.valor) || 0))),
+    transacoesOrigem.map((transacao) => String(Number(transacao.valor) || 0)),
   )
 
   await db.transaction(
@@ -335,7 +334,7 @@ function resolverNomeCategoriaMaterial(material: Record<string, unknown>): strin
 
       // 9. Contas
       if (contasOrigem.length === 0) {
-        const saldoCifradoCaixa = await cifrarCampo('0')
+        const saldoCifradoCaixa = '0'
         const caixaId = (await db.contas.add({
           nome: 'Caixa',
           saldoCriptografado: saldoCifradoCaixa,

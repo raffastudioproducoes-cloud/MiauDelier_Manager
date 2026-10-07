@@ -1,5 +1,5 @@
 import { db, type MiauDelierDB } from '../db/schema'
-import { CHAVE_SALT, CHAVE_VERIFICADOR, deleteUserData } from './auth'
+import { CHAVE_SALT, deleteUserData } from './auth'
 import { useAuthStore } from '../stores/authStore'
 import { logInfo, logError } from './logger'
 
@@ -74,12 +74,11 @@ function validarAutenticacao(dados: Record<string, unknown[]>): void {
       ? configuracoes.map((linha) => (ehObjeto(linha) ? linha.chave : undefined))
       : [],
   )
-  if (!chaves.has(CHAVE_SALT) || !chaves.has(CHAVE_VERIFICADOR)) {
-    const msg = 'Backup sem as configurações de autenticação (salt e verificador).'
+  if (!chaves.has(CHAVE_SALT)) {
+    const msg = 'Backup sem a configuração da conta local.'
     logError('backup', msg, { chavesPresentes: Array.from(chaves) })
     throw new Error(
-      'backup sem as configurações de autenticação (salt e verificador): restaurá-lo apagaria a ' +
-        'senha do dispositivo e nenhum dado cifrado poderia ser aberto de novo',
+      'backup sem a configuração da conta local',
     )
   }
 }

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../db/schema'
 import { setupAccount } from './auth'
-import { decifrarCampo } from './camposCifrados'
 import { ehBackupGestoraX, importarBackupGestoraX } from './gestoraxImport'
 
 function backupGestoraXExemplo() {
@@ -96,10 +95,10 @@ describe('importação de backup do GestoraX', () => {
     expect(pecaOrfa.formaId).toBe(0)
 
     const [transacao] = await db.transacoes.toArray()
-    expect(await decifrarCampo(transacao.valorCriptografado)).toBe('25.5')
+    expect(transacao.valorCriptografado).toBe('25.5')
 
     const [conta] = await db.contas.toArray()
-    expect(await decifrarCampo(conta.saldoCriptografado)).toBe('100')
+    expect(conta.saldoCriptografado).toBe('100')
   })
 
   it('não mexe na autenticação nem exige logout', async () => {

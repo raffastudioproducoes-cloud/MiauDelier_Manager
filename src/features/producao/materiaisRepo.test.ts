@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
-import { decifrarCampo } from '../../lib/camposCifrados'
 import {
   criarMaterial,
   listarMateriais,
@@ -74,7 +73,7 @@ describe('repositório de materiais', () => {
     const [transacao] = await db.transacoes.toArray()
     expect(transacao.contaId).toBe(contaId)
     expect(transacao.tipo).toBe('saida')
-    expect(await decifrarCampo(transacao.valorCriptografado)).toBe('120')
+    expect(transacao.valorCriptografado).toBe('120')
   })
 
   it('atualiza nome, unidade e custo de um material existente', async () => {

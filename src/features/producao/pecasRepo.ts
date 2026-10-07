@@ -1,5 +1,4 @@
 import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema'
-import { cifrarCampo } from '../../lib/camposCifrados'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 import { converterQuantidade, ehIncompativel } from '../../lib/unidades'
 
@@ -265,8 +264,7 @@ export async function registrarVendaPeca(
   contaId: number,
   descricaoTransacao: string,
 ): Promise<void> {
-  // WebCrypto (cifrarCampo) doesn't need to run inside the Dexie transaction — only the writes do.
-  const valorCriptografado = await cifrarCampo(precoVenda.toString())
+  const valorCriptografado = precoVenda.toString()
   const agora = new Date().toISOString()
 
   await db.transaction('rw', db.pecas, db.eventosPeca, db.contas, db.transacoes, db.auditoria, async () => {

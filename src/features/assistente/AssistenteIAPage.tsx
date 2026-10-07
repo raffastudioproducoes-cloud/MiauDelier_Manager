@@ -2,17 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { hasChaveConfigurada } from '../ia/iaConfigRepo'
 import { pedirRespostaChat } from '../ia/geminiClient'
 import { criarMensagemIA, listarMensagensIA, limparConversaIA } from './mensagensIARepo'
-import { db } from '../../db/schema'
 import type { MensagemIA } from '../../db/schema'
 
 const TAMANHO_MAXIMO_PERGUNTA = 500
 
 export function AssistenteIAPage() {
   const { mostrarToast } = useToast()
-  const [chaveConfigurada, setChaveConfigurada] = useState<boolean | null>(null)
   const [mensagens, setMensagens] = useState<MensagemIA[]>([])
   const [pergunta, setPergunta] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -32,32 +29,9 @@ export function AssistenteIAPage() {
   useEffect(() => {
     async function carregar() {
       try {
-        const [configurada, lista] = await Promise.all([hasChaveConfigurada(), listarMensagensIA()])
+        const lista = await listarMensagensIA()
         if (!montado.current) return
-        setChaveConfigurada(configurada)
-        if (configurada && lista.length === 0) {
-          setEnviando(true)
-          try {
-            const materiaisCount = await db.materiais.count()
-            const formasCount = await db.formas.count()
-            const pecasCount = await db.pecas.count()
-            
-            const promptBoasVindas = `Por favor, faça um resumo amigável e acolhedor do meu ateliê MiauDelier. Eu tenho ${materiaisCount} materiais, ${formasCount} moldes e ${pecasCount} peças cadastradas. Me dê as boas-vindas ao assistente, comente rapidamente sobre esses números (como dicas curtas para gestão ou vendas) e pergunte no que pode ajudar!`
-            
-            const resposta = await pedirRespostaChat([], promptBoasVindas)
-            await criarMensagemIA('assistente', resposta)
-            
-            const novaLista = await listarMensagensIA()
-            if (montado.current) setMensagens(novaLista)
-          } catch (falha) {
-            console.error('Falha ao gerar boas-vindas automáticas:', falha)
-            if (montado.current) setMensagens(lista)
-          } finally {
-            if (montado.current) setEnviando(false)
-          }
-        } else {
-          setMensagens(lista)
-        }
+        setMensagens(lista)
       } catch (falha) {
         if (!montado.current) return
         mostrarToast(falha instanceof Error ? falha.message : 'Não foi possível carregar a conversa.', 'erro')
@@ -124,12 +98,11 @@ export function AssistenteIAPage() {
         </Button>
       </div>
 
-      {chaveConfigurada === false && (
+      {
         <div className="rounded-lg border border-outline-variant bg-surface-container p-3 text-sm text-on-surface-variant">
-          Chave de API do Gemini não configurada. Configure em{' '}
-          <span className="font-medium text-on-surface">/configuracoes</span> para usar o assistente.
+          Assistente de IA temporariamente indisponível: a integração será feita apenas pela API segura do backend.
         </div>
-      )}
+      }
 
       <div className="flex flex-col gap-2">
         {mensagens.map((mensagem) => (

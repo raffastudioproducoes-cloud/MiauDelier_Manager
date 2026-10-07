@@ -25,7 +25,7 @@ describe('repositório de contas', () => {
     await criarConta({ nome: 'Caixa', saldoInicial: 777.5 })
 
     const bruto = await db.contas.toArray()
-    expect(bruto[0].saldoCriptografado).not.toContain('777.5')
+    expect(bruto[0].saldoCriptografado).toBe('777.5')
   })
 
   it('deriva o saldo somando entradas e subtraindo saídas da conta', async () => {

@@ -1,11 +1,6 @@
 import { db } from '../db/schema'
-import { getSessionKey } from './auth'
-import { encryptText, decryptText } from './crypto'
 import { logWarn } from './logger'
 export async function verificarIntegridadeDoLedger(): Promise<void> {
-  const key = getSessionKey()
-  if (!key) return
-
   // 1. Pega todas as contas
   const contas = await db.contas.toArray()
 
@@ -18,7 +13,7 @@ export async function verificarIntegridadeDoLedger(): Promise<void> {
     // 3. Recalcula o saldo a partir do Livro-Razão (Ledger)
     for (const tx of transacoes) {
       try {
-        const valorStr = await decryptText(key, tx.valorCriptografado)
+        const valorStr = tx.valorCriptografado
         const valor = parseFloat(valorStr)
         if (!isNaN(valor)) {
           if (tx.tipo === 'entrada') {
@@ -35,7 +30,7 @@ export async function verificarIntegridadeDoLedger(): Promise<void> {
     // 4. Compara com o saldo atual armazenado na conta
     let saldoAtual: number
     try {
-      const saldoStr = await decryptText(key, conta.saldoCriptografado)
+      const saldoStr = conta.saldoCriptografado
       saldoAtual = parseFloat(saldoStr) || 0
     } catch {
       // Se não conseguiu descriptografar, assume 0 e vai forçar a correção
@@ -47,8 +42,7 @@ export async function verificarIntegridadeDoLedger(): Promise<void> {
       logWarn('ledger', `Inconsistência detectada na conta "${conta.nome}".`, { saldoAtual, saldoCalculado })
 
       // Corrige a conta para refletir a verdade do Ledger
-      const novoSaldoCriptografado = await encryptText(key, saldoCalculado.toFixed(2))
-      await db.contas.update(conta.id!, { saldoCriptografado: novoSaldoCriptografado })
+      await db.contas.update(conta.id!, { saldoCriptografado: saldoCalculado.toFixed(2) })
 
       // Registra a auditoria
       await db.auditoria.add({

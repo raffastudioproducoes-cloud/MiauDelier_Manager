@@ -1,5 +1,4 @@
 import { db, type TipoTransacao } from '../../db/schema'
-import { cifrarCampo, decifrarCampo } from '../../lib/camposCifrados'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovaTransacao {
@@ -20,7 +19,7 @@ export interface TransacaoDecifrada {
 }
 
 export async function criarTransacao(nova: NovaTransacao): Promise<number> {
-  const valorCriptografado = await cifrarCampo(nova.valor.toString())
+  const valorCriptografado = nova.valor.toString()
   const id = await db.transacoes.add({
     contaId: nova.contaId,
     tipo: nova.tipo,
@@ -32,7 +31,7 @@ export async function criarTransacao(nova: NovaTransacao): Promise<number> {
 }
 
 export async function atualizarTransacao(transacaoId: number, dados: NovaTransacao): Promise<void> {
-  const valorCriptografado = await cifrarCampo(dados.valor.toString())
+  const valorCriptografado = dados.valor.toString()
   await db.transacoes.update(transacaoId, {
     contaId: dados.contaId,
     tipo: dados.tipo,
@@ -56,7 +55,7 @@ export async function listarTransacoesDaConta(contaId: number): Promise<Transaca
       id: registro.id!,
       contaId: registro.contaId,
       tipo: registro.tipo,
-      valor: Number(await decifrarCampo(registro.valorCriptografado)),
+      valor: Number(registro.valorCriptografado),
       descricao: registro.descricao,
       data: registro.data,
     })),
@@ -70,7 +69,7 @@ export async function listarTodasTransacoes(): Promise<TransacaoDecifrada[]> {
       id: registro.id!,
       contaId: registro.contaId,
       tipo: registro.tipo,
-      valor: Number(await decifrarCampo(registro.valorCriptografado)),
+      valor: Number(registro.valorCriptografado),
       descricao: registro.descricao,
       data: registro.data,
     })),

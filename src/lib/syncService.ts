@@ -1,7 +1,5 @@
 import Dexie from 'dexie'
 import { db, type SyncEvent } from '../db/schema'
-import { getSessionKey } from './auth'
-import { decryptText } from './crypto'
 import { supabase } from './supabase'
 import { syncPerfisFromSupabase } from './perfisRepo'
 import { logError, logWarn } from './logger'
@@ -229,23 +227,15 @@ async function uploadWithPerfilId(perfil_id: number): Promise<void> {
   const BATCH_SIZE = 50
   for (let i = 0; i < pending.length; i += BATCH_SIZE) {
     const batch = pending.slice(i, i + BATCH_SIZE)
-    let payloads
-    try {
-      payloads = await Promise.all(
-        batch.map(async (event) => ({
+    const payloads = batch.map((event) => ({
           id: event.id,
           perfil_id,
           tabela: event.tabela,
           registro_id: event.registroId,
           acao: event.acao,
-            dados_criptografados: event.dadosString === '{}' ? '' : event.dadosString,
+          dados_criptografados: event.dadosString === '{}' ? '' : event.dadosString,
           timestamp: event.timestamp,
-        })),
-      )
-    } catch (encErr) {
-      console.error("ERRO CRÍTICO DE CRIPTOGRAFIA ANTES DO UPLOAD:", encErr)
-      return
-    }
+        }))
 
     const { error } = await supabase.from('sync_events').insert(payloads)
     
@@ -277,7 +267,7 @@ async function uploadWithPerfilId(perfil_id: number): Promise<void> {
 // Download — baixa eventos remotos mais novos que os locais
 // ──────────────────────────────────────────────────────────────────────────────
 
-async function downloadRemoteEvents(perfil_id: number, key: CryptoKey | null): Promise<void> {
+async function downloadRemoteEvents(perfil_id: number): Promise<void> {
   const initialLastTs = Number(await getSyncMetadataValue('lastSyncTimestamp') ?? 0)
 
   let offset = 0
@@ -328,11 +318,7 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey | null): P
           return { event, obj: null }
         }
 
-        const jsonStr = event.dados_criptografados.trimStart().startsWith('{')
-          ? event.dados_criptografados
-          : key
-            ? await decryptText(key, event.dados_criptografados)
-            : (() => { throw new Error('Evento legado cifrado sem compatibilidade com o modo sem criptografia') })()
+        const jsonStr = event.dados_criptografados
         return {
           event,
           obj: normalizeRemoteSyncObject(JSON.parse(jsonStr), event.registro_id),
@@ -362,7 +348,7 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey | null): P
             }
             maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
           } catch (eventErr: any) {
-            console.error('CRITICAL DECRYPT/INSERT ERROR:', eventErr, event)
+            console.error('CRITICAL SYNC/INSERT ERROR:', eventErr, event)
             throw eventErr // NÃO ENGOLIR O ERRO: Para a execução imediatamente
           }
         }
@@ -404,8 +390,6 @@ export async function syncWithSupabase() {
   isSyncing = true
 
   try {
-    const key = getSessionKey()
-
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
@@ -463,7 +447,7 @@ export async function syncWithSupabase() {
     // 6. Download depois. Falha de chave sobe ao chamador e não descarta o evento.
     if (remoteLatest && remoteLastChange >= lastSyncTs) {
       console.log(`[Sync] Remoto tem eventos no timestamp ${remoteLastChange} — baixando...`)
-    await downloadRemoteEvents(perfil_id, key)
+      await downloadRemoteEvents(perfil_id)
     }
 
     if (await db.syncQueue.count() === 0) {
@@ -587,10 +571,8 @@ export async function forceUpload() {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function forceDownload() {
-  const key = getSessionKey()
-
   const perfil_id = await resolvePerfilId()
   if (!perfil_id) throw new Error('Perfil não sincronizado')
 
-  await downloadRemoteEvents(perfil_id, key)
+  await downloadRemoteEvents(perfil_id)
 }

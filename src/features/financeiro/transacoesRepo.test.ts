@@ -38,8 +38,7 @@ describe('repositório de transações', () => {
 
     const bruto = await db.transacoes.toArray()
     expect(bruto).toHaveLength(1)
-    expect(bruto[0].valorCriptografado).not.toContain('42.9')
-    expect(bruto[0].valorCriptografado).toContain(':')
+    expect(bruto[0].valorCriptografado).toBe('42.9')
   })
 
   it('lista só as transações da conta pedida', async () => {
