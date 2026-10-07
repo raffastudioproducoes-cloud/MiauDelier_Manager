@@ -133,4 +133,41 @@ describe('syncService download ordering', () => {
       quantidadeEstoque: 15,
     })
   })
+
+  it('nao descarta evento do mesmo timestamp por causa da ordem aleatoria do UUID', async () => {
+    const key = getSessionKeyMock()
+    remoteEvents.push({
+      id: '00000000-0000-4000-8000-000000000001',
+      perfil_id: 1,
+      tabela: 'materiais',
+      registro_id: '3',
+      acao: 'insert',
+      dados_criptografados: await encryptText(
+        key,
+        JSON.stringify({
+          id: 3,
+          nome: 'Evento remoto posterior',
+          categoriaId: 1,
+          unidade: 'g',
+          quantidadeEstoque: 5,
+          custoUnitario: 1.2,
+        }),
+      ),
+      timestamp: 2000,
+    })
+
+    await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: '2000' })
+    await db.syncMetadata.add({
+      chave: 'lastSyncEventId',
+      valor: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+    })
+
+    const { syncWithSupabase } = await import('./syncService')
+    await syncWithSupabase()
+
+    await expect(db.materiais.get(3)).resolves.toMatchObject({
+      nome: 'Evento remoto posterior',
+      quantidadeEstoque: 5,
+    })
+  })
 })

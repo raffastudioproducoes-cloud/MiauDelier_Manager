@@ -7,8 +7,8 @@
       // GitHub Pages não faz rewrite de servidor para SPA. Este redirect
       // reescreve a rota como query string e o script em index.html
       // desfaz isso via history.replaceState, restaurando a URL real.
-      var pathSegmentsToKeep = 1 // /MiauDelier_Manager/
       var l = window.location
+      var pathSegmentsToKeep = l.pathname.indexOf('/MiauDelier_Manager/') === 0 ? 1 : 0
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
         l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?p=/' +

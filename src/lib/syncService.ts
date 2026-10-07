@@ -187,12 +187,11 @@ async function setSyncMetadataValue(chave: string, valor: string): Promise<void>
   }
 }
 
-function isRemoteEventAfterCursor(
-  event: { timestamp: number; id: string },
+function isRemoteEventAtOrAfterTimestamp(
+  event: { timestamp: number },
   timestamp: number,
-  eventId: string,
 ): boolean {
-  return event.timestamp > timestamp || (event.timestamp === timestamp && (!eventId || event.id > eventId))
+  return event.timestamp >= timestamp
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -223,20 +222,9 @@ async function uploadPendingEvents(): Promise<void> {
 
 async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<void> {
   const pending = await db.syncQueue.toArray()
-  
-  // DIAGNÓSTICO EXTREMO E INCONTESTÁVEL
-  const matCount = await db.table('materiais').count()
-  const transCount = await db.table('transacoes').count()
-  console.log(`\n================= DIAGNÓSTICO DO MOTOR DE UPLOAD =================`)
-  console.log(`[PC -> NUVEM] Materiais Locais: ${matCount} | Transações Locais: ${transCount}`)
-  console.log(`[PC -> NUVEM] Eventos aguardando na fila de Upload (syncQueue): ${pending.length}`)
-  console.log(`==================================================================\n`)
 
   if (pending.length === 0) {
     hasPendingLocalChanges = false
-    if (matCount > 0 || transCount > 0) {
-      console.warn(`[ALERTA FATAL] Existem dados locais no PC, mas a FILA DE UPLOAD ESTÁ VAZIA! Isso prova que o PC não está tentando fazer upload, porque os eventos não foram enfileirados ou já foram limpos. Tente criar um NOVO material agora e veja se o número da fila sobe para 1!`)
-    }
     return
   }
 
@@ -263,7 +251,6 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
       return
     }
 
-    console.log("📤 TENTANDO SUBIR LOTE PARA A NUVEM:", payloads)
     const { error } = await supabase.from('sync_events').insert(payloads)
     
     if (error) {
@@ -274,7 +261,7 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
     // Se não houve erro, apaga da fila local
     const ids = batch.map((p) => p.id!)
     await db.syncQueue.bulkDelete(ids)
-    console.log(`✅ SUCESSO: Lote de ${ids.length} eventos salvo na nuvem e removido da fila local.`)
+    console.log(`[Sync Upload] Lote de ${ids.length} evento(s) confirmado pela nuvem.`)
   }
 
   // Salva o hash de verificação anti-tamper no Supabase
@@ -296,14 +283,12 @@ async function uploadWithPerfilId(perfil_id: number, key: CryptoKey): Promise<vo
 
 async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<void> {
   const initialLastTs = Number(await getSyncMetadataValue('lastSyncTimestamp') ?? 0)
-  const initialLastEventId = await getSyncMetadataValue('lastSyncEventId') ?? ''
 
   let offset = 0
   const LIMIT = 500
   let hasMore = true
   let totalApplied = 0
   let highestTsSeen = initialLastTs
-  let highestEventIdSeen = initialLastEventId
 
   isApplyingRemote = true
   try {
@@ -322,8 +307,7 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
       console.log('SYNC FETCH:', fetchedCount)
 
       if (fetchError) {
-        console.error('[Sync Download] Erro ao baixar eventos:', fetchError)
-        break // Aborta a paginação, tenta novamente no próximo ciclo
+        throw fetchError
       }
 
       if (!remoteEvents || remoteEvents.length === 0) {
@@ -334,7 +318,7 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
       // 2. Ordem de Aplicação (Integridade Relacional)
       // Em caso de empate de timestamp, ordena pela hierarquia estrutural das tabelas
       const sortedEvents = remoteEvents
-        .filter((event) => isRemoteEventAfterCursor(event, initialLastTs, initialLastEventId))
+        .filter((event) => isRemoteEventAtOrAfterTimestamp(event, initialLastTs))
         .sort((a, b) => {
           if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp
           const idxA = TABLES_TO_SYNC.indexOf(a.tabela)
@@ -359,15 +343,11 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
       // Executamos a aplicação do lote E a atualização do timestamp dentro de UMA ÚNICA transação
       await db.transaction('rw', [...TABLES_TO_SYNC, 'syncMetadata'], async () => {
         let maxTsInBatch = highestTsSeen
-        let maxEventIdInBatch = highestEventIdSeen
 
         for (const { event, obj } of preparedEvents) {
           try {
             if (event.tabela === 'configuracoes') {
-              if (isRemoteEventAfterCursor(event, maxTsInBatch, maxEventIdInBatch)) {
-                maxTsInBatch = event.timestamp
-                maxEventIdInBatch = event.id
-              }
+              maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
               continue
             }
 
@@ -380,10 +360,7 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
               console.log('SYNC DEXIE INSERT:', obj)
               await table.put(obj)
             }
-            if (isRemoteEventAfterCursor(event, maxTsInBatch, maxEventIdInBatch)) {
-              maxTsInBatch = event.timestamp
-              maxEventIdInBatch = event.id
-            }
+            maxTsInBatch = Math.max(maxTsInBatch, event.timestamp)
           } catch (eventErr: any) {
             console.error('CRITICAL DECRYPT/INSERT ERROR:', eventErr, event)
             throw eventErr // NÃO ENGOLIR O ERRO: Para a execução imediatamente
@@ -392,11 +369,9 @@ async function downloadRemoteEvents(perfil_id: number, key: CryptoKey): Promise<
 
         if (sortedEvents.length > 0) {
           await setSyncMetadataValue('lastSyncTimestamp', String(maxTsInBatch))
-          await setSyncMetadataValue('lastSyncEventId', maxEventIdInBatch)
         }
         
         highestTsSeen = maxTsInBatch
-        highestEventIdSeen = maxEventIdInBatch
       })
 
       totalApplied += sortedEvents.length
@@ -479,14 +454,8 @@ export async function syncWithSupabase() {
     const remoteLastChange = remoteLatest?.timestamp ?? 0
 
     // 5. Download de eventos mais novos que o nosso último sync
-    const lastSyncEventId = await getSyncMetadataValue('lastSyncEventId') ?? ''
-    const remoteLatestId = remoteLatest?.id ?? ''
-    if (remoteLatest && isRemoteEventAfterCursor(
-      { timestamp: remoteLastChange, id: remoteLatestId },
-      lastSyncTs,
-      lastSyncEventId,
-    )) {
-      console.log(`[Sync] Remoto tem eventos novos (${remoteLastChange}/${remoteLatestId} > ${lastSyncTs}/${lastSyncEventId}) — baixando...`)
+    if (remoteLatest && remoteLastChange >= lastSyncTs) {
+      console.log(`[Sync] Remoto tem eventos no timestamp ${remoteLastChange} — baixando...`)
       await downloadRemoteEvents(perfil_id, key)
     }
 
@@ -501,6 +470,7 @@ export async function syncWithSupabase() {
 
   } catch (err) {
     console.error('[Sync] Erro geral na sincronização:', err)
+    throw err
   } finally {
     isSyncing = false
   }
@@ -512,8 +482,8 @@ export async function syncWithSupabase() {
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Sync agressivo pós-login: força download completo se o dispositivo está vazio.
- * Diferente do sync periódico, este não espera — baixa tudo de uma vez.
+ * Sync pós-login. Nunca limpa dados locais: uma falha de rede ou de chave
+ * não pode transformar uma tentativa de recuperação em perda de dados.
  */
 export async function syncOnLogin() {
   const key = getSessionKey()
@@ -534,50 +504,7 @@ export async function syncOnLogin() {
     return
   }
 
-  // 3. Verifica estado do dispositivo (First Sync?)
-  const lastSync = await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first()
-  const isFirstSync = !lastSync || Number(lastSync.valor) === 0
-
-  let totalLocalRecords = 0
-  for (const tableName of TABLES_TO_SYNC) {
-    try {
-      totalLocalRecords += await db.table(tableName).count()
-    } catch {
-      // tabela pode não existir
-    }
-  }
-
-  // 4. Verifica quantos eventos remotos existem
-  const { count: remoteCount } = await supabase
-    .from('sync_events')
-    .select('id', { count: 'exact', head: true })
-    .eq('perfil_id', perfil_id)
-
-  const debugMsg = `[Sync Login] Registros locais: ${totalLocalRecords} | Eventos remotos: ${remoteCount ?? 0} | FirstSync: ${isFirstSync}`
-  console.log(debugMsg)
-
-  if (isFirstSync && (remoteCount ?? 0) > 0) {
-    // 4. Limpeza Preemptiva (Cold Start)
-    console.log('[Sync Login] Dispositivo vazio (Cold Start) — limpando base local e preparando download massivo...')
-    
-    // Limpa todas as tabelas transacionais ativamente antes do download
-    await db.transaction('rw', TABLES_TO_SYNC, async () => {
-      for (const tableName of TABLES_TO_SYNC) {
-        await db.table(tableName).clear()
-      }
-    })
-    
-    if (lastSync && lastSync.id) {
-      await db.syncMetadata.update(lastSync.id, { valor: '0' })
-    } else {
-      await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: '0' })
-    }
-    
-    console.log('[Sync Login] Base de dados local limpa. Iniciando sync...')
-  }
-
-  // Depois do ajuste de lastSyncTs, chamamos o fluxo normal de sync
-  // Ele lidará tanto com download quanto com upload, resolvendo offline merge
+  // O fluxo normal baixa e envia sem apagar o estado que já existe neste dispositivo.
   await syncWithSupabase()
 }
 

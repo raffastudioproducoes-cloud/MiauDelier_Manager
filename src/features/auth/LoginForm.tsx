@@ -156,31 +156,10 @@ export function LoginForm() {
             console.warn('Recuperação do cofre falhou:', e)
           }
           if (!recovered) {
-            await criarConta(senha)
-
-            try {
-              // Recupera o full_name salvo no Supabase durante o signUp
-              const { data: { user } } = await supabase.auth.getUser()
-              const fullName = user?.user_metadata?.full_name
-
-              const { atualizarPerfil, getPerfilAtivo } = await import('../../lib/perfisRepo')
-              const ativo = await getPerfilAtivo()
-              
-              await atualizarPerfil(ativo.id, { 
-                nomeDono: fullName || '',
-                nome: fullName ? `Ateliê de ${fullName}` : 'Ateliê Principal',
-                emailDono: email
-              })
-            } catch (e) {
-              console.warn('Erro ao atualizar nome do perfil com os dados do usuário:', e)
-            }
-
-            try {
-              const { ensureWrappedDekInCloud } = await import('../../lib/auth')
-              await ensureWrappedDekInCloud()
-            } catch (e) {
-              console.warn('Não foi possível salvar DEK na nuvem:', e)
-            }
+            setErro('Não foi possível recuperar a chave desta conta. Nenhum dado local foi criado ou apagado; tente novamente no dispositivo original.')
+            setEnviando(false)
+            setMostrarOverlay(false)
+            return
           }
         } else {
           // Cria a conta na nuvem e o cofre local
