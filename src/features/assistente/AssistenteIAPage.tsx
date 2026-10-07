@@ -98,12 +98,6 @@ export function AssistenteIAPage() {
         </Button>
       </div>
 
-      {
-        <div className="rounded-lg border border-outline-variant bg-surface-container p-3 text-sm text-on-surface-variant">
-          Assistente de IA temporariamente indisponível: a integração será feita apenas pela API segura do backend.
-        </div>
-      }
-
       <div className="flex flex-col gap-2">
         {mensagens.map((mensagem) => (
           <div
@@ -132,9 +126,9 @@ export function AssistenteIAPage() {
           rows={3}
           value={pergunta}
           onChange={(evento) => setPergunta(evento.target.value)}
-          disabled
+          disabled={enviando}
         />
-        <Button onClick={handleEnviar} disabled>
+        <Button onClick={handleEnviar} disabled={enviando || !pergunta.trim()}>
           {enviando ? 'Enviando...' : 'Enviar'}
         </Button>
       </div>

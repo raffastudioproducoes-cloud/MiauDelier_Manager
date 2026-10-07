@@ -43,7 +43,7 @@ const FAQ_LISTA: PerguntaFAQ[] = [
     categoria: 'basica',
     pergunta: 'O que é e como funciona o Assistente de IA Gemini no MiauDelier?',
     resposta:
-      'O Assistente de IA é uma inteligência artificial integrada que ajuda tirando dúvidas técnicas sobre cura de resina, proporção A/B, cálculo de pigmentos, dicas de vendas e estratégias de marketing. Você pode utilizar sua própria chave de API gratuita do Google Gemini, que é cifrada no seu navegador e não é compartilhada com ninguém.',
+      'O Assistente de IA é uma inteligência artificial integrada que ajuda tirando dúvidas técnicas sobre cura de resina, proporção A/B, cálculo de pigmentos, dicas de vendas e estratégias de marketing. Você pode utilizar sua própria chave de API do Google Gemini, que fica armazenada no cofre seguro do servidor e não é salva no navegador.',
     tags: ['ia', 'gemini', 'assistente', 'chave api'],
   },
 

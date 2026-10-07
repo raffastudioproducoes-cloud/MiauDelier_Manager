@@ -399,10 +399,6 @@ async function downloadRemoteEvents(perfil_id: number): Promise<void> {
 
     if (totalApplied > 0) {
       console.log(`[Sync Download] ${totalApplied} evento(s) aplicado(s) com sucesso.`)
-      // Verifica integridade do ledger após aplicar eventos remotos
-      import('./ledgerVerification').then(({ verificarIntegridadeDoLedger }) => {
-        verificarIntegridadeDoLedger()
-      }).catch(() => {})
     }
   } finally {
     isApplyingRemote = false

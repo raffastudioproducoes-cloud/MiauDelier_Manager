@@ -1,4 +1,5 @@
 import type { MensagemIA } from '../../db/schema'
+import { supabase } from '../../lib/supabase'
 
 export class IaIndisponivelError extends Error {
   constructor(motivo: string) {
@@ -8,8 +9,23 @@ export class IaIndisponivelError extends Error {
 }
 
 async function chamarGemini(contents: Array<{ role?: string; parts: Array<{ text: string }> }>): Promise<string> {
-  void contents
-  throw new IaIndisponivelError('Assistente de IA aguardando API segura no backend.')
+  const { data, error } = await supabase.functions.invoke<{ text?: string; error?: string }>('gemini', {
+    body: { action: 'generate', contents },
+  })
+
+  if (error) throw new IaIndisponivelError('Não foi possível consultar o assistente agora.')
+  if (!data?.text) throw new IaIndisponivelError(data?.error ?? 'Configure uma chave Gemini válida nas configurações.')
+  return data.text
+}
+
+export async function configurarChaveGemini(apiKey: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ error?: string }>('gemini', {
+    body: { action: 'configure', apiKey },
+  })
+
+  if (error || data?.error) {
+    throw new IaIndisponivelError(data?.error ?? 'Não foi possível salvar a chave Gemini.')
+  }
 }
 
 export async function pedirDicaIA(pergunta: string): Promise<string> {

@@ -1,59 +1,11 @@
 import { db } from '../db/schema'
-import { logWarn } from './logger'
-export async function verificarIntegridadeDoLedger(): Promise<void> {
-  // 1. Pega todas as contas
-  const contas = await db.contas.toArray()
 
-  for (const conta of contas) {
-    let saldoCalculado = 0
+export async function calcularMovimentoDoLedger(contaId: number): Promise<number> {
+  const transacoes = await db.transacoes.where('contaId').equals(contaId).toArray()
 
-    // 2. Pega todas as transações dessa conta
-    const transacoes = await db.transacoes.where('contaId').equals(conta.id!).toArray()
-
-    // 3. Recalcula o saldo a partir do Livro-Razão (Ledger)
-    for (const tx of transacoes) {
-      try {
-        const valorStr = tx.valorCriptografado
-        const valor = parseFloat(valorStr)
-        if (!isNaN(valor)) {
-          if (tx.tipo === 'entrada') {
-            saldoCalculado += valor
-          } else if (tx.tipo === 'saida') {
-            saldoCalculado -= valor
-          }
-        }
-      } catch (err) {
-        logWarn('ledger', `Transação inválida/corrompida ignorada (ID: ${String(tx.id)})`, err)
-      }
-    }
-
-    // 4. Compara com o saldo atual armazenado na conta
-    let saldoAtual: number
-    try {
-      const saldoStr = conta.saldoCriptografado
-      saldoAtual = parseFloat(saldoStr) || 0
-    } catch {
-      // Se não conseguiu descriptografar, assume 0 e vai forçar a correção
-      saldoAtual = NaN
-    }
-
-    // Usamos toFixed(2) para evitar problemas de ponto flutuante
-    if (saldoCalculado.toFixed(2) !== saldoAtual.toFixed(2) || isNaN(saldoAtual)) {
-      logWarn('ledger', `Inconsistência detectada na conta "${conta.nome}".`, { saldoAtual, saldoCalculado })
-
-      // Corrige a conta para refletir a verdade do Ledger
-      await db.contas.update(conta.id!, { saldoCriptografado: saldoCalculado.toFixed(2) })
-
-      // Registra a auditoria
-      await db.auditoria.add({
-        entidade: 'contas',
-        entidadeId: conta.id!,
-        quem: 'Sistema de Sincronização (Ledger)',
-        quando: new Date().toISOString(),
-        acao: 'alteracao_preco', // Usando um tipo genérico para correções
-        valorAnterior: String(saldoAtual),
-        valorNovo: String(saldoCalculado),
-      })
-    }
-  }
+  return transacoes.reduce((total, transacao) => {
+    const valor = Number(transacao.valorCriptografado)
+    if (!Number.isFinite(valor)) return total
+    return total + (transacao.tipo === 'entrada' ? valor : -valor)
+  }, 0)
 }
