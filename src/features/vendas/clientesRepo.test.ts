@@ -20,11 +20,11 @@ describe('repositório de clientes', () => {
     expect(clientes[0].contato).toBe('(21) 99999-0000')
   })
 
-  it('não guarda o contato em claro no registro bruto do banco', async () => {
+  it('guarda o contato em texto normal no cache local', async () => {
     await criarCliente({ nome: 'Maria', contato: '21988887777' })
 
     const bruto = await db.clientes.toArray()
-    expect(bruto[0].contato).not.toContain('21988887777')
+    expect(bruto[0].contato).toBe('21988887777')
   })
 
   it('cria cliente sem contato', async () => {
@@ -41,7 +41,7 @@ describe('repositório de clientes', () => {
     expect(clientes[0].contato).toBe('222')
 
     const bruto = await db.clientes.toArray()
-    expect(bruto[0].contato).not.toContain('222')
+    expect(bruto[0].contato).toBe('222')
   })
 
   it('exclui um cliente', async () => {

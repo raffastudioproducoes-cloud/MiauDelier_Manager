@@ -11,7 +11,6 @@ export function LoginForm() {
   const navigate = useNavigate()
   const contaConfigurada = useAuthStore((estado) => estado.contaConfigurada)
   const carregarEstadoInicial = useAuthStore((estado) => estado.carregarEstadoInicial)
-  const entrar = useAuthStore((estado) => estado.entrar)
   const criarConta = useAuthStore((estado) => estado.criarConta)
 
   const [modoCadastro, setModoCadastro] = useState(false)
@@ -72,71 +71,32 @@ export function LoginForm() {
     try {
       setMostrarOverlay(true)
       setTextoOverlay(modoCadastro ? 'Criando conta e ateliê...' : 'Verificando dados e sincronizando...')
-      if (contaConfigurada) {
-        if (modoCadastro) {
-          setErro('Já existe uma conta neste dispositivo. Acesse a aba "Entrar" para fazer login.')
+      if (!modoCadastro) {
+        if (!email) {
+          setErro('Por favor, informe seu e-mail para buscar sua conta.')
           setEnviando(false)
           setMostrarOverlay(false)
           return
-        } else {
-          // PASSO 1: Entrar no cofre local (valida a senha com 100% de certeza)
-          const sucesso = await entrar(senha)
-          if (!sucesso) {
-            setErro('Senha incorreta.')
-            setEnviando(false)
-            setMostrarOverlay(false)
-            return
-          }
-
-          // PASSO 2: Agora tentamos logar ou criar na nuvem para manter a sincronia
-          if (email) {
-            const { error: supaErr } = await supabase.auth.signInWithPassword({ email, password: senha })
-            if (supaErr) {
-              setErro(supaErr.message.toLowerCase().includes('email not confirmed')
-                ? 'Por favor, confirme sua conta pelo e-mail antes de fazer login.'
-                : 'Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
-              if (!supaErr.message.toLowerCase().includes('email not confirmed')) {
-                setTimeout(() => {
-                  setErro('Complete os dados para criar sua conta.')
-                  setModoCadastro(true)
-                }, 2500)
-              }
-              setEnviando(false)
-              setMostrarOverlay(false)
-              return
-            }
-            const { syncOnLogin } = await import('../../lib/syncService')
-            await syncOnLogin().catch(console.warn)
-          }
-
         }
+        const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
+        if (error) {
+          if (error.message.toLowerCase().includes('email not confirmed')) {
+            setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
+          } else {
+            setErro('Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
+            setTimeout(() => {
+              setErro('Complete os dados para criar sua conta.')
+              setModoCadastro(true)
+            }, 2500)
+          }
+          setEnviando(false)
+          setMostrarOverlay(false)
+          return
+        }
+        await criarConta(senha)
+        const { syncOnLogin } = await import('../../lib/syncService')
+        await syncOnLogin().catch(console.warn)
       } else {
-        if (!modoCadastro) {
-          // Novo dispositivo: tenta login na nuvem e puxa o cofre
-          if (!email) {
-            setErro('Por favor, informe seu e-mail para buscar sua conta.')
-            setEnviando(false)
-            setMostrarOverlay(false)
-            return
-          }
-          const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
-          if (error) {
-            if (error.message.toLowerCase().includes('email not confirmed')) {
-              setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
-            } else {
-              setErro('Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
-              setTimeout(() => {
-                setErro('Complete os dados para criar sua conta.')
-                setModoCadastro(true)
-              }, 2500)
-            }
-            setEnviando(false)
-            setMostrarOverlay(false)
-            return
-          }
-          // O Supabase autentica o usuário; o dispositivo apenas inicializa o banco local.
-          await criarConta(senha)
-        } else {
           // Cria a conta na nuvem e o cofre local
           if (email) {
             const { data, error } = await supabase.auth.signUp({
@@ -197,7 +157,6 @@ export function LoginForm() {
           } catch (e) {
             console.warn('Erro ao atualizar nome do perfil (cadastro):', e)
           }
-        }
       }
       
       setTextoOverlay('Concluído!')

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '../db/schema'
-import { setupAccount, login, clearSession, getSessionKey } from './auth'
+import { setupAccount, clearSession, getSessionKey } from './auth'
 import { exportarBackup, importarBackup } from './backup'
 import { useAuthStore } from '../stores/authStore'
 
@@ -39,7 +39,7 @@ describe('backup JSON', () => {
     expect(materiais[0].nome).toBe('Resina Cristal')
   })
 
-  it('restaura em dispositivo novo: backup + senha original devolvem o acesso e os dados', async () => {
+  it('restaura os dados em dispositivo novo sem depender de senha local', async () => {
     await setupAccount('senha-do-rafa-2026')
     await semearMaterial()
     const json = await exportarBackup()
@@ -51,10 +51,6 @@ describe('backup JSON', () => {
 
     await importarBackup(json)
     expect(getSessionKey()).toBeNull()
-
-    const chave = await login('senha-do-rafa-2026')
-    expect(chave).not.toBeNull()
-    expect(await login('outra-senha-qualquer')).toBeNull()
 
     const materiais = await db.materiais.toArray()
     expect(materiais).toHaveLength(1)
@@ -96,7 +92,7 @@ describe('backup JSON', () => {
     expect(await db.categoriasMaterial.count()).toBe(1)
   })
 
-  it('rejeita backup sem as configuracoes de autenticação, sem escrever nada', async () => {
+  it('restaura backup sem marcadores legados de autenticação local', async () => {
     await setupAccount('senha-qualquer')
     await semearMaterial()
     const json = await exportarBackup()
@@ -105,21 +101,19 @@ describe('backup JSON', () => {
     delete parsed.dados.configuracoes
     const semConfiguracoes = await exportarBackupFalso(parsed.dados)
 
-    await expect(importarBackup(semConfiguracoes)).rejects.toThrow(/autenticação/i)
+    await importarBackup(semConfiguracoes)
     expect(await db.materiais.count()).toBe(1)
-    expect(await db.configuracoes.count()).toBe(4)
+    expect(await db.configuracoes.count()).toBe(0)
   })
 
-  it('rejeita backup sem o verificador, mesmo com salt presente', async () => {
+  it('aceita backup sem o verificador legado', async () => {
     await setupAccount('senha-qualquer')
     const parsed = JSON.parse(await exportarBackup())
     parsed.dados.configuracoes = parsed.dados.configuracoes.filter(
       (linha: { chave: string }) => linha.chave !== 'auth.verificador',
     )
 
-    await expect(importarBackup(await exportarBackupFalso(parsed.dados))).rejects.toThrow(
-      /autenticação/i,
-    )
+    await expect(importarBackup(await exportarBackupFalso(parsed.dados))).resolves.toBeUndefined()
   })
 
   it('derruba o estado autenticado da store depois de importar', async () => {
@@ -164,18 +158,18 @@ describe('backup JSON', () => {
     await expect(importarBackup('não é json')).rejects.toThrow(/não é JSON/i)
   })
 
-  it('zera os dados das tabelas mantendo as configurações de autenticação', async () => {
+  it('zera os dados das tabelas mantendo as configurações locais', async () => {
     await setupAccount('senha-do-ateliê')
     await semearMaterial()
 
     expect(await db.materiais.count()).toBe(1)
-    expect(await db.configuracoes.count()).toBe(4)
+    const configuracoesAntes = await db.configuracoes.count()
 
     const { zerarDadosManterPerfil } = await import('./backup')
     await zerarDadosManterPerfil()
 
     expect(await db.materiais.count()).toBe(0)
-    expect(await db.configuracoes.count()).toBe(4)
+    expect(await db.configuracoes.count()).toBe(configuracoesAntes)
   })
 
   it('registra erros no log do sistema (logger) quando a importação de JSON falha', async () => {

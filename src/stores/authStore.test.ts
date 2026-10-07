@@ -21,15 +21,11 @@ describe('authStore', () => {
     expect(useAuthStore.getState().contaConfigurada).toBe(true)
   })
 
-  it('entra com senha certa e recusa senha errada', async () => {
+  it('não valida senha localmente', async () => {
     await useAuthStore.getState().criarConta('senha-certa')
     useAuthStore.setState({ autenticado: false })
 
-    const falhou = await useAuthStore.getState().entrar('senha-errada')
-    expect(falhou).toBe(false)
-    expect(useAuthStore.getState().autenticado).toBe(false)
-
-    const sucesso = await useAuthStore.getState().entrar('senha-certa')
+    const sucesso = await useAuthStore.getState().entrar('qualquer-senha')
     expect(sucesso).toBe(true)
     expect(useAuthStore.getState().autenticado).toBe(true)
   })

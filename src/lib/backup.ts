@@ -1,5 +1,5 @@
 import { db, type MiauDelierDB } from '../db/schema'
-import { CHAVE_SALT, deleteUserData } from './auth'
+import { deleteUserData } from './auth'
 import { useAuthStore } from '../stores/authStore'
 import { logInfo, logError } from './logger'
 
@@ -67,35 +67,6 @@ function validarLinhasDaTabela(nomeTabela: string, linhas: unknown[]): void {
   }
 }
 
-function validarAutenticacao(dados: Record<string, unknown[]>): void {
-  const configuracoes = dados.configuracoes
-  const chaves = new Set(
-    Array.isArray(configuracoes)
-      ? configuracoes.map((linha) => (ehObjeto(linha) ? linha.chave : undefined))
-      : [],
-  )
-  if (!chaves.has(CHAVE_SALT)) {
-    const msg = 'Backup sem a configuração da conta local.'
-    logError('backup', msg, { chavesPresentes: Array.from(chaves) })
-    throw new Error(
-      'backup sem a configuração da conta local',
-    )
-  }
-}
-
-async function validarContaIgual(dados: Record<string, unknown[]>, dbAlvo: MiauDelierDB): Promise<void> {
-  const configuracaoLocal = await dbAlvo.configuracoes.where('chave').equals(CHAVE_SALT).first();
-  if (configuracaoLocal) {
-    const configuracoesBackup = dados.configuracoes;
-    if (Array.isArray(configuracoesBackup)) {
-      const configBackupSalt = configuracoesBackup.find(linha => ehObjeto(linha) && linha.chave === CHAVE_SALT) as any;
-      if (configBackupSalt && configBackupSalt.valor !== configuracaoLocal.valor) {
-        throw new Error('Aviso de Segurança: Este backup pertence a outra conta. Por segurança, só é permitido restaurar backups gerados por esta mesma conta.');
-      }
-    }
-  }
-}
-
 export async function exportarBackup(): Promise<string> {
   try {
     const dados: Record<string, unknown[]> = {}
@@ -137,8 +108,6 @@ export async function importarBackup(json: string, targetDb?: MiauDelierDB): Pro
       throw new Error('checksum do backup não confere — arquivo corrompido')
     }
 
-    validarAutenticacao(parsed.dados)
-    await validarContaIgual(parsed.dados, dbAlvo)
     for (const nomeTabela of TABELAS) {
       validarLinhasDaTabela(nomeTabela, parsed.dados[nomeTabela] ?? [])
     }

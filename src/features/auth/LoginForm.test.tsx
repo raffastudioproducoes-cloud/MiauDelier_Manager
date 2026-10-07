@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { db } from '../../db/schema'
 import { useAuthStore } from '../../stores/authStore'
-import { setupAccount, clearSession } from '../../lib/auth'
+import { clearSession } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 
 const navegarMock = vi.fn()
@@ -14,6 +14,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
       signInWithOAuth: vi.fn(),
       signInWithPassword: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
@@ -84,23 +85,26 @@ describe('LoginForm', () => {
     await waitFor(() => expect(navegarMock).toHaveBeenCalledWith({ to: '/' }))
   })
 
-  it('conta já configurada + senha errada: mostra erro e não navega nem abre sessão', async () => {
-    await setupAccount('senha-certa')
-    clearSession()
+  it('senha inválida no Supabase mostra erro e não navega', async () => {
     useAuthStore.setState({ autenticado: false, contaConfigurada: true })
+    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: 'Invalid login credentials' },
+    } as any)
 
     render(<LoginForm />)
     navegarMock.mockClear()
 
+    const inputEmail = await screen.findByPlaceholderText('Digite seu usuário ou e-mail')
     const inputSenha = await screen.findByPlaceholderText('Digite sua senha')
+    fireEvent.change(inputEmail, { target: { value: 'nao-existe@example.com' } })
     fireEvent.change(inputSenha, { target: { value: 'senha-errada' } })
 
     // Submit é o último botão "Entrar" (o toggle tem o mesmo texto)
     const botoesEntrar = screen.getAllByRole('button', { name: /^Entrar$/ })
     fireEvent.click(botoesEntrar[botoesEntrar.length - 1])
 
-    // Erro exato definido na linha 76 de LoginForm.tsx: 'Senha incorreta.'
-    expect(await screen.findByText(/senha incorreta/i, {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText(/conta não encontrada ou senha incorreta/i, {}, { timeout: 5000 })).toBeInTheDocument()
     expect(navegarMock).not.toHaveBeenCalled()
   })
 
