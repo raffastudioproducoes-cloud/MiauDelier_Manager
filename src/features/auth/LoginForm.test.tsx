@@ -90,6 +90,7 @@ describe('LoginForm', () => {
     useAuthStore.setState({ autenticado: false, contaConfigurada: true })
 
     render(<LoginForm />)
+    navegarMock.mockClear()
 
     const inputSenha = await screen.findByPlaceholderText('Digite sua senha')
     fireEvent.change(inputSenha, { target: { value: 'senha-errada' } })
@@ -100,6 +101,23 @@ describe('LoginForm', () => {
 
     // Erro exato definido na linha 76 de LoginForm.tsx: 'Senha incorreta.'
     expect(await screen.findByText(/senha incorreta/i, {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(navegarMock).not.toHaveBeenCalled()
+  })
+
+  it('login Supabase falho não cadastra conta automaticamente', async () => {
+    useAuthStore.setState({ autenticado: false, contaConfigurada: false })
+    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: 'Invalid login credentials' },
+    } as any)
+    render(<LoginForm />)
+
+    fireEvent.change(await screen.findByPlaceholderText('Digite seu usuário ou e-mail'), { target: { value: 'nao-existe@example.com' } })
+    fireEvent.change(screen.getByPlaceholderText('Digite sua senha'), { target: { value: 'senha-incorreta' } })
+    fireEvent.click(screen.getAllByRole('button', { name: /^Entrar$/ }).at(-1)!)
+
+    expect(await screen.findByText(/use “criar conta”/i)).toBeInTheDocument()
+    expect(supabase.auth.signUp).not.toHaveBeenCalled()
     expect(navegarMock).not.toHaveBeenCalled()
   })
 })

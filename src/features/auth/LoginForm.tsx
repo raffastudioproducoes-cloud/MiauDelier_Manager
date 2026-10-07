@@ -92,28 +92,15 @@ export function LoginForm() {
           if (email) {
             const { error: supaErr } = await supabase.auth.signInWithPassword({ email, password: senha })
             if (supaErr) {
-              console.warn('Login Supabase falhou (pode ser conta legada). Tentando criar na nuvem...', supaErr.message)
-              // MIGRATION: Conta criada antes do Supabase. Vamos criar a conta na nuvem agora!
-              const { error: signUpErr } = await supabase.auth.signUp({
-                email,
-                password: senha,
-                options: { data: { full_name: nome || email.split('@')[0] } }
-              })
-              if (signUpErr) {
-                console.error('Falha ao migrar conta para a nuvem:', signUpErr.message)
-              } else {
-                console.log('Conta legada migrada para a nuvem com sucesso!')
-                // Tenta logar de novo só por garantia
-                await supabase.auth.signInWithPassword({ email, password: senha })
-                const { syncOnLogin } = await import('../../lib/syncService')
-                await syncOnLogin().catch(console.warn)
-              }
-            } else {
-              // Se o login na nuvem deu certo de primeira, precisamos rodar o syncOnLogin 
-              // agora, pois a chamada dentro de entrar() falhou por falta de sessão ativa
-              const { syncOnLogin } = await import('../../lib/syncService')
-              await syncOnLogin().catch(console.warn)
+              setErro(supaErr.message.toLowerCase().includes('email not confirmed')
+                ? 'Por favor, confirme sua conta pelo e-mail antes de fazer login.'
+                : 'Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
+              setEnviando(false)
+              setMostrarOverlay(false)
+              return
             }
+            const { syncOnLogin } = await import('../../lib/syncService')
+            await syncOnLogin().catch(console.warn)
           }
 
         }
@@ -131,11 +118,7 @@ export function LoginForm() {
             if (error.message.toLowerCase().includes('email not confirmed')) {
               setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
             } else {
-              setErro('Conta não encontrada ou senha incorreta. Redirecionando para cadastro...')
-              setTimeout(() => {
-                setErro('Complete os dados para criar sua conta.')
-                setModoCadastro(true)
-              }, 2500)
+              setErro('Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
             }
             setEnviando(false)
             setMostrarOverlay(false)
@@ -180,33 +163,11 @@ export function LoginForm() {
             }
             
             if (!data?.session) {
-              setTextoOverlay('Confirme no seu e-mail. Aguardando...')
-              
-              let isConfirmed = false
-              while (!isConfirmed) {
-                await new Promise(resolve => setTimeout(resolve, 3000))
-                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-                  email,
-                  password: senha
-                })
-                
-                if (signInData?.session) {
-                  isConfirmed = true
-                  setTextoOverlay('E-mail confirmado!')
-                  await new Promise(resolve => setTimeout(resolve, 1000))
-                } else if (signInErr && !signInErr.message.toLowerCase().includes('email not confirmed')) {
-                  // Ignoramos outros erros como 'invalid login credentials' no loop,
-                  // pois o usuário pode ter digitado errado, mas a confirmação deve continuar.
-                }
-              }
-              
-              // E-mail confirmado. Encerramos a sessão gerada e voltamos para o login conforme fluxo solicitado.
-              await supabase.auth.signOut()
+              setErro('Cadastro iniciado. Confirme seu e-mail em até 24 horas e depois faça login.')
               setModoCadastro(false)
-              setErro('E-mail confirmado com sucesso! Faça o login para acessar o ateliê.')
               setMostrarOverlay(false)
               setEnviando(false)
-              return // Para aqui e não executa criarConta nem navigate
+              return
             }
           }
           await criarConta(senha)
