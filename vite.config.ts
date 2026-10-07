@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import packageJson from './package.json'
 
-const BASE_PATH = '/MiauDelier_Manager/'
+const BASE_PATH = process.env.VITE_BASE_PATH || '/MiauDelier_Manager/'
 
 export default defineConfig({
   base: BASE_PATH,
