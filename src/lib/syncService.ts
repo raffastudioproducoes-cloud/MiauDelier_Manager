@@ -4,7 +4,7 @@ import { getSessionKey } from './auth'
 import { encryptText, decryptText } from './crypto'
 import { supabase } from './supabase'
 import { syncPerfisFromSupabase } from './perfisRepo'
-import { logWarn } from './logger'
+import { logError, logWarn } from './logger'
 export let isApplyingRemote = false
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -473,6 +473,7 @@ export async function syncWithSupabase() {
 
   } catch (err) {
     console.error('[Sync] Erro geral na sincronização:', err)
+    void logError('sync', 'Falha na sincronização com o Supabase.', err)
     throw err
   } finally {
     isSyncing = false
