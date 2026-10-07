@@ -49,7 +49,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   criarConta: async (senha: string) => {
-    await setupAccount(senha)
+    // A conta Supabase pode voltar a autenticar no mesmo dispositivo após logout.
+    // Nesse caso, o marcador local já existe e só precisamos restaurar a sessão.
+    if (await hasAccountConfigured()) {
+      await login(senha)
+    } else {
+      await setupAccount(senha)
+    }
     set({ autenticado: true, contaConfigurada: true })
   },
 

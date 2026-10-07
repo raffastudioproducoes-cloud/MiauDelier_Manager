@@ -21,6 +21,14 @@ describe('authStore', () => {
     expect(useAuthStore.getState().contaConfigurada).toBe(true)
   })
 
+  it('reabre a sessão local quando o dispositivo já foi configurado', async () => {
+    await useAuthStore.getState().criarConta('senha-forte')
+    useAuthStore.getState().sair()
+
+    await expect(useAuthStore.getState().criarConta('senha-forte')).resolves.toBeUndefined()
+    expect(useAuthStore.getState().autenticado).toBe(true)
+  })
+
   it('não valida senha localmente', async () => {
     await useAuthStore.getState().criarConta('senha-certa')
     useAuthStore.setState({ autenticado: false })
