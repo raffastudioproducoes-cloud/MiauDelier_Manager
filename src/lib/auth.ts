@@ -7,6 +7,7 @@ export const CHAVE_SALT = 'auth.configurada'
 export const CHAVE_VERIFICADOR = 'auth.verificador'
 export const CHAVE_DEK_SENHA = 'auth.legacy.dek_senha'
 export const CHAVE_MIGRACAO_DEK = 'auth.legacy.removida'
+export const CHAVE_USUARIO_NUVEM = 'auth.cloud_user_id'
 const CHAVE_LOCAL_STORAGE_SESSAO = 'miaudelier_session'
 type LocalSession = { authenticated: true }
 let session: LocalSession | null = null
@@ -20,6 +21,11 @@ async function salvar(chave: string, valor: string) {
 
 export async function hasAccountConfigured() {
   return Boolean(await db.configuracoes.where('chave').equals(CHAVE_SALT).first())
+}
+
+export async function hasLocalCacheForUser(userId: string) {
+  const registro = await db.configuracoes.where('chave').equals(CHAVE_USUARIO_NUVEM).first()
+  return registro?.valor === userId
 }
 
 export async function setupAccount(_password: string, opcoes: { apagandoDadosExistentes?: boolean } = {}) {

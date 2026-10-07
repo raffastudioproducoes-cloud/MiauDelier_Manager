@@ -3,6 +3,7 @@ import { db, type SyncEvent } from '../db/schema'
 import { supabase } from './supabase'
 import { syncPerfisFromSupabase } from './perfisRepo'
 import { logError, logWarn } from './logger'
+import { CHAVE_USUARIO_NUVEM } from './auth'
 export let isApplyingRemote = false
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -46,6 +47,33 @@ const TABLES_TO_SYNC = [
   'equipamentos',
   'taxas',
 ]
+
+/**
+ * O IndexedDB e estritamente um cache por dispositivo. Quando outro usuario
+ * autenticado assume este navegador, os registros anteriores nao podem ser
+ * enviados para a conta nova.
+ */
+export async function prepareLocalCacheForUser(userId: string): Promise<void> {
+  const cachedUser = await db.configuracoes.where('chave').equals(CHAVE_USUARIO_NUVEM).first()
+  if (cachedUser?.valor === userId) return
+
+  isApplyingRemote = true
+  try {
+    if (inactivityTimer) clearTimeout(inactivityTimer)
+    inactivityTimer = null
+    hasPendingLocalChanges = false
+
+    await db.transaction('rw', db.tables, async () => {
+      for (const table of db.tables) await table.clear()
+      await db.configuracoes.add({ chave: CHAVE_USUARIO_NUVEM, valor: userId })
+    })
+
+    localStorage.removeItem('miaudelier_perfil_ativo')
+    localStorage.removeItem('miaudelier_perfis_atelie')
+  } finally {
+    isApplyingRemote = false
+  }
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Hooks Dexie — registram mudanças locais na fila de sync

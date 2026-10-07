@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { hasAccountConfigured, setupAccount, login, clearSession, restoreSessionKey, recuperarCofreComNuvem, alterarSenha as dbAlterarSenha } from '../lib/auth'
+import { hasAccountConfigured, hasLocalCacheForUser, setupAccount, login, clearSession, restoreSessionKey, recuperarCofreComNuvem, alterarSenha as dbAlterarSenha } from '../lib/auth'
 import { syncOnLogin } from '../lib/syncService'
+import { supabase } from '../lib/supabase'
 
 interface AuthState {
   autenticado: boolean
@@ -18,8 +19,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   contaConfigurada: null,
 
   carregarEstadoInicial: async () => {
+    const { data: { session: cloudSession } } = await supabase.auth.getSession()
     const existe = await hasAccountConfigured()
-    if (!existe) {
+    if (!existe || !cloudSession?.user || !await hasLocalCacheForUser(cloudSession.user.id)) {
+      clearSession()
       set({ contaConfigurada: false, autenticado: false })
       return
     }

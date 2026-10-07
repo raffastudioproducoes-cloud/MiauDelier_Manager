@@ -78,7 +78,7 @@ export function LoginForm() {
           setMostrarOverlay(false)
           return
         }
-        const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha })
         if (error) {
           if (error.message.toLowerCase().includes('email not confirmed')) {
             setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
@@ -93,8 +93,10 @@ export function LoginForm() {
           setMostrarOverlay(false)
           return
         }
+        if (!data.user) throw new Error('O Supabase nao retornou o usuario autenticado.')
+        const { prepareLocalCacheForUser, syncOnLogin } = await import('../../lib/syncService')
+        await prepareLocalCacheForUser(data.user.id)
         await criarConta(senha)
-        const { syncOnLogin } = await import('../../lib/syncService')
         await syncOnLogin().catch(console.warn)
       } else {
           // Cria a conta na nuvem e o cofre local
@@ -102,7 +104,10 @@ export function LoginForm() {
             const { data, error } = await supabase.auth.signUp({
               email,
               password: senha,
-              options: { data: { full_name: nome } }
+              options: {
+                data: { full_name: nome },
+                emailRedirectTo: new URL(`${import.meta.env.BASE_URL}login`, window.location.origin).toString(),
+              }
             })
             
             if (error) {

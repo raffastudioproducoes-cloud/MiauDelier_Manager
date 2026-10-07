@@ -83,6 +83,9 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Cadastrar$/ }))
 
     await waitFor(() => expect(navegarMock).toHaveBeenCalledWith({ to: '/' }))
+    expect(supabase.auth.signUp).toHaveBeenCalledWith(expect.objectContaining({
+      options: expect.objectContaining({ emailRedirectTo: expect.stringMatching(/\/login$/) }),
+    }))
   })
 
   it('senha inválida no Supabase mostra erro e não navega', async () => {

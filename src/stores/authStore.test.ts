@@ -36,13 +36,13 @@ describe('authStore', () => {
     expect(useAuthStore.getState().autenticado).toBe(false)
   })
 
-  it('restaura o estado de autenticado no carregarEstadoInicial se a sessão estiver salva', async () => {
+  it('não restaura sessão apenas por marcador local sem sessão Supabase', async () => {
     await useAuthStore.getState().criarConta('senha-de-teste')
     // Resetar o estado da store mantendo os dados de IndexedDB + localStorage
     useAuthStore.setState({ autenticado: false, contaConfigurada: null })
 
     await useAuthStore.getState().carregarEstadoInicial()
-    expect(useAuthStore.getState().contaConfigurada).toBe(true)
-    expect(useAuthStore.getState().autenticado).toBe(true)
+    expect(useAuthStore.getState().contaConfigurada).toBe(false)
+    expect(useAuthStore.getState().autenticado).toBe(false)
   })
 })

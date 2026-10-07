@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../db/schema'
-import { setupAccount } from './auth'
-import { normalizeRemoteSyncObject, registerDexieHooks } from './syncService'
+import { CHAVE_USUARIO_NUVEM, setupAccount } from './auth'
+import { normalizeRemoteSyncObject, prepareLocalCacheForUser, registerDexieHooks } from './syncService'
 import { atualizarMaterial, criarMaterial } from '../features/producao/materiaisRepo'
 
 let hooksRegistered = false
@@ -95,5 +95,18 @@ describe('normalizeRemoteSyncObject', () => {
       id: 7,
       nome: 'Resina',
     })
+  })
+})
+
+describe('prepareLocalCacheForUser', () => {
+  it('limpa dados de outro usuario sem enfileirar deletes', async () => {
+    await db.materiais.add({ nome: 'Dado residual', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 })
+    await db.syncQueue.clear()
+
+    await prepareLocalCacheForUser('novo-usuario')
+
+    expect(await db.materiais.count()).toBe(0)
+    expect(await db.syncQueue.count()).toBe(0)
+    expect(await db.configuracoes.where('chave').equals(CHAVE_USUARIO_NUVEM).first()).toMatchObject({ valor: 'novo-usuario' })
   })
 })
