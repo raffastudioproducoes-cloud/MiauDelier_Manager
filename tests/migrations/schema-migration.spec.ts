@@ -322,6 +322,7 @@ describe('schema migration — banco populado v1 → migração aditiva v2+', ()
         'equipamentos',
         'eventosPeca',
         'formas',
+        'historicoPrecosMateriais',
         'logs',
         'materiais',
         'mensagensIA',
