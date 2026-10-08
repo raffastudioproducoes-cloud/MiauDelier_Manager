@@ -83,11 +83,22 @@ export function LoginForm() {
           if (error.message.toLowerCase().includes('email not confirmed')) {
             setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
           } else {
-            setErro('Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
-            setTimeout(() => {
-              setErro('Complete os dados para criar sua conta.')
-              setModoCadastro(true)
-            }, 2500)
+            const { data: hint, error: hintError } = await supabase.functions.invoke<{ provider?: string }>('auth-login-hint', {
+              body: { email },
+            })
+            const provider = hint?.provider === 'google' || hint?.provider === 'apple' ? hint.provider : null
+            if (hintError) {
+              setErro('Não foi possível verificar a forma de acesso desta conta. Tente novamente.')
+            } else if (provider) {
+              const nomeProvedor = provider === 'google' ? 'Google' : 'Apple'
+              setErro(`Esta conta está vinculada ao ${nomeProvedor}. Entre usando o botão ${nomeProvedor} abaixo.`)
+            } else {
+              setErro('Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
+              setTimeout(() => {
+                setErro('Complete os dados para criar sua conta.')
+                setModoCadastro(true)
+              }, 2500)
+            }
           }
           setEnviando(false)
           setMostrarOverlay(false)
@@ -194,14 +205,14 @@ export function LoginForm() {
     ? 'Cadastrar'
     : 'Entrar'
 
-  async function handleLoginGoogle() {
+  async function handleLoginSocial(provider: 'google' | 'apple') {
     setErro(null)
     const redirectTo = new URL(`${import.meta.env.BASE_URL}login`, window.location.origin).toString()
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider,
       options: { redirectTo },
     })
-    if (error) setErro('Não foi possível iniciar o login com Google. Tente novamente.')
+    if (error) setErro(`Não foi possível iniciar o login com ${provider === 'google' ? 'Google' : 'Apple'}. Tente novamente.`)
   }
 
   return (
@@ -410,7 +421,7 @@ export function LoginForm() {
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
-                  onClick={() => void handleLoginGoogle()}
+                  onClick={() => void handleLoginSocial('google')}
                   className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/60 bg-surface-container/30 px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container/70 transition-all cursor-pointer shadow-sm"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -424,7 +435,7 @@ export function LoginForm() {
 
                 <button
                   type="button"
-                  onClick={() => alert('Login com Apple em breve')}
+                  onClick={() => void handleLoginSocial('apple')}
                   className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/60 bg-surface-container/30 px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container/70 transition-all cursor-pointer shadow-sm"
                 >
                   <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">

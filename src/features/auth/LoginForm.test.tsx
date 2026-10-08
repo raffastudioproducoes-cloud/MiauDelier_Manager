@@ -25,7 +25,10 @@ vi.mock('../../lib/supabase', () => ({
     },
     from: vi.fn().mockReturnValue({
       upsert: vi.fn().mockResolvedValue({ error: null })
-    })
+    }),
+    functions: {
+      invoke: vi.fn().mockResolvedValue({ data: { provider: null }, error: null }),
+    },
   }
 }))
 
@@ -122,6 +125,29 @@ describe('LoginForm', () => {
 
     expect(await screen.findByText(/conta não encontrada ou senha incorreta/i, {}, { timeout: 5000 })).toBeInTheDocument()
     expect(navegarMock).not.toHaveBeenCalled()
+  })
+
+  it('mantém o login quando a conta está vinculada ao Google', async () => {
+    useAuthStore.setState({ autenticado: false, contaConfigurada: true })
+    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: 'Invalid login credentials' },
+    } as any)
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
+      data: { provider: 'google' },
+      error: null,
+    } as any)
+
+    render(<LoginForm />)
+    fireEvent.change(await screen.findByPlaceholderText('Digite seu usuário ou e-mail'), { target: { value: 'vinculada@example.com' } })
+    fireEvent.change(screen.getByPlaceholderText('Digite sua senha'), { target: { value: 'senha-antiga' } })
+    fireEvent.click(screen.getAllByRole('button', { name: /^Entrar$/ }).at(-1)!)
+
+    expect(await screen.findByText(/esta conta está vinculada ao google/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cadastrar$/ })).not.toBeInTheDocument()
+    expect(supabase.functions.invoke).toHaveBeenCalledWith('auth-login-hint', {
+      body: { email: 'vinculada@example.com' },
+    })
   })
 
   it('login Supabase falho não cadastra conta automaticamente', async () => {
