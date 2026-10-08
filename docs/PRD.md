@@ -104,7 +104,7 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 - **Resumo Inteligente por IA (Gemini)**:
   - Resumo automatizado das métricas do ateliê.
   - Controle interno de rate-limit de 24 horas no `localStorage` com botão de atualização manual.
-  - Chave API Gemini configurável e enviada somente à Edge Function autenticada, sem persistência no navegador.
+  - Cada usuária configura a própria chave API Gemini, enviada somente à Edge Function autenticada e vinculada ao seu `user.id`, sem persistência no navegador nem fallback compartilhado.
 - **Logger de Eventos & Captura de Falhas Silenciosas**:
   - Módulo de logging centralizado (`src/lib/logger.ts`) com captura automática de exceções globais (`window.onerror`), rejeições de Promise (`window.onunhandledrejection`) e falhas de renderização no React (`ErrorBoundary`).
   - Higienização e sanitização estrita: omite automaticamente senhas, tokens, chaves de API e dados sensíveis.

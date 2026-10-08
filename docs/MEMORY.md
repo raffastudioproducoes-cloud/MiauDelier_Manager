@@ -7,7 +7,7 @@ Este documento atua como a memória operacional viva do projeto **MiauDelier Man
 ## 1. Última Atualização
 
 - **Data**: 08/10/2026
-- **Horário**: 03:30 (BRT)
+- **Horário**: 04:15 (BRT)
 
 ---
 
@@ -25,6 +25,8 @@ Em 08/10/2026, o dashboard passou a fornecer ao Gemini dados de caixa, resultado
 
 O PWA recebeu ícones MiauDelier para Android, `theme_color`/`background_color` escuros e uma tela inicial breve com marca, versão, Raffa Studio Produções e selo GitGuard. A validação manual no Android permanece pendente.
 
+O Gemini usa exclusivamente a chave cadastrada pela própria usuária: a Edge Function autenticada a associa ao `user.id` no Vault do Supabase e não possui fallback de chave compartilhada do aplicativo. A chave nunca é persistida no navegador.
+
 Recentemente foram concluídas a funcionalidade de conversão de volume e massa sugerida (Litros e kg para volumes >= 1L; ml e g para volumes < 1L em pt-BR), o seletor flexível de tempo de cura (Dias, Horas, Minutos), o suporte a tempo de uso de equipamentos (minutos, horas, dias), o cronômetro de cura ao vivo com barra de progresso em tempo real, notificações ao concluir sem alteração forçada do status `curando`, e o modal **"➕ Adicionar Tempo de Cura"**.
 
 A suíte de testes com **Vitest** possui **326 testes automatizados** distribuídos em **73 arquivos de teste** com **100% de aprovação**, e a checagem de tipos com `npx tsc --noEmit` encerra com **0 erros**. O bundle de produção Vite/Rolldown compila com sucesso.
@@ -36,7 +38,7 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 | ID | Tarefa | Concluída em |
 | --- | --- | --- |
 | 7.1 | Configuração do Supabase CLI, Schema (PostgreSQL + RLS) e adição da coluna `perfil_id` em todo o DB para multi-tenancy | 29/09/2026 |
-| 7.2 | Implementação de Autenticação 2-passos via Google (Auth Nuvem + Desbloqueio do Cofre Local) | 29/09/2026 |
+| 7.2 | Implementação de autenticação por Google via Supabase Auth | 29/09/2026 |
 | 7.3 | Implementação de Autenticação via Email com confirmação OTP de 5 minutos | 29/09/2026 |
 | 6.1 | Refinamento de PWA Service Worker para cache avançado offline e execução PWA 100% | 29/09/2026 |
 | 3.9 | Implementação de abas de divisão do estoque por tipo de material (`INSUMO`, `FERRAMENTA`, `ADMINISTRATIVO`, `EPI`) mantendo subcategorias flexíveis | 28/09/2026 |

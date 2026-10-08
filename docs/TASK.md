@@ -79,7 +79,7 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 | ID | Tarefa | Prioridade | Status |
 | --- | --- | --- | --- |
-| 5.1 | Implementar assistente Gemini via Edge Function com chave fora do navegador | Média | Concluída |
+| 5.1 | Implementar assistente Gemini via Edge Function com chave própria por usuária, fora do navegador e sem fallback compartilhado | Média | Concluída |
 | 5.2 | Implementar resumo do Dashboard com indicadores reais, cache por assinatura e atualização manual | Média | Concluída |
 | 5.3 | Implementar exportação e importação de backups JSON com validação de checksum SHA-256 | Alta | Concluída |
 | 5.4 | Implementar opção de apagar dados na aba de backup mantendo preservados os dados do Perfil do Ateliê e a senha de acesso | Alta | Concluída |
@@ -107,7 +107,7 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | ID | Tarefa | Prioridade | Status |
 | --- | --- | --- | --- |
 | 7.1 | Configurar Supabase CLI, Schema (PostgreSQL + RLS) e estrutura de 10 perfis isolados por usuário | Alta | Concluída |
-| 7.2 | Implementar Autenticação 2-passos via Google (Auth Nuvem + Desbloqueio do Cofre Local) | Alta | Concluída |
+| 7.2 | Implementar autenticação por e-mail/senha confirmado e Google OAuth via Supabase Auth | Alta | Concluída |
 | 7.3 | Implementar Autenticação via Email com confirmação OTP de 5 minutos | Alta | Concluída |
 | 7.4 | Implementar funcionalidade de "Mesclar Conta" na aba de Gestão de Perfis | Alta | Não iniciada |
 | 7.5 | Desenvolver mecanismo de sincronização bidirecional em tempo real (Dexie ↔ Supabase) | Alta | Não iniciada |

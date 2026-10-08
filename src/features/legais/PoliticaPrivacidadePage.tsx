@@ -31,25 +31,25 @@ export function PoliticaPrivacidadePage() {
         </section>
 
         <section className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
-          <h2 className="text-base font-bold text-primary">2. Autenticação e Arquitetura "Local-First"</h2>
+          <h2 className="text-base font-bold text-primary">2. Autenticação e Sincronização</h2>
           <p className="text-xs text-on-surface-variant">
-            O MiauDelier Manager adota um modelo híbrido focado em segurança <strong>Zero-Knowledge</strong> e <strong>Local-First</strong> (Local Primeiro). Isso significa que:
+            O MiauDelier Manager usa autenticação e sincronização em nuvem com um cache local para manter a experiência rápida. Isso significa que:
           </p>
           <ul className="list-disc pl-5 text-xs text-on-surface-variant flex flex-col gap-1.5 mt-1">
-            <li><strong>Gestão de Identidade Segura:</strong> Utilizamos serviços de autenticação padrão de mercado (via Google, Apple ou Código por E-mail OTP) para criar sua conta. Não salvamos senhas de acesso.</li>
-            <li><strong>Armazenamento 100% Local:</strong> Seus dados de negócio (clientes, transações, peças e valores) ficam gravados <em>exclusivamente</em> no armazenamento local (IndexedDB) do seu próprio dispositivo, nunca em nossos servidores.</li>
-            <li><strong>Autonomia do Titular:</strong> Você possui controle soberano e exclusivo sobre as informações armazenadas no seu dispositivo, com a chave nas suas mãos.</li>
+            <li><strong>Gestão de Identidade Segura:</strong> Utilizamos o Supabase Auth com e-mail/senha, Google ou Apple. As senhas são tratadas pelo provedor de autenticação e não ficam no aplicativo.</li>
+            <li><strong>Dados do Ateliê:</strong> Clientes, transações, peças e valores são sincronizados com o Supabase e mantidos em cache IndexedDB no dispositivo.</li>
+            <li><strong>Controle de Acesso:</strong> Cada operação remota exige sessão autenticada, HTTPS e políticas RLS que isolam os dados da conta.</li>
           </ul>
         </section>
 
         <section className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
-          <h2 className="text-base font-bold text-primary">3. Criptografia e Segurança dos Dados (AES-256)</h2>
+          <h2 className="text-base font-bold text-primary">3. Segurança dos Dados</h2>
           <p className="text-xs text-on-surface-variant">
-            Para garantir a confidencialidade das informações mesmo em caso de acesso físico ao seu dispositivo por terceiros, aplicamos camadas de segurança robustas:
+            A proteção de dados é aplicada no backend e no transporte, sem cifragem interna dos dados de negócio no navegador:
           </p>
           <ul className="list-disc pl-5 text-xs text-on-surface-variant flex flex-col gap-1.5 mt-1">
-            <li>Campos sensíveis (como contatos de clientes, saldos de contas e chave de API do Gemini) são criptografados com o algoritmo <strong>AES-GCM (256 bits)</strong> via API nativa Web Crypto do navegador.</li>
-            <li>A chave de criptografia é derivada da sua senha master e expira automaticamente ao encerrar a sessão.</li>
+            <li>O acesso aos dados é protegido por autenticação, HTTPS e regras de Row Level Security (RLS) no Supabase.</li>
+            <li>A chave Gemini, quando configurada, pertence à própria usuária, fica guardada no cofre do servidor e nunca é devolvida ou persistida no navegador.</li>
           </ul>
         </section>
 
@@ -66,7 +66,7 @@ export function PoliticaPrivacidadePage() {
               <strong>II. Correção de Dados:</strong> Edite ou atualize qualquer informação diretamente nos formulários do sistema.
             </div>
             <div className="p-3 bg-surface-container-high/30 rounded-lg border border-outline-variant/15 text-xs">
-              <strong>III. Portabilidade (Backup):</strong> Exporte todo o banco de dados em formato JSON criptografado na aba de Backup.
+              <strong>III. Portabilidade (Backup):</strong> Exporte os dados do ateliê em formato JSON pela aba de Backup.
             </div>
             <div className="p-3 bg-surface-container-high/30 rounded-lg border border-outline-variant/15 text-xs">
               <strong>IV. Eliminação dos Dados:</strong> Apague de forma definitiva e irreversível todos os dados na opção "Apagar Todos os Dados".

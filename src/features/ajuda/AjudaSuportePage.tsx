@@ -27,7 +27,7 @@ const FAQ_LISTA: PerguntaFAQ[] = [
     categoria: 'basica',
     pergunta: 'Meus dados ficam salvos na internet ou no meu próprio dispositivo?',
     resposta:
-      'Em total respeito à sua privacidade e conformidade com a LGPD, o MiauDelier Manager opera sob o conceito Híbrido "Nuvem + Local-First". O seu login (E-mail ou Google/Apple) é processado com segurança pela nuvem para autenticar você, mas TODOS os seus dados do ateliê (clientes, peças, valores e contas) ficam armazenados exclusivamente no banco de dados local criptografado do seu navegador usando sua Senha do Cofre. Nenhum dado financeiro ou pessoal é enviado em formato legível para servidores externos.',
+      'O MiauDelier Manager usa o Supabase para autenticação e sincronização segura. Os dados do ateliê ficam associados à sua conta no banco de dados, protegidos por sessão, HTTPS e regras de acesso RLS; o navegador mantém apenas um cache local para a experiência do aplicativo.',
     tags: ['dados', 'privacidade', 'local-first', 'armazenamento', 'lgpd', 'login'],
   },
   {
@@ -43,7 +43,7 @@ const FAQ_LISTA: PerguntaFAQ[] = [
     categoria: 'basica',
     pergunta: 'O que é e como funciona o Assistente de IA Gemini no MiauDelier?',
     resposta:
-      'O Assistente de IA é uma inteligência artificial integrada que ajuda tirando dúvidas técnicas sobre cura de resina, proporção A/B, cálculo de pigmentos, dicas de vendas e estratégias de marketing. Você pode utilizar sua própria chave de API do Google Gemini, que fica armazenada no cofre seguro do servidor e não é salva no navegador.',
+      'O Assistente de IA ajuda com cura de resina, proporção A/B, cálculo de pigmentos, vendas e estratégias de marketing. Ele usa exclusivamente a sua própria chave de API do Google Gemini, guardada no cofre seguro do servidor e nunca salva no navegador; o consumo é vinculado à sua conta Google.',
     tags: ['ia', 'gemini', 'assistente', 'chave api'],
   },
 
@@ -103,17 +103,17 @@ const FAQ_LISTA: PerguntaFAQ[] = [
   {
     id: 'faq-11',
     categoria: 'seguranca',
-    pergunta: 'Como funciona a autenticação e a Senha do Cofre?',
+    pergunta: 'Como funciona a autenticação e a proteção dos dados?',
     resposta:
-      'Para garantir o máximo de segurança, o MiauDelier usa duas etapas: 1. Login na nuvem (Google, Apple ou E-mail com código OTP) que identifica quem você é. 2. A Senha do Cofre (Zero-Knowledge): esta senha NUNCA é enviada para a internet. Ela é usada exclusivamente no seu navegador para criptografar/descriptografar (usando AES-GCM 256 bits) seus dados reais antes que eles sejam salvos no dispositivo. Sem a Senha do Cofre, ninguém pode ler seus dados!',
-    tags: ['criptografia', 'aes-gcm', 'segurança', 'login', 'google', 'cofre', 'zero-knowledge'],
+      'Você entra com e-mail e senha, Google ou Apple. O Supabase Auth identifica sua conta; as regras RLS garantem que apenas ela acesse os dados sincronizados. A comunicação usa HTTPS, e o navegador mantém somente o cache necessário para o aplicativo.',
+    tags: ['segurança', 'login', 'google', 'apple', 'supabase', 'rls'],
   },
   {
     id: 'faq-12',
     categoria: 'seguranca',
     pergunta: 'Como o MiauDelier Manager cumpre a LGPD (Lei 13.709/2018)?',
     resposta:
-      'O MiauDelier cumpre a LGPD por design (Privacy by Design). Como não coletamos nem armazenamos seus dados em servidores proprietários, você é o controlador soberano de todas as informações. Garantimos todos os direitos do Artigo 18 da LGPD: acesso, retificação, portabilidade (exportação de backup JSON) e exclusão total de dados diretamente pelo sistema.',
+      'O MiauDelier cumpre a LGPD por design: você pode acessar, corrigir, exportar e excluir seus dados pelo sistema. O acesso é limitado à sua sessão autenticada e às políticas de isolamento de dados no Supabase.',
     tags: ['lgpd', 'lei 13.709', 'direitos do titular', 'privacy by design'],
   },
   {
@@ -121,7 +121,7 @@ const FAQ_LISTA: PerguntaFAQ[] = [
     categoria: 'seguranca',
     pergunta: 'Como posso exercer o meu direito à exclusão total de dados (Art. 18 LGPD)?',
     resposta:
-      'Para apagar permanentemente todos os dados armazenados no seu dispositivo, acesse o menu "Backup" e utilize a função "Apagar Todos os Dados do Ateliê". Essa ação limpa o banco de dados IndexedDB e as chaves de criptografia locais de forma irreversível, mantendo apenas a estrutura limpa do seu perfil.',
+      'Para apagar permanentemente os dados do ateliê, acesse o menu "Backup" e utilize a função "Apagar Todos os Dados do Ateliê". A ação remove os dados sincronizados da sua conta e limpa o cache local do navegador.',
     tags: ['exclusão', 'zerar dados', 'lgpd', 'artigo 18', 'limpeza'],
   },
 
@@ -131,7 +131,7 @@ const FAQ_LISTA: PerguntaFAQ[] = [
     categoria: 'backup',
     pergunta: 'Como fazer backup seguro e salvar meus dados em outro computador ou celular?',
     resposta:
-      'Vá até a aba "Backup" e clique em "Gerar Backup do Ateliê (JSON)". O sistema criará um arquivo `.json` criptografado contendo todo o seu histórico. Para transferir para outro dispositivo, abra o MiauDelier no novo aparelho, entre com a mesma senha e importe o arquivo de backup.',
+      'Vá até a aba "Backup" e clique em "Gerar Backup do Ateliê (JSON)". O sistema criará um arquivo `.json` contendo todo o seu histórico. Para transferir para outro dispositivo, abra o MiauDelier no novo aparelho, entre na mesma conta e importe o arquivo de backup.',
     tags: ['backup', 'json', 'exportar', 'importar', 'transferir'],
   },
   {
@@ -286,9 +286,9 @@ export function AjudaSuportePage() {
                 <span className="text-xs font-bold uppercase tracking-wider text-primary">Passo 1</span>
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-semibold">Configuração Inicial</span>
               </div>
-              <h3 className="text-base font-bold text-on-surface">1. Faça Login e Crie seu Cofre Seguro</h3>
+              <h3 className="text-base font-bold text-on-surface">1. Faça Login e Configure seu Ateliê</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Acesse o aplicativo utilizando sua conta Google, Apple ou E-mail. Na primeira vez, você criará a sua <strong>Senha do Cofre</strong> (guarde bem, ela é irrecuperável!). Depois, no menu <strong>Perfil do Ateliê</strong> você pode personalizar sua identidade e, se quiser tirar dúvidas técnicas via inteligência artificial, vá em <strong>Configurações</strong> e insira sua chave gratuita do Google Gemini.
+                Acesse o aplicativo utilizando sua conta Google, Apple ou e-mail. Depois, no menu <strong>Perfil do Ateliê</strong> você pode personalizar sua identidade e, se quiser tirar dúvidas técnicas via inteligência artificial, vá em <strong>Configurações</strong> e insira a sua chave do Google Gemini.
               </p>
             </Card>
 
@@ -360,7 +360,7 @@ export function AjudaSuportePage() {
               </div>
               <h3 className="text-base font-bold text-on-surface">7. Acompanhe o Financeiro, Analytics & Faça Backups</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Utilize a aba <strong>Transações</strong> para registrar entradas e saídas de caixa. Consulte o <strong>Analytics</strong> e o <strong>Diagnóstico</strong> para ver seu lucro líquido real e a nota de saúde financeira do seu ateliê. Por fim, lembre-se de ir até a aba <strong>Backup</strong> semanalmente para baixar o arquivo `.json` criptografado com todos os seus dados!
+                Utilize a aba <strong>Transações</strong> para registrar entradas e saídas de caixa. Consulte o <strong>Analytics</strong> e o <strong>Diagnóstico</strong> para ver seu lucro líquido real e a nota de saúde financeira do seu ateliê. Por fim, lembre-se de ir até a aba <strong>Backup</strong> semanalmente para baixar o arquivo `.json` com todos os seus dados!
               </p>
             </Card>
           </div>
@@ -425,7 +425,7 @@ export function AjudaSuportePage() {
             <Card className="flex flex-col gap-2 p-4">
               <h3 className="text-sm font-bold text-primary flex items-center gap-1.5">👥 Clientes & Pedidos</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Gestão de contatos de clientes criptografados com visualização do histórico de compras. Emissão de pedidos vinculando peças, com status de produção (Orçamento, Em Produção, Concluído, Entregue).
+                Gestão de contatos de clientes com visualização do histórico de compras. Emissão de pedidos vinculando peças, com status de produção (Orçamento, Em Produção, Concluído, Entregue).
               </p>
             </Card>
 
@@ -439,14 +439,14 @@ export function AjudaSuportePage() {
             <Card className="flex flex-col gap-2 p-4">
               <h3 className="text-sm font-bold text-primary flex items-center gap-1.5">💳 Contas & Transações</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Gestão de contas bancárias/caixa físico do ateliê. Registro de receitas de vendas e despesas operacionais (aluguel, internet, insumos) com cifras AES locais.
+                Gestão de contas bancárias/caixa físico do ateliê. Registro de receitas de vendas e despesas operacionais (aluguel, internet e insumos), sincronizadas com segurança na sua conta.
               </p>
             </Card>
 
             <Card className="flex flex-col gap-2 p-4">
               <h3 className="text-sm font-bold text-primary flex items-center gap-1.5">💾 Backup & Segurança</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Geração de arquivo de backup criptografado em formato JSON para exportação/importação e opção de exclusão definitiva de dados em conformidade com a LGPD.
+                Geração de arquivo de backup em formato JSON para exportação/importação e opção de exclusão definitiva de dados em conformidade com a LGPD.
               </p>
             </Card>
           </div>
@@ -607,16 +607,16 @@ export function AjudaSuportePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="flex flex-col gap-2 p-4">
-              <h3 className="text-sm font-bold text-on-surface flex items-center gap-1.5">🔐 Sincronização Segura (Zero-Knowledge)</h3>
+              <h3 className="text-sm font-bold text-on-surface flex items-center gap-1.5">🔐 Sincronização Segura</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Nós não temos acesso aos seus dados financeiros ou de clientes. Tudo é criptografado com sua senha mestre localmente no seu dispositivo antes de ser enviado para a nuvem de forma segura, garantindo sincronização sem comprometer a privacidade.
+                Seus dados são sincronizados com sessão autenticada, HTTPS e regras RLS no Supabase. Cada conta acessa apenas os próprios registros.
               </p>
             </Card>
 
             <Card className="flex flex-col gap-2 p-4">
-              <h3 className="text-sm font-bold text-on-surface flex items-center gap-1.5">🔑 Criptografia Forte AES-256</h3>
+              <h3 className="text-sm font-bold text-on-surface flex items-center gap-1.5">🔑 Chave Gemini da Usuária</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Valores de vendas, contatos de clientes e chaves de API são cifrados no seu navegador via algoritmo AES-GCM com chave derivada da sua senha master através da Web Crypto API.
+                O assistente usa somente a chave Gemini configurada pela própria usuária. Ela é protegida no servidor e não permanece no navegador nem consome uma chave compartilhada do aplicativo.
               </p>
             </Card>
 

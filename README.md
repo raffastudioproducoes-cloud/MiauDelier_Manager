@@ -46,7 +46,7 @@ Versão atual: **v1.1.0** · Idioma: **Português Brasileiro** · Plataforma: **
 
 - Autenticação por e-mail/senha com confirmação, Google OAuth e vínculo manual de identidades pelo Supabase Auth.
 - Dados sincronizáveis trafegam em JSON normal entre o cache IndexedDB e o Supabase; a proteção de acesso é feita por Auth, RLS e HTTPS. Não há cofre, DEK/KEK nem cifra interna de dados de negócio no cliente.
-- A chave Gemini é enviada somente à Edge Function autenticada e não fica persistida no navegador. O resumo do dashboard usa indicadores financeiros, estoque, prazos, descontos e histórico de custos para recomendações factuais.
+- Cada usuária configura sua própria chave Gemini: ela é enviada somente à Edge Function autenticada, vinculada ao seu `user.id` e não fica persistida no navegador. Não há chave Gemini compartilhada do aplicativo. O resumo do dashboard usa indicadores financeiros, estoque, prazos, descontos e histórico de custos para recomendações factuais.
 - O PWA usa ícones próprios MiauDelier, cor de sistema escura e uma tela de abertura breve com versão, Raffa Studio Produções e selo GitGuard.
 
 ## Objetivo
@@ -179,7 +179,7 @@ A sincronização utiliza um **Ledger (Event Sourcing) local-first**. O cache De
 
 O MiauDelier Manager é uso proprietário e single-tenant — não há modelo de assinatura nem cobrança dentro do app.
 
-O módulo de IA utiliza Gemini somente quando a usuária configura uma chave e há internet. A chave vai do formulário autenticado à Edge Function e não permanece no navegador. O resumo do dashboard limita as recomendações aos números reais do ateliê, incluindo caixa, resultado, prazos, estoque, descontos e histórico de custos; ele não deve inventar tendências externas.
+O módulo de IA utiliza Gemini somente quando a usuária configura a própria chave e há internet. A chave vai do formulário autenticado à Edge Function, é vinculada à usuária e não permanece no navegador; não existe fallback compartilhado. O resumo do dashboard limita as recomendações aos números reais do ateliê, incluindo caixa, resultado, prazos, estoque, descontos e histórico de custos; ele não deve inventar tendências externas.
 
 ## Documentação
 
