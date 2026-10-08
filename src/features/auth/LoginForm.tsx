@@ -216,7 +216,8 @@ export function LoginForm() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-background text-on-surface flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen w-full overflow-x-hidden bg-background font-sans text-on-surface">
+      <div className="relative flex min-h-[calc(100vh-104px)] w-full flex-col md:flex-row">
       
       {/* OVERLAY DE LOADING */}
       {mostrarOverlay && (
@@ -239,7 +240,7 @@ export function LoginForm() {
       <div className="absolute right-0 top-1/2 h-[600px] w-[600px] -translate-y-1/2 rounded-full bg-surface-container-high/30 blur-[160px] pointer-events-none" />
 
       {/* LADO ESQUERDO — Imagem Hero dos Gatos MiauDelier (Desktop: ~50-52% da tela, Mobile: Banner Topo) */}
-      <div className="relative w-full md:w-[52%] lg:w-[55%] min-h-[340px] sm:min-h-[420px] md:min-h-screen overflow-hidden flex flex-col justify-between p-6 sm:p-10 z-10">
+      <div className="relative z-10 flex min-h-[340px] w-full flex-col justify-between overflow-hidden p-6 sm:min-h-[420px] sm:p-10 md:min-h-[calc(100vh-104px)] md:w-[52%] lg:w-[55%]">
         {/* Imagem de Fundo Completa sem Caixas ou Molduras */}
         <img
           src={catFeederBanner}
@@ -276,7 +277,7 @@ export function LoginForm() {
       <div className="hidden md:block absolute left-[35%] lg:left-[40%] right-[30%] lg:right-[35%] top-0 bottom-0 pointer-events-none z-20 bg-gradient-to-r from-transparent via-background/80 to-background" />
 
       {/* LADO DIREITO — Formulário de Autenticação Posicionado Mais À Esquerda (Desktop: ~48-50%) */}
-      <div className="relative z-30 flex-1 flex flex-col justify-center p-6 sm:p-10 md:p-12 lg:p-16 min-h-[480px] md:min-h-screen bg-background md:bg-transparent">
+      <div className="relative z-30 flex min-h-[480px] flex-1 flex-col justify-center bg-background p-6 sm:p-10 md:min-h-[calc(100vh-104px)] md:bg-transparent md:p-12 lg:p-16">
         {/* Fundo Colorido do Tema com Degradê da Direita para a Esquerda para Fazer a Junção Sem Linha Dura */}
         <div className="hidden md:block absolute inset-0 bg-gradient-to-l from-background via-background/95 to-transparent pointer-events-none -z-10" />
 
@@ -447,6 +448,32 @@ export function LoginForm() {
             </div>
         </div>
       </div>
+      </div>
+
+      <footer className="flex flex-col items-center justify-between gap-4 border-t border-outline-variant/15 px-6 py-5 text-xs text-on-surface-variant md:flex-row md:px-10">
+        <div className="flex flex-col items-center gap-1 text-center md:items-start md:text-left">
+          <span className="flex flex-wrap items-center justify-center gap-2 font-semibold text-on-surface md:justify-start">
+            © 2026 Raffa Studio Produções. Empresa registrada desde 2026.
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold tracking-widest text-primary">
+              v{__APP_VERSION__}
+            </span>
+          </span>
+          <span className="text-[11px] text-on-surface-variant/80">
+            Todos os direitos reservados · Suporte Técnico: <a href="mailto:contato.raffasp@gmail.com" className="font-medium text-primary hover:underline">contato.raffasp@gmail.com</a>
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs md:gap-4">
+          <a href="https://www.gitguard.com.br/raffastudioproducoes-cloud" target="_blank" rel="noopener noreferrer" className="opacity-60 transition-opacity hover:opacity-100">
+            <img src="https://img.shields.io/badge/Secured%20by-GitGuard-success?style=flat-square" alt="Secured by GitGuard" className="h-[18px]" />
+          </a>
+          <button type="button" onClick={() => navigate({ to: '/ajuda' })} className="cursor-pointer transition-colors hover:text-primary">💡 Ajuda & FAQ</button>
+          <span className="text-outline-variant/40">•</span>
+          <button type="button" onClick={() => navigate({ to: '/privacidade' })} className="cursor-pointer transition-colors hover:text-primary">🔒 Política de Privacidade & LGPD</button>
+          <span className="text-outline-variant/40">•</span>
+          <button type="button" onClick={() => navigate({ to: '/termos' })} className="cursor-pointer transition-colors hover:text-primary">📜 Termos de Uso</button>
+        </div>
+      </footer>
     </div>
   )
 }

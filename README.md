@@ -4,7 +4,7 @@
 
 ### Gestão de produção, custos e financeiro para quem trabalha com resina epóxi e moldes de silicone.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-2563EB)](package.json)
+[![Version](https://img.shields.io/badge/version-1.1.0-2563EB)](package.json)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-8.2-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
@@ -40,7 +40,7 @@
 
 **MiauDelier Manager** é um aplicativo web (PWA, local-first) para gestão do ateliê da **MiauDelier** e de outros profissionais que trabalham com resina epóxi e moldes de silicone. Reúne cálculo técnico de volume e mistura, precificação real, controle de produção, estoque, clientes/pedidos e financeiro em um único lugar. Os dados residem primeiro no dispositivo da usuária e sincronizam na nuvem via Event Sourcing.
 
-Versão atual: **v1.0.0** · Idioma: **Português Brasileiro** · Plataforma: **Web (PWA)**
+Versão atual: **v1.1.0** · Idioma: **Português Brasileiro** · Plataforma: **Web (PWA)**
 
 ## Objetivo
 
