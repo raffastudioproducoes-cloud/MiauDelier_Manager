@@ -50,9 +50,12 @@ export function ConfiguracoesPage() {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar configurações.', 'erro')
     })
-    recarregarEstadoGemini().catch(() => undefined)
+    const verificacaoGemini = window.setTimeout(() => {
+      recarregarEstadoGemini().catch(() => undefined)
+    }, 0)
     return () => {
       montado.current = false
+      window.clearTimeout(verificacaoGemini)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
