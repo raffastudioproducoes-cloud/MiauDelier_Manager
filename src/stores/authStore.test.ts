@@ -23,7 +23,7 @@ describe('authStore', () => {
 
   it('aceita uma sessão OAuth do Supabase em dispositivo sem cache local', async () => {
     const { supabase } = await import('../lib/supabase')
-    vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce({
       data: { session: { user: { id: 'usuario-google' } } },
       error: null,
     } as any)
