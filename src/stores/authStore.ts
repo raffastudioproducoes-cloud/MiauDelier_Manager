@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { hasAccountConfigured, hasLocalCacheForUser, setupAccount, login, clearSession, restoreSessionKey, recuperarCofreComNuvem, alterarSenha as dbAlterarSenha } from '../lib/auth'
-import { syncOnLogin } from '../lib/syncService'
+import { hasAccountConfigured, setupAccount, login, clearSession, recuperarCofreComNuvem, alterarSenha as dbAlterarSenha } from '../lib/auth'
+import { prepareLocalCacheForUser, syncOnLogin } from '../lib/syncService'
 import { supabase } from '../lib/supabase'
 
 interface AuthState {
@@ -20,23 +20,17 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   carregarEstadoInicial: async () => {
     const { data: { session: cloudSession } } = await supabase.auth.getSession()
-    const existe = await hasAccountConfigured()
-    if (!existe || !cloudSession?.user || !await hasLocalCacheForUser(cloudSession.user.id)) {
+    if (!cloudSession?.user) {
       clearSession()
       set({ contaConfigurada: false, autenticado: false })
       return
     }
 
-    const chaveRestaurada = await restoreSessionKey()
-    set({
-      contaConfigurada: true,
-      autenticado: chaveRestaurada !== null,
-    })
-
-    // Se restaurou sessão, faz sync imediato em background
-    if (chaveRestaurada) {
-      syncOnLogin().catch(console.warn)
-    }
+    // O Supabase e a fonte de verdade da sessão. IndexedDB é apenas cache por usuário.
+    await prepareLocalCacheForUser(cloudSession.user.id)
+    if (!await hasAccountConfigured()) await setupAccount('')
+    await syncOnLogin().catch(console.warn)
+    set({ contaConfigurada: true, autenticado: true })
   },
 
   entrar: async (senha: string) => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '../db/schema'
 import { useAuthStore } from './authStore'
 
@@ -19,6 +19,18 @@ describe('authStore', () => {
     await useAuthStore.getState().criarConta('senha-forte')
     expect(useAuthStore.getState().autenticado).toBe(true)
     expect(useAuthStore.getState().contaConfigurada).toBe(true)
+  })
+
+  it('aceita uma sessão OAuth do Supabase em dispositivo sem cache local', async () => {
+    const { supabase } = await import('../lib/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
+      data: { session: { user: { id: 'usuario-google' } } },
+      error: null,
+    } as any)
+
+    await useAuthStore.getState().carregarEstadoInicial()
+
+    expect(useAuthStore.getState()).toMatchObject({ contaConfigurada: true, autenticado: true })
   })
 
   it('reabre a sessão local quando o dispositivo já foi configurado', async () => {
