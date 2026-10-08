@@ -80,4 +80,48 @@ describe('resumo do dashboard', () => {
     expect(resumo.eventosRecentes).toEqual([])
     expect(resumo.fluxoCaixa14Dias).toHaveLength(14)
   })
+
+  it('inclui sinais de desconto, custo, preço e prazo para o diagnóstico da IA', async () => {
+    const hoje = new Date().toISOString().slice(0, 10)
+    await db.historicoPrecosMateriais.bulkAdd([
+      {
+        materialId: 10,
+        nomeMaterial: 'Resina',
+        unidade: 'kg',
+        quantidadeComprada: 1,
+        valorProdutos: 90,
+        valorFrete: 0,
+        valorDesconto: 0,
+        valorTotalPago: 90,
+        custoUnitario: 90,
+        dataCompra: '2026-01-10',
+        registradoEm: '2026-01-10T10:00:00.000Z',
+      },
+      {
+        materialId: 10,
+        nomeMaterial: 'Resina',
+        unidade: 'kg',
+        quantidadeComprada: 1,
+        valorProdutos: 110,
+        valorFrete: 0,
+        valorDesconto: 10,
+        valorTotalPago: 100,
+        custoUnitario: 100,
+        dataCompra: hoje,
+        registradoEm: '2026-10-08T10:00:00.000Z',
+      },
+    ])
+    await db.pecas.add({ nome: 'Peça sem preço', formaId: 1, status: 'planejada', criadaEm: new Date().toISOString() })
+    await db.pedidos.add({ clienteId: 1, pecaIds: [], status: 'aberto', criadoEm: new Date().toISOString(), prazoEntrega: '2000-01-01' })
+
+    const resumo = await obterResumoDashboard()
+
+    expect(resumo.descontoCompras90Dias).toBe(10)
+    expect(resumo.comprasComDesconto90Dias).toBe(1)
+    expect(resumo.pecasSemPreco).toBe(1)
+    expect(resumo.pedidosAtrasados).toBe(1)
+    expect(resumo.tendenciasPrecoMateriais).toEqual([
+      expect.objectContaining({ nomeMaterial: 'Resina', custoAnterior: 90, custoAtual: 100, variacaoPercentual: expect.closeTo(11.111, 2) }),
+    ])
+  })
 })

@@ -1,6 +1,6 @@
 import { listarContas } from '../financeiro/contasRepo'
 import { listarTodasTransacoes } from '../financeiro/transacoesRepo'
-import { listarMateriais } from '../producao/materiaisRepo'
+import { listarHistoricoPrecosMateriais, listarMateriais } from '../producao/materiaisRepo'
 import { listarPecas, listarEventosDaPeca } from '../producao/pecasRepo'
 import { listarPedidos } from '../vendas/pedidosRepo'
 
@@ -8,6 +8,18 @@ import { listarPedidos } from '../vendas/pedidosRepo'
 const LIMIAR_ESTOQUE_BAIXO = 10
 const DIAS_FLUXO_CAIXA = 14
 const MAX_EVENTOS_RECENTES = 8
+const DIAS_ANALISE_COMPRAS = 90
+const MAX_TENDENCIAS_PRECO = 3
+
+export interface TendenciaPrecoMaterial {
+  nomeMaterial: string
+  unidade: string
+  custoAnterior: number
+  custoAtual: number
+  variacaoPercentual: number
+  dataAnterior: string
+  dataAtual: string
+}
 
 export interface ResumoDashboard {
   saldoTotal: number
@@ -16,6 +28,11 @@ export interface ResumoDashboard {
   pecasEmCura: number
   materiaisEstoqueBaixo: number
   pedidosAbertos: number
+  pedidosAtrasados: number
+  pecasSemPreco: number
+  descontoCompras90Dias: number
+  comprasComDesconto90Dias: number
+  tendenciasPrecoMateriais: TendenciaPrecoMaterial[]
   fluxoCaixa14Dias: Array<{ data: string; entradas: number; saidas: number }>
   eventosRecentes: Array<{ pecaId: number; nomePeca: string; tipo: string; descricao: string; criadoEm: string }>
 }
@@ -34,12 +51,13 @@ function inicioDoDia(valor: string | Date): string {
 }
 
 export async function obterResumoDashboard(): Promise<ResumoDashboard> {
-  const [contas, transacoes, materiais, pecas, pedidos] = await Promise.all([
+  const [contas, transacoes, materiais, pecas, pedidos, historicoPrecos] = await Promise.all([
     listarContas(),
     listarTodasTransacoes(),
     listarMateriais(),
     listarPecas(),
     listarPedidos(),
+    listarHistoricoPrecosMateriais(),
   ])
 
   const saldoTotal = contas.reduce((soma, conta) => soma + conta.saldo, 0)
@@ -55,6 +73,43 @@ export async function obterResumoDashboard(): Promise<ResumoDashboard> {
   const pecasEmCura = pecas.filter((peca) => peca.status === 'curando').length
   const materiaisEstoqueBaixo = materiais.filter((material) => material.quantidadeEstoque < LIMIAR_ESTOQUE_BAIXO).length
   const pedidosAbertos = pedidos.filter((pedido) => pedido.status === 'aberto').length
+  const hoje = inicioDoDia(agora)
+  const pedidosAtrasados = pedidos.filter(
+    (pedido) => pedido.status !== 'entregue' && pedido.status !== 'cancelado' && pedido.prazoEntrega && pedido.prazoEntrega < hoje,
+  ).length
+  const pecasSemPreco = pecas.filter((peca) => peca.status !== 'vendida' && peca.status !== 'cancelada' && (peca.precoVenda ?? 0) <= 0).length
+
+  const inicioAnaliseCompras = new Date(agora)
+  inicioAnaliseCompras.setDate(inicioAnaliseCompras.getDate() - DIAS_ANALISE_COMPRAS)
+  const chaveInicioAnaliseCompras = inicioDoDia(inicioAnaliseCompras)
+  const comprasRecentes = historicoPrecos.filter((compra) => inicioDoDia(compra.dataCompra) >= chaveInicioAnaliseCompras)
+  const descontoCompras90Dias = comprasRecentes.reduce((soma, compra) => soma + compra.valorDesconto, 0)
+  const comprasComDesconto90Dias = comprasRecentes.filter((compra) => compra.valorDesconto > 0).length
+
+  const tendenciasPrecoMateriais = Object.values(
+    historicoPrecos.reduce<Record<string, typeof historicoPrecos>>((porMaterial, compra) => {
+      const chave = `${compra.materialId}:${compra.nomeMaterial}`
+      ;(porMaterial[chave] ??= []).push(compra)
+      return porMaterial
+    }, {}),
+  )
+    .map((compras) => compras.sort((a, b) => a.dataCompra.localeCompare(b.dataCompra)))
+    .filter((compras) => compras.length >= 2)
+    .map((compras) => {
+      const anterior = compras[compras.length - 2]
+      const atual = compras[compras.length - 1]
+      return {
+        nomeMaterial: atual.nomeMaterial,
+        unidade: atual.unidade,
+        custoAnterior: anterior.custoUnitario,
+        custoAtual: atual.custoUnitario,
+        variacaoPercentual: anterior.custoUnitario > 0 ? ((atual.custoUnitario - anterior.custoUnitario) / anterior.custoUnitario) * 100 : 0,
+        dataAnterior: anterior.dataCompra,
+        dataAtual: atual.dataCompra,
+      }
+    })
+    .sort((a, b) => Math.abs(b.variacaoPercentual) - Math.abs(a.variacaoPercentual))
+    .slice(0, MAX_TENDENCIAS_PRECO)
 
   const fluxoCaixa14Dias: ResumoDashboard['fluxoCaixa14Dias'] = []
   for (let i = DIAS_FLUXO_CAIXA - 1; i >= 0; i--) {
@@ -86,5 +141,19 @@ export async function obterResumoDashboard(): Promise<ResumoDashboard> {
     .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
     .slice(0, MAX_EVENTOS_RECENTES)
 
-  return { saldoTotal, lucroDoMes, pecasEmProducao, pecasEmCura, materiaisEstoqueBaixo, pedidosAbertos, fluxoCaixa14Dias, eventosRecentes }
+  return {
+    saldoTotal,
+    lucroDoMes,
+    pecasEmProducao,
+    pecasEmCura,
+    materiaisEstoqueBaixo,
+    pedidosAbertos,
+    pedidosAtrasados,
+    pecasSemPreco,
+    descontoCompras90Dias,
+    comprasComDesconto90Dias,
+    tendenciasPrecoMateriais,
+    fluxoCaixa14Dias,
+    eventosRecentes,
+  }
 }
