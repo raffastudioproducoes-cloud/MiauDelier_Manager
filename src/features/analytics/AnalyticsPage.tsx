@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/useToast'
 import { obterResumoAnalytics, type ResumoAnalytics } from './analyticsRepo'
+import { limparHistoricoPrecosVencido } from '../producao/materiaisRepo'
 
 const RESUMO_VAZIO: ResumoAnalytics = {
   porMes: [],
@@ -10,6 +13,11 @@ const RESUMO_VAZIO: ResumoAnalytics = {
   despesaTotal: 0,
   resultado: 0,
   margem: 0,
+  descontoTotal: 0,
+  comprasComDesconto: [],
+  historicoPrecos: [],
+  historicoExpiraEm30Dias: 0,
+  historicoVencido: 0,
 }
 
 function formatarMoeda(valor: number): string {
@@ -208,6 +216,8 @@ export function AnalyticsPage() {
   const [mesFim, setMesFim] = useState(mesPadrao(0))
   const [resumo, setResumo] = useState<ResumoAnalytics>(RESUMO_VAZIO)
   const [carregado, setCarregado] = useState(false)
+  const [confirmandoLimpeza, setConfirmandoLimpeza] = useState(false)
+  const [atualizacao, setAtualizacao] = useState(0)
 
   useEffect(() => {
     montado.current = true
@@ -236,7 +246,20 @@ export function AnalyticsPage() {
         setCarregado(true)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mesInicio, mesFim])
+  }, [mesInicio, mesFim, atualizacao])
+
+  async function handleLimparHistoricoVencido() {
+    try {
+      const removidos = await limparHistoricoPrecosVencido()
+      if (!montado.current) return
+      mostrarToast(`${removidos} registro(s) vencido(s) removido(s) após o backup.`)
+      setConfirmandoLimpeza(false)
+      setAtualizacao((valor) => valor + 1)
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao limpar o histórico vencido.', 'erro')
+    }
+  }
 
   const periodoInvalido = mesInicio > mesFim
 
@@ -395,6 +418,94 @@ export function AnalyticsPage() {
           </div>
         </>
       )}
+
+      {carregado && !periodoInvalido && (
+        <>
+          {(resumo.historicoVencido > 0 || resumo.historicoExpiraEm30Dias > 0) && (
+            <Card className="border border-warning/40 bg-warning/10 p-4">
+              <h2 className="text-sm font-semibold text-on-surface">Histórico de preços perto da retenção anual</h2>
+              <p className="mt-1 text-sm text-on-surface-variant">
+                {resumo.historicoVencido > 0
+                  ? `${resumo.historicoVencido} registro(s) já passou/passaram de um ano. Exporte um backup antes de confirmar a limpeza.`
+                  : `${resumo.historicoExpiraEm30Dias} registro(s) completa(m) um ano nos próximos 30 dias. Faça um backup para preservar a comparação.`}
+              </p>
+              {resumo.historicoVencido > 0 && (
+                <div className="mt-3">
+                  <Button variante="secondary" onClick={() => setConfirmandoLimpeza(true)}>
+                    Limpar registros vencidos
+                  </Button>
+                </div>
+              )}
+            </Card>
+          )}
+
+          <Card className="p-5">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-on-surface">Descontos em compras</h2>
+                <p className="text-xs text-on-surface-variant">Cupons e reduções recebidos no período selecionado.</p>
+              </div>
+              <p className="text-lg font-semibold text-primary">{formatarMoeda(resumo.descontoTotal)}</p>
+            </div>
+            {resumo.comprasComDesconto.length === 0 ? (
+              <p className="text-sm text-on-surface-variant">Nenhum desconto registrado neste período.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-outline-variant text-left text-on-surface-variant">
+                    <tr><th className="pb-2 font-medium">Data</th><th className="pb-2 font-medium">Material</th><th className="pb-2 text-right font-medium">Desconto</th></tr>
+                  </thead>
+                  <tbody>
+                    {resumo.comprasComDesconto.map((compra) => (
+                      <tr key={compra.id} className="border-b border-outline-variant/40">
+                        <td className="py-2">{new Date(compra.dataCompra).toLocaleDateString('pt-BR')}</td>
+                        <td className="py-2">{compra.nomeMaterial}</td>
+                        <td className="py-2 text-right font-medium text-primary">{formatarMoeda(compra.valorDesconto)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-5">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold text-on-surface">Histórico de preços dos materiais</h2>
+              <p className="text-xs text-on-surface-variant">Comparativo de compras do período. A retenção é de até um ano.</p>
+            </div>
+            {resumo.historicoPrecos.length === 0 ? (
+              <p className="text-sm text-on-surface-variant">Nenhuma compra de material registrada neste período.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-outline-variant text-left text-on-surface-variant">
+                    <tr><th className="pb-2 font-medium">Data</th><th className="pb-2 font-medium">Material</th><th className="pb-2 text-right font-medium">Custo unitário</th><th className="pb-2 text-right font-medium">Total pago</th></tr>
+                  </thead>
+                  <tbody>
+                    {resumo.historicoPrecos.map((compra) => (
+                      <tr key={compra.id} className="border-b border-outline-variant/40">
+                        <td className="py-2">{new Date(compra.dataCompra).toLocaleDateString('pt-BR')}</td>
+                        <td className="py-2">{compra.nomeMaterial}</td>
+                        <td className="py-2 text-right">{formatarMoeda(compra.custoUnitario)}/{compra.unidade}</td>
+                        <td className="py-2 text-right font-medium">{formatarMoeda(compra.valorTotalPago)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+
+      <ConfirmModal
+        aberto={confirmandoLimpeza}
+        titulo="Limpar histórico vencido?"
+        descricao="Confirme somente depois de exportar o backup. Esta ação remove os registros de preço com mais de um ano."
+        onCancelar={() => setConfirmandoLimpeza(false)}
+        onConfirmar={handleLimparHistoricoVencido}
+      />
     </div>
   )
 }

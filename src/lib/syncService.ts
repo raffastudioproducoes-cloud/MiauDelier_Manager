@@ -35,6 +35,7 @@ function addSyncQueueEvent(event: SyncEvent) {
 const TABLES_TO_SYNC = [
   'categoriasMaterial',
   'materiais',
+  'historicoPrecosMateriais',
   'formas',
   'pecas',
   'consumosPeca',

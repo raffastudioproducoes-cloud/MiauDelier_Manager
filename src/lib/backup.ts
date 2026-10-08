@@ -15,6 +15,7 @@ function fnv1aHash(texto: string): string {
 const TABELAS = [
   'categoriasMaterial',
   'materiais',
+  'historicoPrecosMateriais',
   'formas',
   'pecas',
   'consumosPeca',
@@ -133,6 +134,7 @@ export async function zerarDadosManterPerfil(): Promise<void> {
   const TABELAS_PARA_ZERAR = [
     'categoriasMaterial',
     'materiais',
+    'historicoPrecosMateriais',
     'formas',
     'pecas',
     'consumosPeca',

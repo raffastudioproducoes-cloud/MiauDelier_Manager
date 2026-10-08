@@ -1,4 +1,4 @@
-import { db, type Material, type TipoClassificacaoMaterial } from '../../db/schema'
+import { db, type HistoricoPrecoMaterial, type Material, type TipoClassificacaoMaterial } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovoMaterial {
@@ -17,7 +17,9 @@ export interface RegistrarCompraParams {
   novoMaterial?: NovoMaterial
   quantidadeComprada: number
   valorTotalPago: number
+  valorProdutos?: number
   valorFrete?: number
+  valorDesconto?: number
   atualizarCustoUnitario?: boolean
   novoCustoUnitarioCalculado?: number
   contaIdFinanceira?: number
@@ -31,6 +33,20 @@ export async function criarMaterial(novo: NovoMaterial): Promise<number> {
 
 export async function listarMateriais(): Promise<Material[]> {
   return db.materiais.toArray()
+}
+
+export async function listarHistoricoPrecosMateriais(): Promise<HistoricoPrecoMaterial[]> {
+  return db.historicoPrecosMateriais.orderBy('dataCompra').reverse().toArray()
+}
+
+export async function limparHistoricoPrecosVencido(agora = new Date()): Promise<number> {
+  const limite = new Date(agora)
+  limite.setFullYear(limite.getFullYear() - 1)
+  const vencidos = await db.historicoPrecosMateriais
+    .filter((registro) => new Date(registro.dataCompra) < limite)
+    .toArray()
+  await db.historicoPrecosMateriais.bulkDelete(vencidos.map((registro) => registro.id!).filter(Boolean))
+  return vencidos.length
 }
 
 export async function atualizarEstoqueMaterial(materialId: number, novaQuantidade: number): Promise<void> {
@@ -52,7 +68,7 @@ export async function registrarCompraMaterial(params: RegistrarCompraParams): Pr
 
   return db.transaction(
     'rw',
-    [db.materiais, db.categoriasMaterial, db.contas, db.transacoes, db.auditoria],
+    [db.materiais, db.historicoPrecosMateriais, db.categoriasMaterial, db.contas, db.transacoes, db.auditoria],
     async () => {
       let targetMaterialId = params.materialId
       let nomeMaterial: string
@@ -96,6 +112,20 @@ export async function registrarCompraMaterial(params: RegistrarCompraParams): Pr
           data,
         })
       }
+
+      await db.historicoPrecosMateriais.add({
+        materialId: targetMaterialId,
+        nomeMaterial,
+        unidade: unidadeMaterial,
+        quantidadeComprada: params.quantidadeComprada,
+        valorProdutos: params.valorProdutos ?? params.valorTotalPago - (params.valorFrete ?? 0) + (params.valorDesconto ?? 0),
+        valorFrete: params.valorFrete ?? 0,
+        valorDesconto: params.valorDesconto ?? 0,
+        valorTotalPago: params.valorTotalPago,
+        custoUnitario: params.novoCustoUnitarioCalculado ?? params.valorTotalPago / params.quantidadeComprada,
+        dataCompra: data,
+        registradoEm: new Date().toISOString(),
+      })
 
       return targetMaterialId
     },

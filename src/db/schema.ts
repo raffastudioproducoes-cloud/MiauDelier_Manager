@@ -32,6 +32,21 @@ export interface Material {
   tipoClassificacao?: TipoClassificacaoMaterial
 }
 
+export interface HistoricoPrecoMaterial {
+  id?: number
+  materialId: number
+  nomeMaterial: string
+  unidade: string
+  quantidadeComprada: number
+  valorProdutos: number
+  valorFrete: number
+  valorDesconto: number
+  valorTotalPago: number
+  custoUnitario: number
+  dataCompra: string
+  registradoEm: string
+}
+
 export type FormaGeometria = 'retangular' | 'cilindrico' | 'esferico' | 'direto'
 
 export interface CavidadeForma {
@@ -286,6 +301,7 @@ export interface PerfilAtelieDB {
 export class MiauDelierDB extends Dexie {
   categoriasMaterial!: EntityTable<CategoriaMaterial, 'id'>
   materiais!: EntityTable<Material, 'id'>
+  historicoPrecosMateriais!: EntityTable<HistoricoPrecoMaterial, 'id'>
   formas!: EntityTable<Forma, 'id'>
   pecas!: EntityTable<Peca, 'id'>
   consumosPeca!: EntityTable<ConsumoPeca, 'id'>
@@ -376,6 +392,9 @@ export class MiauDelierDB extends Dexie {
       } catch {
         // não falha a migração se o localStorage estiver corrompido
       }
+    })
+    this.version(8).stores({
+      historicoPrecosMateriais: '++id, materialId, dataCompra, registradoEm',
     })
   }
 }

@@ -7,6 +7,8 @@ import {
   atualizarEstoqueMaterial,
   reporEstoqueMaterial,
   registrarCompraMaterial,
+  listarHistoricoPrecosMateriais,
+  limparHistoricoPrecosVencido,
   atualizarMaterial,
   excluirMaterial,
 } from './materiaisRepo'
@@ -74,6 +76,42 @@ describe('repositório de materiais', () => {
     expect(transacao.contaId).toBe(contaId)
     expect(transacao.tipo).toBe('saida')
     expect(transacao.valorCriptografado).toBe('120')
+  })
+
+  it('registra desconto no total pago e no histórico de preços', async () => {
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 0, custoUnitario: 0 })
+
+    await registrarCompraMaterial({
+      materialId,
+      quantidadeComprada: 20,
+      valorProdutos: 3000,
+      valorFrete: 100,
+      valorDesconto: 80,
+      valorTotalPago: 3020,
+      atualizarCustoUnitario: true,
+      novoCustoUnitarioCalculado: 151,
+      dataCompra: '2026-10-08T00:00:00.000Z',
+    })
+
+    const [historico] = await listarHistoricoPrecosMateriais()
+    expect(historico).toMatchObject({
+      nomeMaterial: 'Resina',
+      valorProdutos: 3000,
+      valorFrete: 100,
+      valorDesconto: 80,
+      valorTotalPago: 3020,
+      custoUnitario: 151,
+    })
+  })
+
+  it('remove do histórico somente preços com mais de um ano', async () => {
+    await db.historicoPrecosMateriais.bulkAdd([
+      { materialId: 1, nomeMaterial: 'Antigo', unidade: 'kg', quantidadeComprada: 1, valorProdutos: 10, valorFrete: 0, valorDesconto: 0, valorTotalPago: 10, custoUnitario: 10, dataCompra: '2025-10-07T00:00:00.000Z', registradoEm: '2025-10-07T00:00:00.000Z' },
+      { materialId: 1, nomeMaterial: 'Recente', unidade: 'kg', quantidadeComprada: 1, valorProdutos: 12, valorFrete: 0, valorDesconto: 0, valorTotalPago: 12, custoUnitario: 12, dataCompra: '2025-10-09T00:00:00.000Z', registradoEm: '2025-10-09T00:00:00.000Z' },
+    ])
+
+    expect(await limparHistoricoPrecosVencido(new Date('2026-10-08T00:00:00.000Z'))).toBe(1)
+    expect((await listarHistoricoPrecosMateriais()).map((registro) => registro.nomeMaterial)).toEqual(['Recente'])
   })
 
   it('atualiza nome, unidade e custo de um material existente', async () => {

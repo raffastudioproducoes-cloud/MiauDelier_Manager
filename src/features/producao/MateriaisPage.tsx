@@ -87,6 +87,14 @@ function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function lerValorMonetario(valor: string): number {
+  const texto = valor.trim()
+  if (!texto) return 0
+  const normalizado = texto.includes(',') ? texto.replaceAll('.', '').replace(',', '.') : texto
+  const numero = Number(normalizado)
+  return Number.isFinite(numero) ? numero : 0
+}
+
 // Tipo de ID de aba de filtro: pode ser 'todos', um dos IDs padrão, ou 'cat_<id>' para divisões customizadas
 type FiltroId = 'todos' | TipoClassificacaoMaterial | string
 
@@ -106,6 +114,7 @@ export function MateriaisPage() {
   const [compraQtd, setCompraQtd] = useState('')
   const [compraValorTotal, setCompraValorTotal] = useState('')
   const [compraValorFrete, setCompraValorFrete] = useState('')
+  const [compraValorDesconto, setCompraValorDesconto] = useState('')
   const [compraAtualizarCusto, setCompraAtualizarCusto] = useState(true)
   const [compraContaId, setCompraContaId] = useState('')
   const [compraData, setCompraData] = useState(() => new Date().toISOString().slice(0, 10))
@@ -146,6 +155,7 @@ export function MateriaisPage() {
     setCompraQtd('')
     setCompraValorTotal('')
     setCompraValorFrete('')
+    setCompraValorDesconto('')
     setCompraAtualizarCusto(true)
     setCompraContaId('')
     setCompraData(new Date().toISOString().slice(0, 10))
@@ -187,17 +197,18 @@ export function MateriaisPage() {
     evento.preventDefault()
     setErroCompra(null)
 
-    const qtd = Number(compraQtd)
-    const valorProdutos = Number(compraValorTotal) || 0
-    const valorFrete = Number(compraValorFrete) || 0
-    const valorTotal = valorProdutos + valorFrete
+    const qtd = lerValorMonetario(compraQtd)
+    const valorProdutos = lerValorMonetario(compraValorTotal)
+    const valorFrete = lerValorMonetario(compraValorFrete)
+    const valorDesconto = lerValorMonetario(compraValorDesconto)
+    const valorTotal = valorProdutos + valorFrete - valorDesconto
 
     if (!Number.isFinite(qtd) || qtd <= 0) {
       setErroCompra('Informe uma quantidade comprada válida e maior que zero.')
       return
     }
     if (!Number.isFinite(valorTotal) || valorTotal < 0) {
-      setErroCompra('Informe o valor total pago (ou 0 se for brinde/amostra).')
+      setErroCompra('O desconto não pode ser maior que o total de produtos e frete.')
       return
     }
 
@@ -214,7 +225,9 @@ export function MateriaisPage() {
           materialId: matId,
           quantidadeComprada: qtd,
           valorTotalPago: valorTotal,
+          valorProdutos,
           valorFrete: valorFrete > 0 ? valorFrete : undefined,
+          valorDesconto: valorDesconto > 0 ? valorDesconto : undefined,
           atualizarCustoUnitario: compraAtualizarCusto,
           novoCustoUnitarioCalculado,
           contaIdFinanceira: compraContaId ? Number(compraContaId) : undefined,
@@ -264,7 +277,9 @@ export function MateriaisPage() {
           },
           quantidadeComprada: qtd,
           valorTotalPago: valorTotal,
+          valorProdutos,
           valorFrete: valorFrete > 0 ? valorFrete : undefined,
+          valorDesconto: valorDesconto > 0 ? valorDesconto : undefined,
           atualizarCustoUnitario: true,
           novoCustoUnitarioCalculado,
           contaIdFinanceira: compraContaId ? Number(compraContaId) : undefined,
@@ -306,6 +321,11 @@ export function MateriaisPage() {
   }
 
   const materialSelecionadoCompra = materiais.find((m) => String(m.id) === compraMaterialId)
+  const quantidadeCompra = lerValorMonetario(compraQtd)
+  const valorProdutosCompra = lerValorMonetario(compraValorTotal)
+  const valorFreteCompra = lerValorMonetario(compraValorFrete)
+  const valorDescontoCompra = lerValorMonetario(compraValorDesconto)
+  const totalCompra = valorProdutosCompra + valorFreteCompra - valorDescontoCompra
   const valorTotalEstoque = materiais.reduce((acc, m) => acc + m.quantidadeEstoque * m.custoUnitario, 0)
   const itensEstoqueBaixo = materiais.filter((m) => m.quantidadeEstoque <= 0).length
 
@@ -638,13 +658,14 @@ export function MateriaisPage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div>
                       <TextField
                         id="compra-qtd"
                         rotulo={`Quantidade Comprada ${materialSelecionadoCompra ? `(${materialSelecionadoCompra.unidade})` : ''}`}
-                        type="number"
-                        step="any"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Ex: 20 ou 0,5"
                         value={compraQtd}
                         onChange={(e) => setCompraQtd(e.target.value)}
                       />
@@ -654,7 +675,7 @@ export function MateriaisPage() {
                           <span>
                             <strong>Estoque atual:</strong> {materialSelecionadoCompra.quantidadeEstoque}{' '}
                             {materialSelecionadoCompra.unidade}. Novo total:{' '}
-                            {materialSelecionadoCompra.quantidadeEstoque + (Number(compraQtd) || 0)}{' '}
+                            {materialSelecionadoCompra.quantidadeEstoque + quantidadeCompra}{' '}
                             {materialSelecionadoCompra.unidade}.
                           </span>
                         </p>
@@ -663,38 +684,46 @@ export function MateriaisPage() {
                     <TextField
                       id="compra-valor-total"
                       rotulo="Valor dos Produtos (R$)"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex: 3.031,19"
                       value={compraValorTotal}
                       onChange={(e) => setCompraValorTotal(e.target.value)}
                     />
                     <TextField
                       id="compra-valor-frete"
                       rotulo="Valor do Frete (R$ - opcional)"
-                      type="number"
-                      step="0.01"
-                      placeholder="Ex: 20.00"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex: 95,78"
                       value={compraValorFrete}
                       onChange={(e) => setCompraValorFrete(e.target.value)}
                     />
+                    <TextField
+                      id="compra-valor-desconto"
+                      rotulo="Desconto (R$ - opcional)"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex: 50,00"
+                      value={compraValorDesconto}
+                      onChange={(e) => setCompraValorDesconto(e.target.value)}
+                    />
                   </div>
 
-                  {Number(compraQtd) > 0 && (Number(compraValorTotal) >= 0 || Number(compraValorFrete) > 0) && (
+                  {quantidadeCompra > 0 && (compraValorTotal || compraValorFrete || compraValorDesconto) && (
                     <div className="rounded-lg bg-surface-container-high p-3 text-sm text-on-surface">
                       <p className="font-semibold text-primary">
-                        Custo Unitário desta compra (com frete):{' '}
-                        {formatarMoeda((Number(compraValorTotal) + Number(compraValorFrete || 0)) / Number(compraQtd))}/{' '}
+                        Custo Unitário desta compra:{' '}
+                        {formatarMoeda(totalCompra / quantidadeCompra)}/{' '}
                         {materialSelecionadoCompra
                           ? materialSelecionadoCompra.unidade
                           : compraNovoUnidadeSelecao === '__outra__'
                             ? compraNovoUnidadeCustom || 'un'
                             : compraNovoUnidadeSelecao}
                       </p>
-                      {Number(compraValorFrete) > 0 && (
-                        <p className="mt-0.5 text-xs text-on-surface-variant">
-                          Produtos: {formatarMoeda(Number(compraValorTotal))} + Frete: {formatarMoeda(Number(compraValorFrete))} = Total: {formatarMoeda(Number(compraValorTotal) + Number(compraValorFrete))}
-                        </p>
-                      )}
+                      <p className="mt-0.5 text-xs text-on-surface-variant">
+                        Produtos: {formatarMoeda(valorProdutosCompra)} + Frete: {formatarMoeda(valorFreteCompra)} - Desconto: {formatarMoeda(valorDescontoCompra)} = Total: {formatarMoeda(totalCompra)}
+                      </p>
                     </div>
                   )}
 

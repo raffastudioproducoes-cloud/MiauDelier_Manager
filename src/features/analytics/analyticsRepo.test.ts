@@ -35,4 +35,18 @@ describe('resumo de analytics', () => {
     expect(resumo.receitaTotal).toBe(0)
     expect(resumo.margem).toBe(0)
   })
+
+  it('agrega descontos e expõe o histórico de preço no período', async () => {
+    await db.historicoPrecosMateriais.bulkAdd([
+      { materialId: 1, nomeMaterial: 'Resina', unidade: 'kg', quantidadeComprada: 2, valorProdutos: 200, valorFrete: 20, valorDesconto: 30, valorTotalPago: 190, custoUnitario: 95, dataCompra: '2026-06-10T00:00:00.000Z', registradoEm: '2026-06-10T00:00:00.000Z' },
+      { materialId: 1, nomeMaterial: 'Resina', unidade: 'kg', quantidadeComprada: 1, valorProdutos: 120, valorFrete: 0, valorDesconto: 0, valorTotalPago: 120, custoUnitario: 120, dataCompra: '2026-07-10T00:00:00.000Z', registradoEm: '2026-07-10T00:00:00.000Z' },
+    ])
+
+    const resumo = await obterResumoAnalytics('2026-06', '2026-07')
+
+    expect(resumo.descontoTotal).toBe(30)
+    expect(resumo.comprasComDesconto).toHaveLength(1)
+    expect(resumo.historicoPrecos).toHaveLength(2)
+    expect(resumo.historicoPrecos[0]).toMatchObject({ nomeMaterial: 'Resina', custoUnitario: 120 })
+  })
 })
