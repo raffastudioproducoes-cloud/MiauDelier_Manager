@@ -19,7 +19,8 @@ function response(body: Record<string, unknown>, status = 200, origin?: string |
     headers.set('Access-Control-Allow-Origin', origin)
     headers.set('Vary', 'Origin')
   }
-  return new Response(JSON.stringify(body), { status, headers })
+  // HTTP 204 forbids a response body; preflight otherwise fails before the POST.
+  return new Response(status === 204 ? null : JSON.stringify(body), { status, headers })
 }
 
 Deno.serve(async (request) => {
