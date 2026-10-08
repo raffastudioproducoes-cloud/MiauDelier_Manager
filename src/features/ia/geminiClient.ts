@@ -8,12 +8,22 @@ export class IaIndisponivelError extends Error {
   }
 }
 
+async function mensagemErroDaFunction(error: unknown): Promise<string | null> {
+  if (!error || typeof error !== 'object' || !('context' in error)) return null
+  const context = error.context
+  if (!(context instanceof Response)) return null
+  const body = await context.clone().json().catch(() => null) as { error?: unknown } | null
+  return typeof body?.error === 'string' ? body.error : null
+}
+
 async function chamarGemini(contents: Array<{ role?: string; parts: Array<{ text: string }> }>): Promise<string> {
   const { data, error } = await supabase.functions.invoke<{ text?: string; error?: string }>('gemini', {
     body: { action: 'generate', contents },
   })
 
-  if (error) throw new IaIndisponivelError('Não foi possível consultar o assistente agora.')
+  if (error) {
+    throw new IaIndisponivelError(await mensagemErroDaFunction(error) ?? 'Não foi possível consultar o assistente agora.')
+  }
   if (!data?.text) throw new IaIndisponivelError(data?.error ?? 'Configure uma chave Gemini válida nas configurações.')
   return data.text
 }
@@ -42,7 +52,6 @@ export async function pedirRespostaChat(historico: MensagemIA[], novaPergunta: s
   ]
 
   const contents: Array<{ role: string; parts: Array<{ text: string }> }> = []
-  
   // Agrupar mensagens subsequentes do mesmo autor (previne erro 400 do Gemini)
   for (const item of rawHistory) {
     const last = contents[contents.length - 1]
@@ -55,7 +64,6 @@ export async function pedirRespostaChat(historico: MensagemIA[], novaPergunta: s
 
   // Limite de comandos (últimas 40 interações - equivalente a 20 idas e voltas)
   const contentsLimitado = contents.slice(-40)
-
   if (contentsLimitado.length > 0 && contentsLimitado[0].role === 'model') {
     contentsLimitado.unshift({ role: 'user', parts: [{ text: '(O usuário abriu o aplicativo e você enviou uma mensagem de boas-vindas com o resumo do ateliê.)' }] })
   }

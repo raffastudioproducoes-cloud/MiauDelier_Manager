@@ -3,6 +3,14 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 type GeminiContent = { role?: string; parts: Array<{ text: string }> }
 
+function mensagemErroGemini(status: number) {
+  if (status === 400) return 'O Gemini recusou esta solicitação. Tente reformular a pergunta.'
+  if (status === 401 || status === 403) return 'A chave Gemini é inválida ou não tem acesso a este modelo.'
+  if (status === 404) return 'O modelo Gemini configurado não está disponível para esta chave.'
+  if (status === 429) return 'O limite de uso da chave Gemini foi atingido. Tente novamente mais tarde.'
+  return 'O Gemini está indisponível agora. Tente novamente em alguns minutos.'
+}
+
 const allowedOrigins = new Set([
   'https://miaudelier-manager-testes.pages.dev',
   'https://raffastudioproducoes-cloud.github.io',
@@ -67,7 +75,10 @@ Deno.serve(async (request) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: body.contents }),
   })
-  if (!geminiResponse.ok) return response({ error: 'Gemini não respondeu à solicitação.' }, 502, origin)
+  if (!geminiResponse.ok) {
+    console.error('Gemini upstream request failed', { status: geminiResponse.status, statusText: geminiResponse.statusText })
+    return response({ error: mensagemErroGemini(geminiResponse.status) }, 502, origin)
+  }
 
   const geminiData = await geminiResponse.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
   const text = geminiData.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('').trim()
