@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { useAuthStore } from '../../stores/authStore'
 import { ToastProvider } from '../ui/ToastProvider'
 
@@ -17,10 +17,11 @@ describe('AppShell', () => {
     expect(screen.getByText('Conteúdo da página')).toBeInTheDocument()
   })
 
-  it('botão Sair chama sair() da store', () => {
-    const sairSpy = vi.spyOn(useAuthStore.getState(), 'sair')
+  it('botão Sair encerra a sessão e volta ao login', async () => {
+    const sairSpy = vi.spyOn(useAuthStore.getState(), 'sair').mockResolvedValueOnce()
     render(<ToastProvider><AppShell><p>x</p></AppShell></ToastProvider>)
     fireEvent.click(screen.getByRole('button', { name: /sair/i }))
     expect(sairSpy).toHaveBeenCalledOnce()
+    await waitFor(() => expect(navegarMock).toHaveBeenCalledWith({ to: '/login' }))
   })
 })

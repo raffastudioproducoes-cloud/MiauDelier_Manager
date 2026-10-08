@@ -50,9 +50,12 @@ describe('authStore', () => {
     expect(useAuthStore.getState().autenticado).toBe(true)
   })
 
-  it('sai e limpa o estado autenticado', async () => {
+  it('encerra a sessão Supabase e limpa o estado autenticado', async () => {
+    const { supabase } = await import('../lib/supabase')
+    const signOutSpy = vi.spyOn(supabase.auth, 'signOut').mockResolvedValueOnce({ error: null } as any)
     await useAuthStore.getState().criarConta('senha-forte')
-    useAuthStore.getState().sair()
+    await useAuthStore.getState().sair()
+    expect(signOutSpy).toHaveBeenCalledOnce()
     expect(useAuthStore.getState().autenticado).toBe(false)
   })
 

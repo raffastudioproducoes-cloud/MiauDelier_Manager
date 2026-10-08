@@ -319,6 +319,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     setMenuAberto(false)
   }
 
+  async function encerrarSessao() {
+    await sair()
+    setMenuAberto(false)
+    navigate({ to: '/login' })
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-on-surface md:flex-row">
       {/* Header Mobile */}
@@ -477,7 +483,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {/* Botão Sair */}
           <Button
             variante="ghost"
-            onClick={sair}
+            onClick={() => void encerrarSessao()}
             className={cn('w-full justify-start text-error hover:bg-error/10 hover:text-error', retraido && 'justify-center px-2')}
           >
             <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

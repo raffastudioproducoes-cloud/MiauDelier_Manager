@@ -11,7 +11,7 @@ interface AuthState {
   criarConta: (senha: string) => Promise<void>
   recuperarConta: (novaSenha: string) => Promise<boolean>
   alterarSenha: (novaSenha: string) => Promise<void>
-  sair: () => void
+  sair: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -66,8 +66,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     await dbAlterarSenha(novaSenha)
   },
 
-  sair: () => {
-    clearSession()
-    set({ autenticado: false })
+  sair: async () => {
+    try {
+      await supabase.auth.signOut()
+    } finally {
+      clearSession()
+      set({ contaConfigurada: false, autenticado: false })
+    }
   },
 }))

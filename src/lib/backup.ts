@@ -122,7 +122,7 @@ export async function importarBackup(json: string, targetDb?: MiauDelierDB): Pro
 
     await logInfo('backup', 'Backup MiauDelier restaurado com sucesso', { checksum: parsed.checksum })
 
-    useAuthStore.getState().sair()
+    await useAuthStore.getState().sair()
   } catch (err) {
     await logError('backup', `Erro na restauração do backup JSON: ${err instanceof Error ? err.message : String(err)}`, err)
     throw err
