@@ -52,9 +52,9 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-window.requestAnimationFrame(() => {
+window.setTimeout(() => {
   const splash = document.getElementById('pwa-splash')
   if (!splash) return
   splash.classList.add('is-ready')
   window.setTimeout(() => splash.remove(), 180)
-})
+}, 2_000)
