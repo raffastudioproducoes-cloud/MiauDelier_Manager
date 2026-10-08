@@ -4,21 +4,38 @@ import { Button } from '../../components/ui/Button'
 import { pedirDicaIA } from '../ia/geminiClient'
 import type { ResumoDashboard } from './dashboardRepo'
 
-const CACHE_KEY = 'miaudelier_resumo_ia_cache_v1'
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000 // 24 horas
+const CACHE_KEY = 'miaudelier_resumo_ia_cache_v2'
+const CACHE_DURATION_MS = 6 * 60 * 60 * 1000
 
 interface CacheResumoIa {
   resposta: string
   origem: 'gemini' | 'local'
   timestamp: number
+  assinatura: string
 }
 
-function obterCacheValido(): CacheResumoIa | null {
+function assinaturaDoResumo(resumo: ResumoDashboard): string {
+  return JSON.stringify({
+    saldoTotal: resumo.saldoTotal,
+    lucroDoMes: resumo.lucroDoMes,
+    materiaisEstoqueBaixo: resumo.materiaisEstoqueBaixo,
+    pecasEmProducao: resumo.pecasEmProducao,
+    pecasEmCura: resumo.pecasEmCura,
+    pedidosAbertos: resumo.pedidosAbertos,
+    pedidosAtrasados: resumo.pedidosAtrasados,
+    pecasSemPreco: resumo.pecasSemPreco,
+    descontoCompras90Dias: resumo.descontoCompras90Dias,
+    comprasComDesconto90Dias: resumo.comprasComDesconto90Dias,
+    tendenciasPrecoMateriais: resumo.tendenciasPrecoMateriais,
+  })
+}
+
+function obterCacheValido(assinatura: string): CacheResumoIa | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
     const parsed: CacheResumoIa = JSON.parse(raw)
-    if (!parsed || typeof parsed.timestamp !== 'number' || !parsed.resposta) return null
+    if (!parsed || typeof parsed.timestamp !== 'number' || !parsed.resposta || parsed.assinatura !== assinatura) return null
     const idade = Date.now() - parsed.timestamp
     if (idade < CACHE_DURATION_MS) {
       return parsed
@@ -29,12 +46,13 @@ function obterCacheValido(): CacheResumoIa | null {
   }
 }
 
-function salvarCache(resposta: string, origem: 'gemini' | 'local') {
+function salvarCache(resposta: string, origem: 'gemini' | 'local', assinatura: string) {
   try {
     const item: CacheResumoIa = {
       resposta,
       origem,
       timestamp: Date.now(),
+      assinatura,
     }
     localStorage.setItem(CACHE_KEY, JSON.stringify(item))
   } catch {
@@ -43,15 +61,29 @@ function salvarCache(resposta: string, origem: 'gemini' | 'local') {
 }
 
 function montarPergunta(resumo: ResumoDashboard): string {
-  return `Você é consultora sênior de negócios para ateliês de resina epóxi e artesanato. Com base nestes números atuais do ateliê, escreva uma análise executiva direta e prática (de 3 a 5 frases):
+  const tendencias = resumo.tendenciasPrecoMateriais.length > 0
+    ? resumo.tendenciasPrecoMateriais.map((tendencia) =>
+      `- ${tendencia.nomeMaterial}: custo por ${tendencia.unidade} mudou de R$ ${tendencia.custoAnterior.toFixed(2)} em ${tendencia.dataAnterior} para R$ ${tendencia.custoAtual.toFixed(2)} em ${tendencia.dataAtual} (${tendencia.variacaoPercentual.toFixed(1)}%).`,
+    ).join('\n')
+    : '- Ainda não há duas compras registradas de um mesmo material para comparar preços.'
+
+  return `Você é uma consultora sênior de gestão para ateliês de resina epóxi e artesanato. Use SOMENTE os fatos abaixo; não invente épocas promocionais, preços de mercado, prazos ou tendências externas.
+
+Dados atuais do ateliê:
 - Saldo total em caixa: R$ ${resumo.saldoTotal.toFixed(2)}
-- Lucro do mês: R$ ${resumo.lucroDoMes.toFixed(2)}
+- Resultado financeiro do mês: R$ ${resumo.lucroDoMes.toFixed(2)}
 - Peças em produção: ${resumo.pecasEmProducao}
 - Peças em cura no ateliê: ${resumo.pecasEmCura}
 - Materiais com estoque baixo/crítico: ${resumo.materiaisEstoqueBaixo}
 - Pedidos em aberto: ${resumo.pedidosAbertos}
+- Pedidos com prazo vencido: ${resumo.pedidosAtrasados}
+- Peças ativas sem preço de venda definido: ${resumo.pecasSemPreco}
+- Descontos obtidos em compras nos últimos 90 dias: R$ ${resumo.descontoCompras90Dias.toFixed(2)} em ${resumo.comprasComDesconto90Dias} compra(s)
 
-Destaque pontos fortes de caixa, prazos de entrega, precificação e alertas urgentes de reposição de insumos.`
+Comparação entre as duas últimas compras registradas por material:
+${tendencias}
+
+Responda em português do Brasil, com no máximo 4 bullets curtos. Priorize uma ação imediata, uma oportunidade de economia/compra e uma ação de precificação/venda quando os dados permitirem. Cite os valores relevantes. Quando faltarem dados históricos, diga claramente qual registro ainda precisa ser feito; não faça previsões.`
 }
 
 function gerarDiagnosticoLocal(resumo: ResumoDashboard): string {
@@ -75,6 +107,23 @@ function gerarDiagnosticoLocal(resumo: ResumoDashboard): string {
     )
   } else {
     frases.push(`📦 Estoque de insumos abastecido e sob controle.`)
+  }
+
+  if (resumo.pedidosAtrasados > 0) {
+    frases.push(`⏰ Prazo: ${resumo.pedidosAtrasados} pedido(s) já passou/passaram da data de entrega. Priorize a confirmação com o cliente e a finalização.`)
+  }
+
+  if (resumo.pecasSemPreco > 0) {
+    frases.push(`🏷️ Precificação: ${resumo.pecasSemPreco} peça(s) ativa(s) ainda não possui(em) preço de venda. Complete a precificação antes de anunciar ou aceitar pedidos.`)
+  }
+
+  if (resumo.comprasComDesconto90Dias > 0) {
+    frases.push(`💡 Economia: foram aproveitados R$ ${resumo.descontoCompras90Dias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em descontos nas últimas ${resumo.comprasComDesconto90Dias} compra(s). Continue registrando cupom e frete para comparar fornecedores.`)
+  }
+
+  const aumentoMaior = resumo.tendenciasPrecoMateriais.find((tendencia) => tendencia.variacaoPercentual >= 5)
+  if (aumentoMaior) {
+    frases.push(`📈 Compra: o custo de ${aumentoMaior.nomeMaterial} subiu ${aumentoMaior.variacaoPercentual.toFixed(1)}% na última reposição. Revise o custo das próximas peças antes de manter o mesmo preço de venda.`)
   }
 
   // Produção e Cura
@@ -101,10 +150,11 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
   const [resposta, setResposta] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
   const [origem, setOrigem] = useState<'gemini' | 'local'>('local')
+  const assinatura = assinaturaDoResumo(resumo)
 
   async function gerarResumo(forcarAtualizacao = false) {
     if (!forcarAtualizacao) {
-      const cacheValido = obterCacheValido()
+      const cacheValido = obterCacheValido(assinatura)
       if (cacheValido) {
         setResposta(cacheValido.resposta)
         setOrigem(cacheValido.origem)
@@ -118,13 +168,13 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
       if (!montado.current) return
       setResposta(textoGemini)
       setOrigem('gemini')
-      salvarCache(textoGemini, 'gemini')
+      salvarCache(textoGemini, 'gemini', assinatura)
     } catch {
       if (!montado.current) return
       const textoLocal = gerarDiagnosticoLocal(resumo)
       setResposta(textoLocal)
       setOrigem('local')
-      salvarCache(textoLocal, 'local')
+      salvarCache(textoLocal, 'local', assinatura)
     } finally {
       if (montado.current) setCarregando(false)
     }
@@ -138,7 +188,7 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
       montado.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resumo.saldoTotal, resumo.lucroDoMes, resumo.materiaisEstoqueBaixo, resumo.pecasEmProducao, resumo.pedidosAbertos])
+  }, [assinatura])
 
   return (
     <Card className="glow-hover bg-gradient-to-br from-surface via-surface-container-low/50 to-surface-container/30 border border-outline-variant/40 shadow-lg p-5 rounded-2xl transition-all">
@@ -167,7 +217,7 @@ export function ResumoLojaCard({ resumo }: { resumo: ResumoDashboard }) {
             <span>Gerando diagnóstico inteligente do ateliê...</span>
           </div>
         ) : (
-          <p className="text-xs sm:text-sm leading-relaxed text-on-surface font-normal">
+          <p className="whitespace-pre-line text-xs font-normal leading-relaxed text-on-surface sm:text-sm">
             {resposta || gerarDiagnosticoLocal(resumo)}
           </p>
         )}

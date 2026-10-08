@@ -17,6 +17,11 @@ const RESUMO_VAZIO: ResumoDashboard = {
   pecasEmCura: 0,
   materiaisEstoqueBaixo: 0,
   pedidosAbertos: 0,
+  pedidosAtrasados: 0,
+  pecasSemPreco: 0,
+  descontoCompras90Dias: 0,
+  comprasComDesconto90Dias: 0,
+  tendenciasPrecoMateriais: [],
   fluxoCaixa14Dias: [],
   eventosRecentes: [],
 }
