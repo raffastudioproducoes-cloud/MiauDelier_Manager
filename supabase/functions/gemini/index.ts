@@ -76,7 +76,9 @@ Deno.serve(async (request) => {
     if (!apiKey) return response({ status: 'disconnected', message: 'Desconectado: nenhuma chave Gemini cadastrada.' }, 200, origin)
 
     try {
-      const verification = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash?key=' + encodeURIComponent(apiKey))
+      const verification = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash', {
+        headers: { 'x-goog-api-key': apiKey },
+      })
       if (!verification.ok) return response({ status: 'problem', message: mensagemErroGemini(verification.status) }, 200, origin)
       return response({ status: 'connected', message: 'Conectado: chave cadastrada e conexão verificada.' }, 200, origin)
     } catch {
@@ -91,9 +93,9 @@ Deno.serve(async (request) => {
   const { data: apiKey, error: keyError } = await admin.rpc('get_user_gemini_key', { p_user_id: user.id })
   if (keyError || !apiKey) return response({ error: 'Configure uma chave Gemini nas configurações para usar o assistente.' }, 400, origin)
 
-  const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey), {
+  const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({ contents: body.contents }),
   })
   if (!geminiResponse.ok) {

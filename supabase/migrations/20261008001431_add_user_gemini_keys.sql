@@ -69,4 +69,4 @@ CREATE TRIGGER delete_user_gemini_key_secret
 REVOKE ALL ON FUNCTION public.set_user_gemini_key(uuid, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.get_user_gemini_key(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.set_user_gemini_key(uuid, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.get_user_gemini_key(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_user_gemini_key(uuid) TO service_role;;

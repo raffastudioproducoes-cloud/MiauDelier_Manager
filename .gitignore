@@ -22,7 +22,12 @@ dist
 !**/.env.example
 !**/.env.sample
 !**/.env.template
-!**/.env.production
+test_supa*.js
+test_supa_connection.ts
+test_rest*.js
+test_columns.cjs
+downloaded_bundle.js
+artifact.tar
 *.pem
 *.key
 *.p12

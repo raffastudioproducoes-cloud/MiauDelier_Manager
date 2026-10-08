@@ -83,22 +83,7 @@ export function LoginForm() {
           if (error.message.toLowerCase().includes('email not confirmed')) {
             setErro('Por favor, verifique sua caixa de e-mail e confirme sua conta antes de fazer o login.')
           } else {
-            const { data: hint, error: hintError } = await supabase.functions.invoke<{ provider?: string }>('auth-login-hint', {
-              body: { email },
-            })
-            const provider = hint?.provider === 'google' || hint?.provider === 'apple' ? hint.provider : null
-            if (hintError) {
-              setErro('Não foi possível verificar a forma de acesso desta conta. Tente novamente.')
-            } else if (provider) {
-              const nomeProvedor = provider === 'google' ? 'Google' : 'Apple'
-              setErro(`Esta conta está vinculada ao ${nomeProvedor}. Entre usando o botão ${nomeProvedor} abaixo.`)
-            } else {
-              setErro('Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar.')
-              setTimeout(() => {
-                setErro('Complete os dados para criar sua conta.')
-                setModoCadastro(true)
-              }, 2500)
-            }
+            setErro('Conta não encontrada ou senha incorreta. Use “Criar Conta” para se cadastrar ou entre com Google/Apple.')
           }
           setEnviando(false)
           setMostrarOverlay(false)

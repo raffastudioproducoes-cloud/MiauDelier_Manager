@@ -22,10 +22,12 @@ Este documento apresenta a auditoria estática de segurança do **MiauDelier Man
 - **Veredito / Ação:** **Seguro e Conforme.** A delegação da autenticação para o Supabase aumentou significativamente a barreira defensiva.
 
 ## 4. Políticas de Row Level Security (RLS)
-- **Contexto:** A Fase 7 do MiauDelier utilizará **Supabase (PostgreSQL)**. O conceito essencial de segurança para este caso é o **Row Level Security (RLS)** nativo do banco relacional.
-- **Estado Atual (Local-first):** Não se aplica (IndexedDB é unicamente local e isolado por domínio).
-- **Fase 7 (Supabase):** 
-- **Veredito / Ação:** **Ponto de Atenção Crítico para Fase 7.** O banco de dados em nuvem deverá ser provisionado com regras estritas garantindo o acesso isolado por _tenant_ (usuário). Regra mandatória a ser criada para cada tabela:
+- **Contexto:** O Supabase PostgreSQL está em uso para sincronização, autenticação e dados do aplicativo. O RLS é a barreira primária contra BOLA/IDOR.
+- **Estado atual:** as migrations versionadas habilitam RLS nas tabelas de negócio e restringem os registros ao `auth.uid() = user_id`; `sync_events` também valida a posse do perfil antes de leitura ou inserção.
+- **Funções privilegiadas:** RPCs de exclusão e de chave Gemini usam `SECURITY DEFINER`, `search_path` explícito e execução revogada de `public` e `anon`; as permissões necessárias são concedidas de modo específico.
+- **Chaves Gemini:** `user_gemini_keys` não permite leitura ou escrita direta por `anon` ou `authenticated`; uma política restritiva explícita complementa os `REVOKE`s. Apenas a Edge Function autenticada com `service_role` resolve a chave do próprio usuário.
+- **Exceção revisada:** `delete_user_account()` e `delete_user_data()` permanecem executáveis por `authenticated` porque são fluxos de autoexclusão. Elas não recebem um identificador de alvo e sempre usam `auth.uid()`, impedindo exclusão de conta de terceiros.
+- **Veredito / ação:** **Implementado e sujeito a revisão a cada migration.** Para novas tabelas multi-tenant, aplicar a regra abaixo antes de expor qualquer acesso:
   ```sql
   CREATE POLICY "Isolamento por usuário"
   ON tabela
@@ -48,8 +50,8 @@ Este documento apresenta a auditoria estática de segurança do **MiauDelier Man
 
 ---
 
-### Resumo do Plano de Ação para a Fase 7
-Para garantir que a transição para a nuvem não introduza falhas, a engenharia de segurança determina os seguintes requisitos para a Fase 7:
+### Requisitos contínuos de segurança
+Para evitar regressões na arquitetura em nuvem, a engenharia de segurança mantém os seguintes requisitos:
 1. **Regras de Segurança Estritas (RLS multi-tenant):** Nenhuma tabela do PostgreSQL no Supabase pode ficar pública. O RLS deve verificar `auth.uid() = user_id` E o aplicativo deve isolar as visões pelo `perfil_id`, garantindo suporte seguro para até 10 perfis por usuário.
 2. **Dados de negócio sem cifra interna:** Não reintroduzir AES-GCM, DEK/KEK ou Senha do Cofre no navegador. A proteção aprovada é Supabase Auth, RLS, HTTPS e controle de segredos nas Edge Functions.
 3. **Mesclagem Segura de Contas:** Ao vincular um login social (Google/Apple), a mesclagem deve ocorrer apenas para uma sessão já autenticada e usar o fluxo de *manual linking* do Supabase.
@@ -61,3 +63,7 @@ Para garantir que a transição para a nuvem não introduza falhas, a engenharia
   - **Exclusão de Dados (Zerar):** O usuário pode limpar toda a sua base de dados (faturas, peças, clientes) do perfil local e, simultaneamente, disparar um evento (via RPC `delete_user_data()`) que apaga o registro remoto, sem destruir a própria conta na nuvem.
   - **Exclusão de Conta (Delete Account):** Ao excluir o perfil principal na aba de Perfil, o aplicativo aciona a exclusão integral da conta no Auth do Supabase (via RPC `delete_user_account()`). Esse gatilho desencadeia cascatas (`ON DELETE CASCADE`) que destroem o vinculo OAuth, senhas, `user_keys` e toda a infraestrutura `sync_events` e metadados. Adicionalmente, todos os bancos de dados locais IndexedDB e `localStorage` são expurgados no mesmo evento.
 - **Veredito / Ação:** **Seguro e Conforme.** As garantias de Direito ao Esquecimento foram asseguradas nas pontas do cliente (aparelho) e do servidor (Supabase).
+
+## 8. Limitação do Plano Free
+- **Proteção contra senhas vazadas:** o Supabase Advisor recomenda bloquear senhas presentes em bases de vazamentos, mas o painel informa que esse controle requer o plano Pro. No plano Free, permanecem ativos confirmação de e-mail, requisitos mínimos de senha e os limites nativos de autenticação.
+- **Ação futura:** ao migrar para Pro, acessar **Authentication > Sign In / Providers > Email** e ativar **Prevent use of leaked passwords**.

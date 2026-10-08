@@ -16,4 +16,4 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.get_login_provider_hint(text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.get_login_provider_hint(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_login_provider_hint(text) TO service_role;;
