@@ -50,7 +50,7 @@ export function ConfiguracoesPage() {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar configurações.', 'erro')
     })
-    recarregarEstadoGemini()
+    recarregarEstadoGemini().catch(() => undefined)
     return () => {
       montado.current = false
     }
