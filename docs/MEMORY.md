@@ -6,8 +6,8 @@ Este documento atua como a memória operacional viva do projeto **MiauDelier Man
 
 ## 1. Última Atualização
 
-- **Data**: 29/09/2026
-- **Horário**: 02:20 (BRT)
+- **Data**: 08/10/2026
+- **Horário**: 03:30 (BRT)
 
 ---
 
@@ -19,7 +19,11 @@ Este documento atua como a memória operacional viva do projeto **MiauDelier Man
 
 ## 3. Status Atual do Projeto
 
-O **MiauDelier Manager** encontra-se em estágio de produção maduro v1.0.0. Todos os módulos principais de domínio (Calculadora de Volume, Precificação, Estoque de Materiais, Formas/Moldes, Peças, Vitrine WhatsApp, Clientes, Pedidos, Financeiro Cifrado, Backup SHA-256, Resumo de IA e Cronômetro de Cura de Resina) estão 100% desenvolvidos, testados e operacionais.
+O **MiauDelier Manager** está em v1.1.0 e possui os módulos principais de cálculo, precificação, estoque, formas, peças, clientes, pedidos, financeiro, backup, IA, autenticação e sincronização. A branch `testes` é a via padrão para validação humana antes de qualquer merge para `main`.
+
+Em 08/10/2026, o dashboard passou a fornecer ao Gemini dados de caixa, resultado do mês, pedidos vencidos, peças sem preço, descontos de compras em 90 dias e variação entre as duas últimas compras de materiais. O modelo é instruído a usar somente esses fatos e declarar quando falta histórico. O cache do resumo é invalidado pela assinatura dos dados e o botão Atualizar força nova consulta.
+
+O PWA recebeu ícones MiauDelier para Android, `theme_color`/`background_color` escuros e uma tela inicial breve com marca, versão, Raffa Studio Produções e selo GitGuard. A validação manual no Android permanece pendente.
 
 Recentemente foram concluídas a funcionalidade de conversão de volume e massa sugerida (Litros e kg para volumes >= 1L; ml e g para volumes < 1L em pt-BR), o seletor flexível de tempo de cura (Dias, Horas, Minutos), o suporte a tempo de uso de equipamentos (minutos, horas, dias), o cronômetro de cura ao vivo com barra de progresso em tempo real, notificações ao concluir sem alteração forçada do status `curando`, e o modal **"➕ Adicionar Tempo de Cura"**.
 
@@ -59,9 +63,9 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 1. **Gestão Não-Intrusiva do Status de Cura**: Quando o tempo de cura de uma peça é concluído, o sistema emite uma notificação em tempo real ("Cura Concluída! 🧪") e destaca o badge na interface, mas **NÃO altera forçadamente o status para `pronta`**. O controle permanece 100% com o artesão/usuário para inspecionar a peça no ateliê, adicionar mais tempo de cura se necessário, ou mover manualmente para desmolde/acabamento.
 2. **Formatação Dinâmica de Volume e Massa**: Formatação pt-BR com vírgula decimal para volumes resinados: se `>= 1000 ml`, exibe em `L` e `kg resina` (densidade média ~1.1g/cm³); se `< 1000 ml`, exibe em `ml` e `g resina`.
 3. **Armazenamento de Imagens em Base64 Redimensionado**: As fotos de moldes e peças são comprimidas via Canvas offscreen para no máximo 800×800px a 80% de qualidade JPEG antes de serem armazenadas no IndexedDB (`imagemUrl?: string`). Isso preserva o suporte offline 100% local-first sem depender de buckets S3/Cloud Storage.
-4. **Criptografia Financeira Cifrada em Repouso**: Nenhum valor monetário de saldo ou transação é salvo em texto claro no IndexedDB. Apenas a camada `camposCifrados.ts` usando WebCrypto PBKDF2 + AES-GCM-256 tem autoridade para cifra/decifra durante uma sessão ativa.
-5. **Evolução Híbrida (Fase 7 - Supabase)**: Decidido integrar Supabase (PostgreSQL + RLS) para armazenamento em nuvem e sincronização com o banco local-first. O sistema terá suporte a Autenticação por Google, Email/Senha e, futuramente, Apple. Substitui a ideia original do Firebase devido ao plano Hobby gratuito excelente do Supabase e sua aderência às regras de RLS nativas do Postgres.
-6. **Fluxo de Autenticação Estrito (Nuvem + Local-First)**: A página padroniza o login como entrada principal. Se a conta não for encontrada (Invalid Credentials), o sistema redireciona para o formulário de cadastro. Após a confirmação de e-mail (via Supabase magic link), o usuário é intencionalmente deslogado de sessões temporárias para forçar o login manual com senha, o qual é requisito obrigatório para gerar/recuperar a chave de criptografia local (DEK) no IndexedDB.
+4. **Segurança no backend:** dados de negócio não possuem cifra interna no navegador. O acesso remoto depende de Supabase Auth, RLS e HTTPS; o IndexedDB é cache de sincronização.
+5. **Evolução híbrida:** Supabase fornece banco, Auth, RLS, Edge Functions e sincronização. Google está ativo; Apple permanece futuro enquanto o provedor não estiver configurado.
+6. **Fluxo de autenticação:** a tela inicial é login. E-mail inexistente segue para cadastro; uma conta vinculada a Google/Apple permanece no login e orienta o uso do provedor correspondente. Após confirmação de e-mail, o usuário retorna ao login e entra com a credencial confirmada.
 
 ---
 

@@ -42,6 +42,13 @@
 
 Versão atual: **v1.1.0** · Idioma: **Português Brasileiro** · Plataforma: **Web (PWA)**
 
+### Estado confirmado em 08/10/2026
+
+- Autenticação por e-mail/senha com confirmação, Google OAuth e vínculo manual de identidades pelo Supabase Auth.
+- Dados sincronizáveis trafegam em JSON normal entre o cache IndexedDB e o Supabase; a proteção de acesso é feita por Auth, RLS e HTTPS. Não há cofre, DEK/KEK nem cifra interna de dados de negócio no cliente.
+- A chave Gemini é enviada somente à Edge Function autenticada e não fica persistida no navegador. O resumo do dashboard usa indicadores financeiros, estoque, prazos, descontos e histórico de custos para recomendações factuais.
+- O PWA usa ícones próprios MiauDelier, cor de sistema escura e uma tela de abertura breve com versão, Raffa Studio Produções e selo GitGuard.
+
 ## Objetivo
 
 Transformar o controle manual do ofício de resina em decisões de produção e preço com base em dado real, permitindo à artesã:
@@ -74,7 +81,7 @@ Transformar o controle manual do ofício de resina em decisões de produção e 
 | **Produção e estoque** | Controle de materiais, formas, peças e ledger imutável de eventos/consumo | ✅ Disponível |
 | **Vendas** | Gerenciamento de clientes, controle de pedidos e orçamentos na tela | ✅ Disponível |
 | **Financeiro** | Contas bancárias e transações via ledger verificado | ✅ Disponível |
-| **Assistente de IA** | Integração aguardando API segura no backend | ⏳ Pendente |
+| **Assistente de IA** | Chat e resumo do dashboard via Edge Function Gemini autenticada | ✅ Disponível |
 
 ## Tecnologias
 
@@ -153,22 +160,18 @@ npx tsc --noEmit
 npm run build
 ```
 
-Gera o bundle de produção em `dist/`. O app é uma SPA estática — qualquer host de arquivos estáticos serve (Cloudflare Pages, Netlify, GitHub Pages). Deploy contínuo (CI) ainda não está configurado; é item do roadmap.
+Gera o bundle de produção em `dist/`. O app é uma SPA estática — qualquer host de arquivos estáticos serve (Cloudflare Pages, Netlify, GitHub Pages). A branch `testes` possui CI de lint, testes, tipagem, build e publicação do artefato de preview.
 
 ## Segurança e privacidade
 
-- Senha nunca é gravada em texto puro nem em log — só um verificador cifrado e o salt ficam persistidos.
-- Chave de criptografia é derivada da senha (PBKDF2 600.000 iterações) e vive só em memória, nunca é salva.
-- Valor de conta e de transação é cifrado (AES-GCM) antes de tocar o disco; sem sessão aberta, a camada de cifra recusa ler ou escrever.
-- Login bloqueia temporariamente (backoff crescente) após 5 tentativas erradas seguidas, persistido no dispositivo — sobrevive a recarregar a página.
-- Backup exportado/importado valida checksum e formato do envelope antes de qualquer escrita no banco; um arquivo corrompido ou incompleto nunca é aplicado parcialmente.
-- Não existe fluxo de recuperação da senha-mestre local (Cofre), que é responsável por cifrar os dados. A plataforma usa autenticação na nuvem (Google/Email), mas a senha do Cofre local não pode ser recuperada remotamente (decisão Zero-Knowledge).
-- Os dados do ateliê são sincronizados, porém cifrados localmente antes do envio, garantindo privacidade ponta a ponta. O assistente de IA usa uma conexão direta protegida.
-- **Exclusão de Conta e Dados (LGPD/GDPR)**: O usuário possui total autonomia para excluir todos os seus dados em nuvem, expurgar seus bancos de dados locais e realizar a exclusão irreversível da sua conta (Supabase Auth, vínculos Google/Apple e chaves) com um único clique.
+- Senhas são tratadas exclusivamente pelo Supabase Auth e não são gravadas pelo aplicativo nem em logs.
+- O frontend contém apenas a URL e a chave publicável do Supabase; `service_role`, segredos OAuth e a chave Gemini não são expostos nele.
+- Acesso remoto é limitado por sessão Supabase, RLS por `user_id`/perfil e HTTPS. O IndexedDB é um cache local sincronizável, sem cifra interna de dados de negócio.
+- Backup valida checksum e formato antes de qualquer escrita; arquivos corrompidos ou incompletos não são aplicados parcialmente.
+- **Exclusão de Conta e Dados (LGPD/GDPR)**: a exclusão da conta remove os dados em nuvem e a limpeza local remove o cache deste dispositivo.
 ## Sincronização em Nuvem e Event Sourcing (Fase 7)
 
-A partir da versão que inclui suporte à nuvem, a sincronização de dados funciona com base em um **Ledger (Event Sourcing) local-first**:
-- **Imutabilidade e Append-Only:** Os dados não são simplesmente atualizados no Supabase. O banco de dados remoto age como um *log cego*, registrando apenas os eventos (criação, edição e exclusão) cifrados pela chave local da usuária. O servidor remoto nunca tem a chave para ler os dados, garantindo privacidade *Zero-Knowledge*.
+A sincronização utiliza um **Ledger (Event Sourcing) local-first**. O cache Dexie registra mudanças e o Supabase recebe eventos JSON protegidos pelas políticas RLS. No login e nas reconexões, o cliente baixa e aplica os eventos autorizados da conta, mantendo os dispositivos sincronizados.
 - **Verificação de Integridade Real (Ledger):** Inspirado em sistemas bancários, **o saldo das contas não pode ser modificado arbitrariamente**. A cada ciclo de sincronização ou reinício, o sistema lê todas as *transações* do livro-razão (ledger), recalcula os saldos e corrige forçosamente a tabela de `contas` se detectar que o valor local foi manipulado sem autorização/transação correspondente, gerando uma trilha de auditoria.
 
 
@@ -176,7 +179,7 @@ A partir da versão que inclui suporte à nuvem, a sincronização de dados func
 
 O MiauDelier Manager é uso proprietário e single-tenant — não há modelo de assinatura nem cobrança dentro do app.
 
-O módulo de IA utiliza a API gratuita do Gemini, sendo ativado somente com internet disponível, e possui restrição instrucional fixa ao domínio do ofício (resina, moldes, produção, precificação). A chave de API fica configurada pela própria usuária e é cifrada localmente pela mesma camada de segurança do restante do app.
+O módulo de IA utiliza Gemini somente quando a usuária configura uma chave e há internet. A chave vai do formulário autenticado à Edge Function e não permanece no navegador. O resumo do dashboard limita as recomendações aos números reais do ateliê, incluindo caixa, resultado, prazos, estoque, descontos e histórico de custos; ele não deve inventar tendências externas.
 
 ## Documentação
 
@@ -184,8 +187,8 @@ Este README é a fonte pública de verdade sobre o projeto. A documentação de 
 
 ## Roadmap
 
-- [x] Fundação: schema, criptografia, login, motores de cálculo, backup
-- [x] Segurança de dados: cifra de campo financeiro, sessão reativa, guard de rota
+- [x] Fundação: schema, autenticação Supabase, motores de cálculo, backup
+- [x] Segurança de dados: Auth, RLS, HTTPS, sessão reativa e guard de rota
 - [x] Design system e shell de navegação
 - [x] Produção e estoque (materiais, formas, peças)
 - [x] Vendas (precificação na tela, clientes, pedidos)

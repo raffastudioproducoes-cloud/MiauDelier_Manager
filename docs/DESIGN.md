@@ -81,3 +81,12 @@ Todos os componentes visuais residem em `src/components/ui/`:
 
 ### 4.7. `<EmptyState>`
 - **Descrição**: Componente para exibição quando uma lista de dados está vazia, contendo título descritivo e instrução.
+
+---
+
+## 5. Identidade PWA
+
+- **Cor do sistema e abertura Android:** `#121416`, igual ao fundo escuro do aplicativo. Não usar o verde legado.
+- **Ícone instalado:** ilustração da gata MiauDelier em cobre sobre fundo escuro, entregue em 64, 192, 512 e máscara Android; não usar bloco de cor sem a marca.
+- **Tela de abertura do HTML:** enquanto o React ainda carrega, mostrar ícone MiauDelier, nome do produto, versão, Raffa Studio Produções e o selo textual GitGuard. Ela desaparece assim que o aplicativo monta.
+- **Fundo e contraste:** cobre/peach `#ffc48d` em fundo `#121416`, mantendo o contraste e o tema do login.

@@ -24,10 +24,11 @@ Este documento estabelece as diretrizes obrigatórias de desenvolvimento, padrõ
 
 ---
 
-## 3. Segurança & Regras de Acesso a Dados Cifrados
+## 3. Segurança & Regras de Acesso aos Dados
 
-1. **Camada de Criptografia Obligatória**: Todo acesso de leitura ou escrita a campos financeiros cifrados (`saldoCriptografado`, `valorCriptografado`) **DEVE** ser feito utilizando os helpers `cifrarCampo()` e `decifrarCampo()` disponíveis em `src/lib/camposCifrados.ts`.
-2. **Proibição de Bypass**: NENHUMA funcionalidade deve acessar ou manipular os campos cifrados do IndexedDB ignorando a verificação de sessão da camada de criptografia.
+1. **Sem segredos no frontend**: somente URL e chave publicável Supabase podem entrar no bundle. `service_role`, credenciais OAuth e chaves de IA ficam no ambiente seguro/Edge Function.
+2. **Autorização obrigatória**: toda tabela e RPC exposta deve respeitar a sessão Supabase e RLS por usuário/perfil; o IndexedDB é cache e não fonte de autorização.
+3. **Dados de negócio sem cifra interna**: não reintroduzir `cifrarCampo`, DEK/KEK ou cofre local. O transporte HTTPS, Auth e RLS são as proteções definidas para este projeto.
 3. **Proibição de Exposição de Segredos**: Nunca inclua chaves de API, tokens, senhas ou segredos em arquivos de código, commits ou documentação markdown.
 4. **Validação Rigorosa de Backup**: Nenhum backup deve ser importado para o banco de dados sem antes verificar o formato do envelope JSON e validar o checksum SHA-256.
 

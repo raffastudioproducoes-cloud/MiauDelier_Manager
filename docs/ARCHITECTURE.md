@@ -1,11 +1,11 @@
 # Arquitetura do Sistema
 
-Este documento descreve a estrutura técnica, os componentes de software, o modelo de dados local-first e os padrões arquiteturais adotados no **MiauDelier Manager**.
+Este documento descreve a estrutura técnica, os componentes de software, o modelo de dados local-first e os padrões arquiteturais adotados no **MiauDelier Manager**. Estado confirmado em 08/10/2026.
 
 ---
 
 ## 1. Arquitetura de Alto Nível
-O **MiauDelier Manager** é construído sob uma arquitetura **Híbrida (Local-First + Cloud Sync)**. As operações de leitura e escrita locais são otimizadas via **IndexedDB/Dexie.js**. A sincronização em nuvem e a identidade do usuário são gerenciadas pelo **Supabase (PostgreSQL + Auth)**, enquanto a criptografia E2EE (Zero-Knowledge) é mantida ativamente local.
+O **MiauDelier Manager** usa uma arquitetura **híbrida (cache local + sincronização em nuvem)**. Dexie/IndexedDB mantém a cópia local para resposta rápida e uso offline; o Supabase fornece identidade, RLS, banco remoto, Edge Functions e transporte HTTPS. Dados de negócio não passam por cifra interna no cliente: o frontend usa somente as chaves públicas de comunicação do Supabase.
 
 ```mermaid
 flowchart TD
@@ -19,15 +19,9 @@ flowchart TD
           EmailOTP["Email + OTP (5 minutos)"]
         end
 
-        subgraph SecurityLayer ["Camada de Segurança Zero-Knowledge"]
-          PBKDF2["Derivação KEKs (Senha/Frase)"]
-          DEKWRAP["DEK Wrappers (Empacotamento)"]
-          AESGCM["Criptografia de Dados (DEK AES-GCM)"]
-        end
-
         subgraph StorageLayer ["Camada de Persistência Local"]
-          Dexie["Dexie.js (IndexedDB wrapper)"]
-          DB[("IndexedDB Local\n(Isolado por perfil_id)")]
+          Dexie["Dexie.js (cache IndexedDB)"]
+          DB[("IndexedDB Local\n(cache por perfil_id)")]
         end
     end
 
@@ -38,18 +32,17 @@ flowchart TD
 
     UI --> AuthLayer
     AuthLayer --> CloudAuth
-    UI --> SecurityLayer
-    SecurityLayer --> Dexie
+    UI --> Dexie
     Dexie <--> Postgres
     Dexie --> DB
 ```
 
-### Fluxo de Autenticação e Dados Cifrados (Login de 2 Passos)
+### Fluxo de Autenticação, Dados e IA
 
-1. **Autenticação de Identidade (Supabase):** O usuário efetua login com Google, Apple, ou Email + OTP (5 min). O Supabase valida a identidade e emite um JWT de sessão. Isso garante acesso à sincronização e respeita o RLS (`auth.uid() = user_id`).
-2. **Desbloqueio e Recuperação do Cofre (DEK/KEK):** Mesmo logado com a nuvem, o usuário **deve** informar a sua **Senha do Cofre** localmente para acessar dados cifrados. O sistema utiliza a senha para derivar uma KEK (Key Encryption Key) via PBKDF2 (600.000 iterações), que por sua vez desempacota a DEK (Data Encryption Key) mestre salva localmente. Caso o usuário perca a senha, ele aciona o recurso "Esqueci minha senha", onde uma **autenticação dupla** é exigida: após reverificar sua identidade provando acesso ao E-mail cadastrado (OTP no Supabase Auth), o sistema faz o download de uma versão de recuperação da DEK previamente empacotada na nuvem. O aplicativo, então, deriva uma KEK de Recuperação (usando o `user_id` do Supabase e um pepper local da aplicação) para desempacotar a DEK, restabelecer a sessão e permitir a criação de uma nova Senha do Cofre.
-3. **Múltiplos Perfis (10 perfis/conta):** Um único `user_id` pode possuir até 10 perfis isolados. Cada registro possui um `perfil_id`. Na nuvem, o RLS permite que o usuário gerencie seus perfis, e localmente o Dexie isola o roteamento de dados por perfil. O recurso de **Mesclar Conta** (para migrar de um perfil puramente local/senha para uma conta Google) é feito de forma segura mediante confirmação com a Senha do Cofre, estando obrigatoriamente logado na tela de gestão de Perfis.
-4. **Escrita/Leitura Cifrada**: Dados financeiros passam pelo helper `cifrarCampo()`/`decifrarCampo()` usando a chave em memória. O banco remoto armazena apenas as strings base64 do payload cifrado.na-se ilegível para os campos protegidos.
+1. **Autenticação de identidade:** o usuário entra por e-mail/senha confirmado, Google ou Apple. O Supabase Auth emite a sessão e o RLS impõe `auth.uid()` nas operações remotas.
+2. **Vínculo de provedores:** uma identidade Google ou Apple pode ser vinculada à conta autenticada quando o projeto Supabase habilita *manual linking*. Depois do vínculo, o login deve usar o provedor correspondente; o formulário não induz a um novo cadastro.
+3. **Sincronização:** alterações do Dexie entram no Ledger local e são enviadas como eventos JSON autorizados. Ao entrar, reconectar ou voltar ao foco, o cliente baixa eventos autorizados e os aplica no cache.
+4. **Gemini:** a chave é enviada apenas para uma Edge Function autenticada. Ela fica fora do navegador e é usada pelo servidor para chamar Gemini. O dashboard fornece ao modelo apenas indicadores pertinentes do ateliê, sem fabricar tendências de mercado.
 
 ---
 
@@ -65,7 +58,7 @@ flowchart TD
 | **Banco de Dados** | Dexie.js 4.4 + IndexedDB | Banco de dados NoSQL indexado local no navegador |
 | **Sincronização & Nuvem (Fase 7)** | Supabase (PostgreSQL) | Banco de dados na nuvem para backup e sincronização |
 | **Gerenciamento de Estado** | Zustand 5.0 | Estado global reativo de autenticação e sessão do usuário |
-| **Segurança / Cifra** | WebCrypto API Nativa | Derivação de chave PBKDF2 e criptografia simétrica AES-GCM |
+| **Segurança de acesso** | Supabase Auth + RLS + HTTPS | Identidade, autorização por usuário/perfil e transporte seguro |
 | **Autenticação (Fase 7)** | Supabase Auth | Login Social (Google, Apple) e Email/Senha |
 | **Estilização** | Tailwind CSS v4 | Framework CSS utilitário para design system customizado em Dark Mode |
 | **Validação** | Zod | Schemas de validação de formulários e parsing |
@@ -112,7 +105,7 @@ MiauDelier-Manager/
 │   │   ├── calculator/                 # Motor de cálculo de volume e proporções
 │   │   ├── configuracoes/              # Backup, exportação e restore
 │   │   ├── dashboard/                  # Dashboard principal com resumo IA
-│   │   ├── financeiro/                 # Contas bancárias e transações cifradas
+│   │   ├── financeiro/                 # Contas bancárias e transações
 │   │   ├── ia/                         # Cliente Gemini e rate-limiting
 │   │   ├── mais/                       # Menu secundário e utilitários
 │   │   ├── pricing/                    # Tarifas elétricas e custos de equipamentos
@@ -121,8 +114,6 @@ MiauDelier-Manager/
 │   ├── lib/                            # Bibliotecas utilitárias e conectores
 │   │   ├── auth.ts                     # Autenticação e bloqueio temporário
 │   │   ├── backup.ts                   # Geração e importação de backup com SHA-256
-│   │   ├── camposCifrados.ts           # Interceptador de criptografia WebCrypto
-│   │   ├── crypto.ts                   # Primitivas de cifra AES-GCM/PBKDF2
 │   │   ├── perfisRepo.ts               # Gestão de múltiplos perfis isolados
 │   │   ├── unidades.ts                 # Utilitário de conversão de unidades de medida
 │   │   └── ...
@@ -135,7 +126,7 @@ MiauDelier-Manager/
 │   │   ├── pedidos.tsx                 # Rota de Pedidos
 │   │   └── ...
 │   ├── stores/                         # Zustand Stores
-│   │   └── authStore.ts                # Estado global de sessão e chave de cifra
+│   │   └── authStore.ts                # Estado global de sessão Supabase
 │   ├── styles/                         # Estilos globais e tokens CSS Tailwind
 │   ├── routeTree.gen.ts                # Árvore de rotas gerada pelo TanStack Router
 │   ├── router.tsx                      # Instância do roteador TanStack

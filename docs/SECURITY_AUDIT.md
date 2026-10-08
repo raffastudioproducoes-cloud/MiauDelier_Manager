@@ -1,6 +1,8 @@
 # Auditoria de Segurança e Conformidade (AppSec & Red Team)
 
-Este documento apresenta a auditoria estática de segurança do **MiauDelier Manager**, baseada no estado atual da aplicação (PWA Híbrida: Local-First + Sincronização Cloud via Supabase PostgreSQL/Auth implementada na Fase 7).
+Este documento apresenta a auditoria estática de segurança do **MiauDelier Manager**, baseada no estado atual da aplicação (PWA híbrida com sincronização via Supabase PostgreSQL/Auth). Atualizado em 08/10/2026.
+
+> **Decisão vigente:** dados de negócio não são cifrados internamente no frontend ou IndexedDB. A proteção definida é Supabase Auth, RLS, HTTPS e controle de segredos no backend/Edge Functions. Referências históricas a DEK, KEK, cofre local e `camposCifrados` abaixo não representam a arquitetura vigente.
 
 ---
 
@@ -10,8 +12,8 @@ Este documento apresenta a auditoria estática de segurança do **MiauDelier Man
 - **Veredito / Ação:** **Conforme e Implementado.** O acesso aos dados em nuvem está devidamente restrito por tenant.
 
 ## 2. Criptografia de Senhas no Banco de Dados
-- **Estado Atual (Local-first):** Excelente. As senhas em texto plano **nunca** são armazenadas. O sistema utiliza a API nativa `WebCrypto` (`src/lib/crypto.ts` e `src/lib/auth.ts`) para gerar um hash forte usando **PBKDF2-SHA256** com milhares de iterações e _salt_ aleatório. Este hash é usado tanto para login local quanto para derivar a chave simétrica de criptografia.
-- **Fase 7 (Supabase):** A autenticação remota é delegada ao **Supabase Auth**, que utiliza algoritmos robustos padrão da indústria (GoTrue/PostgreSQL pgcrypto) em seus servidores para proteção das credenciais, garantindo conformidade. O cofre local continua usando a senha primária (Zero-Knowledge).
+- **Estado atual:** senhas são processadas pelo Supabase Auth e não são armazenadas pelo aplicativo em texto ou logs.
+- **Supabase:** a autenticação remota é delegada ao **Supabase Auth**; o aplicativo usa a sessão emitida para acessar apenas dados autorizados pelas políticas RLS.
 - **Veredito / Ação:** **Seguro e Conforme.**
 
 ## 3. Rate Limiting (Proteção contra Força Bruta)
@@ -33,10 +35,9 @@ Este documento apresenta a auditoria estática de segurança do **MiauDelier Man
   ```
 
 ## 5. Criptografia de Dados Pessoais e Sensíveis
-- **Estado Atual (Local-first):** Altamente Seguro. A arquitetura implementa uma camada interceptadora (`src/lib/camposCifrados.ts`) que criptografa dados financeiros e de clientes com **AES-GCM-256** antes de salvar no IndexedDB.
-- **Arquitetura de Chaves (DEK/KEK):** A chave de criptografia dos dados (DEK - Data Encryption Key) não é derivada diretamente da senha do usuário. Em vez disso, a DEK é gerada aleatoriamente (256-bits) e armazenada de forma encriptada (Wrapped) por Key Encryption Keys (KEKs) na tabela `user_keys` do Supabase. Existem duas KEKs principais: uma derivada da Senha do Cofre e outra derivada do `user_id` (via sessão autenticada) da conta em nuvem acrescido de um _pepper_ local para fins de recuperação. Isso permite que o usuário troque a senha local ou recupere o acesso (após verificação por código OTP via E-mail) sem perder os dados e sem que o sistema remoto conheça as chaves em claro.
-- **Fase 7 (Supabase):** O Supabase criptografa todos os dados "em repouso" (at rest) nativamente no servidor AWS/GCP. 
-- **Veredito / Ação:** **Seguro e Conforme.** Recomenda-se **manter** a camada `camposCifrados.ts` ativa mesmo com a sincronização do Supabase. Isso cria uma arquitetura **E2EE (End-to-End Encryption)**, onde o Supabase armazena os dados já cifrados pelo cliente, impedindo até mesmo o vazamento em nuvem em caso de invasão da conta.
+- **Estado atual:** o IndexedDB serve como cache local sem cifra interna dos dados de negócio. O frontend não guarda `service_role`, segredo OAuth ou chave Gemini.
+- **Supabase:** dados remotos são autorizados por RLS e trafegam por HTTPS. A chave Gemini é tratada pela Edge Function e não é devolvida ao navegador.
+- **Veredito / ação:** manter políticas RLS, revisão de RPC/Edge Functions e tratamento de segredos como controles obrigatórios. Não reintroduzir a camada local DEK/KEK.
 
 ## 6. Sanitização de Input e Bloqueio de Scripts (Anti-XSS/Injection)
 - **Estado Atual (Local-first):** 

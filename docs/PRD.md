@@ -1,7 +1,7 @@
 # Documento de Requisitos do Produto (PRD)
 
 **Produto:** MiauDelier Manager  
-**Versão:** 1.0.0  
+**Versão:** 1.1.0
 **Data:** 28/09/2026  
 **Autor / Equipe:** Raffa Studio Produções / MiauDelier  
 **Status:** Em Produção / Ativo  
@@ -11,9 +11,9 @@
 
 ## 1. Visão Geral do Produto
 
-O **MiauDelier Manager** é um aplicativo web progressivo (PWA), operando no modelo *local-first*, concebido para a gestão integral de ateliês de resina epóxi e fabricação de moldes de silicone. O sistema unifica cálculos técnicos de volume e proporção de mistura, precificação com base em custos reais, controle de estoque de insumos e moldes, acompanhamento do ciclo de vida das peças, cadastro de clientes, gestão de pedidos, ledger financeiro cifrado e divulgação de produtos acabados para venda direta via WhatsApp.
+O **MiauDelier Manager** é um aplicativo web progressivo (PWA), operando no modelo *local-first*, concebido para a gestão integral de ateliês de resina epóxi e fabricação de moldes de silicone. O sistema unifica cálculos técnicos de volume e proporção de mistura, precificação com base em custos reais, controle de estoque de insumos e moldes, acompanhamento do ciclo de vida das peças, cadastro de clientes, gestão de pedidos, ledger financeiro sincronizável e divulgação de produtos acabados para venda direta via WhatsApp.
 
-Os dados operacionais residem inicialmente no dispositivo da usuária (IndexedDB via Dexie.js), garantindo operação offline contínua, e são sincronizados ativamente com a nuvem (Supabase) via arquitetura Event Sourcing e criptografia Zero-Knowledge, provendo segurança e disponibilidade.
+Os dados operacionais são mantidos em cache no dispositivo (IndexedDB via Dexie.js), permitindo continuidade offline, e são sincronizados com o Supabase via Event Sourcing. O controle de acesso é fornecido por Supabase Auth, RLS e HTTPS; dados de negócio não possuem criptografia interna no frontend.
 
 ---
 
@@ -36,8 +36,8 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 - **Controle de Estoque e Insumos**: Monitorar materiais e categorias (com suporte a subcategorias), convertendo unidades de medida automaticamente (ex: ml, L, g, kg, un, bisnaga).
 - **Rastreabilidade de Moldes e Peças**: Controlar a vida útil dos moldes (usos realizados vs. limite), tempo de cura de silicone/resina, registro de fotos por câmera ou memória interna e histórico de eventos da peça.
 - **Vitrine e Canal de Vendas**: Oferecer uma área de vitrine de peças prontas com geração automática de post para redes sociais e botão de compra/atendimento direto no WhatsApp do vendedor.
-- **Segurança Local-First**: Cifrar dados financeiros sensíveis no disco (AES-GCM-256 com derivação de chave por PBKDF2) e permitir exportação/importação de backups validados por checksum SHA-256.
-- **Assistência por IA (Opcional)**: Fornecer resumo diário de loja e dicas técnicas através da API do Google Gemini com rate-limiting de 24 horas.
+- **Segurança de Acesso**: Usar Supabase Auth, RLS e HTTPS; não expor segredos no cliente e validar backups antes da escrita.
+- **Assistência por IA (Opcional)**: Fornecer resumo e dicas técnicas via Gemini através de Edge Function autenticada, com contexto factual do ateliê.
 
 ---
 
@@ -56,9 +56,9 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 - **Autenticação, Proteção de Perfil & Nuvem (Fase 7)**:
   - Arquitetura Híbrida: Login Social (Google/Apple) e Email+OTP (5 min) via Supabase Auth.
   - Multi-tenancy isolado: Suporte a até 10 perfis independentes por Conta de Usuário (`user_id`).
-  - Segurança Zero-Knowledge: Cofre cifrado com PBKDF2 e AES-GCM-256. Mesmo logado via OAuth, o usuário deve informar a **Senha do Cofre** para descriptografar os dados locais.
-  - Recuperação de Conta (Cloud DEK/KEK): A chave dos dados (DEK) é envelopada por uma KEK de recuperação (derivada do `user_id` + _pepper_ local) e armazenada com segurança na nuvem na tabela `user_keys` (Supabase). Caso o usuário esqueça a senha local, ele recebe um código OTP por E-mail, recupera a DEK e define uma nova senha na tela de recuperação, mantendo a integridade e o isolamento dos dados sem senhas de backup complexas.
-  - Mesclagem de Contas: Permite unificar conta local/senha com identidade Google/Apple, confirmando a senha do cofre atual na área restrita.
+  - Segurança de acesso: sessão Supabase, RLS por usuário/perfil e HTTPS. Não há cofre local, DEK/KEK nem chaves de negócio no navegador.
+  - Confirmação de e-mail: cadastro aguarda confirmação do Supabase antes do primeiro login.
+  - Mesclagem de contas: permite vincular identidade Google/Apple à conta autenticada quando o *manual linking* está habilitado no Supabase.
 - **Calculadora de Volume & Proporção de Mistura**:
   - Suporte a geometrias: Retangular, Cilíndrica, Esférica e Medida Direta.
   - Suporte a furos/vazados (ex: comedouros pets) e pés de mesa resinados.
@@ -98,16 +98,16 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
   - Cadastro de equipamentos (potência Watts) e cálculo de consumo de energia.
   - Cadastro de taxas fixas e percentuais (cartão, plataforma de vendas).
   - Cálculo automático de custo total e preço sugerido com margem de lucro.
-- **Financeiro Cifrado**:
+- **Financeiro Sincronizado**:
   - Cadastro de contas bancárias e transações de entrada/saída.
-  - Criptografia AES-GCM em repouso dos saldos e valores de transação.
+  - Acesso protegido por Supabase Auth, RLS e HTTPS.
 - **Resumo Inteligente por IA (Gemini)**:
   - Resumo automatizado das métricas do ateliê.
   - Controle interno de rate-limit de 24 horas no `localStorage` com botão de atualização manual.
-  - Suporte a chave API Gemini configurável e cifrada.
+  - Chave API Gemini configurável e enviada somente à Edge Function autenticada, sem persistência no navegador.
 - **Logger de Eventos & Captura de Falhas Silenciosas**:
   - Módulo de logging centralizado (`src/lib/logger.ts`) com captura automática de exceções globais (`window.onerror`), rejeições de Promise (`window.onunhandledrejection`) e falhas de renderização no React (`ErrorBoundary`).
-  - Higienização e sanitização estrita: omite automaticamente senhas, hashes, chaves de criptografia hex de 256-bit, tokens, payloads cifrados e dados sensíveis.
+  - Higienização e sanitização estrita: omite automaticamente senhas, tokens, chaves de API e dados sensíveis.
   - Tela dedicada de inspeção de logs (`/logs`) com filtros por nível (`info`, `warn`, `error`, `debug`), busca por termo, exportação em arquivos `.txt` e `.json` e botão de limpeza local.
 - **Segurança, Backup & Registro de Auditoria**:
   - Exportação e importação de arquivo de backup JSON com verificação de checksum SHA-256.
@@ -119,3 +119,5 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 - **Instalador PWA Completo & Notifications Push**: Registro avançado de Service Worker para alertas nativos do SO ao concluir cura de peças/moldes.
 - **Integração CI/CD**: Pipeline automatizado de lint, testes e build para deploy contínuo em páginas estáticas. (Concluído)
 - **Fase 7 - Cloud e Autenticação (Supabase)**: O modelo híbrido com sincronização em nuvem via Supabase (PostgreSQL) está **concluído**. Login social via Google, Email + OTP, mesclagem segura de perfis e a sincronização bidirecional robusta (Dexie ↔ Supabase via arquitetura Event Sourcing com validação Ledger) estão implementados e operacionais.
+
+- **PWA Android (08/10/2026)**: ícones próprios MiauDelier, tela de abertura breve, tema escuro e versão visível durante a inicialização foram concluídos em `testes` e aguardam validação manual antes de `main`.

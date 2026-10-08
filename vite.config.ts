@@ -13,6 +13,10 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
   plugins: [
+    {
+      name: 'app-version-in-html',
+      transformIndexHtml: (html) => html.replace('%APP_VERSION%', packageJson.version),
+    },
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     react(),
     tailwindcss(),
@@ -26,8 +30,8 @@ export default defineConfig({
         name: 'MiauDelier Manager',
         short_name: 'MiauDelier',
         description: 'Gestão de produção, custos e financeiro para ateliê de resina epóxi.',
-        theme_color: '#2F5D5A',
-        background_color: '#FAF6EF',
+        theme_color: '#121416',
+        background_color: '#121416',
         display: 'standalone',
         start_url: '.',
         lang: 'pt-BR',

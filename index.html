@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#2F5D5A" />
+    <meta name="theme-color" content="#121416" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="Gestão local-first para ateliê de resina epóxi e moldes de silicone. Cálculo exato de volume (ml/L), precificação com margem real e estoque 100% offline." />
     <!-- Security Headers / CSP -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://dimjnihremxztedueoob.supabase.co; frame-ancestors 'none';" />
@@ -19,14 +19,14 @@
     <!-- Open Graph / WhatsApp -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="MiauDelier Manager | Gestão & Calculadora de Resina Epóxi" />
-    <meta property="og:description" content="Gestão local-first para ateliês de resina e silicone. Cálculos de volume, precificação realista, controle de cura e estoque cifrado." />
+    <meta property="og:description" content="Gestão para ateliês de resina e silicone. Cálculos de volume, precificação realista, controle de cura e estoque sincronizado com segurança." />
     <meta property="og:image" content="%BASE_URL%favicon.png" />
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="MiauDelier Manager | Gestão & Calculadora de Resina Epóxi" />
-    <meta name="twitter:description" content="Gestão local-first para ateliês de resina e silicone. Cálculos de volume, precificação realista, controle de cura e estoque cifrado." />
+    <meta name="twitter:description" content="Gestão para ateliês de resina e silicone. Cálculos de volume, precificação realista, controle de cura e estoque sincronizado com segurança." />
     <link rel="icon" type="image/png" href="%BASE_URL%favicon.png" />
-    <link rel="apple-touch-icon" href="%BASE_URL%favicon.png" />
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon-180x180.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -62,13 +62,13 @@
             "price": "0",
             "priceCurrency": "BRL"
           },
-          "description": "Aplicativo PWA local-first para cálculo de volume (ml/L), proporção de mistura de resina epóxi, precificação realista, gestão de moldes de silicone e controle de estoque cifrado em repouso com AES-GCM-256.",
+          "description": "Aplicativo PWA para cálculo de volume (ml/L), proporção de mistura de resina epóxi, precificação realista, gestão de moldes de silicone e controle de estoque sincronizado pelo Supabase.",
           "featureList": [
             "Cálculo de volume retangular, cilíndrico, esférico e com vazados/pés de mesa",
             "Proporções de mistura 2:1, 3:1, 1:1, 100:3",
             "Precificação realista com depreciação amortizada do molde e mão de obra",
             "Cronômetro de cura em tempo real com barra de progresso",
-            "Armazenamento 100% offline via IndexedDB cifrado",
+            "Cache offline via IndexedDB e sincronização segura pelo Supabase",
             "Divisão do estoque por Insumos, Ferramentas, Administrativo e EPIs"
           ]
         },
@@ -109,9 +109,44 @@
     }
     </script>
     <script type="module" src="/src/entry-client.tsx"></script>
-  <link rel="manifest" href="%BASE_URL%manifest.webmanifest"></head>
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <style>
+      #pwa-splash {
+        align-items: center;
+        background: #121416;
+        box-sizing: border-box;
+        color: #f6eee7;
+        display: flex;
+        flex-direction: column;
+        inset: 0;
+        justify-content: center;
+        padding: 32px;
+        position: fixed;
+        text-align: center;
+        transition: opacity 180ms ease-out;
+        z-index: 9999;
+      }
+      #pwa-splash.is-ready { opacity: 0; pointer-events: none; }
+      #pwa-splash img { height: 112px; margin-bottom: 20px; width: 112px; }
+      #pwa-splash strong { font: 700 28px/1.1 Manrope, system-ui, sans-serif; }
+      #pwa-splash .product { color: #ffc48d; font: 800 12px/1.2 Manrope, system-ui, sans-serif; letter-spacing: .11em; margin-top: 5px; }
+      #pwa-splash .version { color: #bcb4ae; font: 500 12px/1.4 Manrope, system-ui, sans-serif; margin: 18px 0 28px; }
+      #pwa-splash footer { color: #bcb4ae; font: 500 11px/1.5 Manrope, system-ui, sans-serif; }
+      #pwa-splash .gitguard { border: 1px solid #4b433e; border-radius: 999px; color: #f6eee7; display: inline-block; font-size: 10px; margin-top: 8px; padding: 3px 8px; }
+    </style>
+  </head>
   <body>
     <div id="root"></div>
+    <div id="pwa-splash" role="status" aria-label="Carregando MiauDelier Manager">
+      <img src="%BASE_URL%pwa-192x192.png" alt="" />
+      <strong>MiauDelier</strong>
+      <span class="product">MANAGER</span>
+      <span class="version">Versão %APP_VERSION%</span>
+      <footer>
+        Raffa Studio Produções<br />
+        <span class="gitguard">Secured by GitGuard</span>
+      </footer>
+    </div>
     <script>
       // Desfaz o redirect de 404.html, restaurando a rota real antes do React montar.
       (function () {

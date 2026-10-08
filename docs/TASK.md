@@ -14,16 +14,16 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 ---
 
 
-## Fase 1 — Fundação, Autenticação e Segurança Local-First
+## Fase 1 — Fundação, Autenticação e Segurança de Acesso
 
-**Objetivo**: Estabelecer o schema Dexie, a camada de criptografia WebCrypto AES-GCM, o fluxo de login com PBKDF2 e a proteção de sessão.
+**Objetivo**: Estabelecer o schema Dexie, o fluxo de autenticação Supabase e a proteção de sessão.
 
 | ID | Tarefa | Prioridade | Status |
 | --- | --- | --- | --- |
 | 1.1 | Criar schema inicial Dexie.js e entidades de banco no IndexedDB (`src/db/schema.ts`) | Alta | Concluída |
-| 1.2 | Implementar primitivas WebCrypto (PBKDF2-SHA256 e AES-GCM-256) em `src/lib/crypto.ts` | Alta | Concluída |
+| 1.2 | Remover a cifra interna legada e manter chaves sensíveis fora do frontend | Alta | Concluída |
 | 1.3 | Criar gerenciador de login com bloqueio temporário de tentativas em `src/lib/auth.ts` | Alta | Concluída |
-| 1.4 | Implementar camada interceptadora de campos cifrados (`src/lib/camposCifrados.ts`) | Alta | Concluída |
+| 1.4 | Aplicar Supabase Auth, RLS e HTTPS como proteção de acesso aos dados | Alta | Concluída |
 | 1.5 | Criar Zustand `authStore` para gerenciamento de sessão e chave simétrica em memória | Alta | Concluída |
 
 ---
@@ -67,7 +67,7 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | --- | --- | --- | --- |
 | 4.1 | Implementar módulo de cadastro e gestão de clientes | Alta | Concluída |
 | 4.2 | Implementar gestão de pedidos com atualização de progresso em debounce | Alta | Concluída |
-| 4.3 | Implementar cadastro de contas bancárias e transações financeiras com cifra AES-GCM | Alta | Concluída |
+| 4.3 | Implementar cadastro de contas bancárias e transações financeiras sincronizáveis | Alta | Concluída |
 | 4.4 | Criar tela de taxas de cartão/plataforma e precificação de equipamentos (potência/energia) | Média | Concluída |
 | 4.5 | Implementar registro de auditoria imutável para vendas, exclusões e alterações de preço | Média | Concluída |
 
@@ -79,8 +79,8 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 | ID | Tarefa | Prioridade | Status |
 | --- | --- | --- | --- |
-| 5.1 | Implementar assistente de IA Gemini com chave de API cifrada e instrução de sistema restrita | Média | Concluída |
-| 5.2 | Implementar resumo diário automatizado no Dashboard com rate-limit de 24h e cache em `localStorage` | Média | Concluída |
+| 5.1 | Implementar assistente Gemini via Edge Function com chave fora do navegador | Média | Concluída |
+| 5.2 | Implementar resumo do Dashboard com indicadores reais, cache por assinatura e atualização manual | Média | Concluída |
 | 5.3 | Implementar exportação e importação de backups JSON com validação de checksum SHA-256 | Alta | Concluída |
 | 5.4 | Implementar opção de apagar dados na aba de backup mantendo preservados os dados do Perfil do Ateliê e a senha de acesso | Alta | Concluída |
 
@@ -112,3 +112,12 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | 7.4 | Implementar funcionalidade de "Mesclar Conta" na aba de Gestão de Perfis | Alta | Não iniciada |
 | 7.5 | Desenvolver mecanismo de sincronização bidirecional em tempo real (Dexie ↔ Supabase) | Alta | Não iniciada |
 | 7.6 | Implementar autenticação via Apple | Baixa | Futuramente |
+
+---
+
+## Fase 8 — Refinamento PWA e Observabilidade de Decisão
+
+| ID | Tarefa | Prioridade | Status |
+| --- | --- | --- | --- |
+| 8.1 | Padronizar ícones, tema escuro e tela de abertura do PWA Android | Alta | Concluída em `testes` — aguarda validação manual |
+| 8.2 | Enriquecer o resumo Gemini com descontos, histórico de compras, prazos e precificação | Alta | Concluída em `testes` — aguarda validação manual |
