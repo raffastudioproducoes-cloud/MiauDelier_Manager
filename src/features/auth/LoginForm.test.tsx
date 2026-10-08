@@ -88,6 +88,19 @@ describe('LoginForm', () => {
     }))
   })
 
+  it('inicia login Google retornando para a página de login atual', async () => {
+    useAuthStore.setState({ autenticado: false, contaConfigurada: true })
+    vi.mocked(supabase.auth.signInWithOAuth).mockResolvedValueOnce({ data: { provider: 'google', url: 'https://accounts.google.com' }, error: null } as any)
+    render(<LoginForm />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Google$/ }))
+
+    await waitFor(() => expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: expect.stringMatching(/\/login$/) },
+    }))
+  })
+
   it('senha inválida no Supabase mostra erro e não navega', async () => {
     useAuthStore.setState({ autenticado: false, contaConfigurada: true })
     vi.mocked(supabase.auth.signInWithPassword).mockResolvedValueOnce({

@@ -194,6 +194,16 @@ export function LoginForm() {
     ? 'Cadastrar'
     : 'Entrar'
 
+  async function handleLoginGoogle() {
+    setErro(null)
+    const redirectTo = new URL(`${import.meta.env.BASE_URL}login`, window.location.origin).toString()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    })
+    if (error) setErro('Não foi possível iniciar o login com Google. Tente novamente.')
+  }
+
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-background text-on-surface flex flex-col md:flex-row font-sans">
       
@@ -400,7 +410,7 @@ export function LoginForm() {
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
-                  onClick={() => alert('Login com Google em breve')}
+                  onClick={() => void handleLoginGoogle()}
                   className="flex items-center justify-center gap-2 rounded-xl border border-outline-variant/60 bg-surface-container/30 px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container/70 transition-all cursor-pointer shadow-sm"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
