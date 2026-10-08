@@ -1,25 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Card } from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
-import { TextField } from '../../components/ui/TextField'
 import { useToast } from '../../components/ui/useToast'
 import { supabase } from '../../lib/supabase'
-import { useAuthStore } from '../../stores/authStore'
 
 export function CloudIdentityManager() {
   const { mostrarToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [identities, setIdentities] = useState<any[]>([])
   
-  // Confirmação de senha local
-  const [pedindoSenha, setPedindoSenha] = useState(false)
-  const [senhaLocal, setSenhaLocal] = useState('')
-  const [validandoSenha, setValidandoSenha] = useState(false)
-  const [erroSenha, setErroSenha] = useState<string | null>(null)
-  const [providerParaLigar, setProviderParaLigar] = useState<string | null>(null)
-
-  const entrar = useAuthStore((estado) => estado.entrar)
-
   useEffect(() => {
     carregarIdentidades()
   }, [])
@@ -33,43 +21,18 @@ export function CloudIdentityManager() {
     setLoading(false)
   }
 
-  function handleIniciarLigacao(provider: string) {
-    setProviderParaLigar(provider)
-    setSenhaLocal('')
-    setErroSenha(null)
-    setPedindoSenha(true)
-  }
-
-  async function confirmarEProsseguir() {
-    if (!senhaLocal) {
-      setErroSenha('Digite sua senha atual do cofre.')
-      return
-    }
-
-    setValidandoSenha(true)
-    setErroSenha(null)
-
+  async function handleIniciarLigacao(provider: 'google') {
     try {
-      // 1. Valida a senha local do cofre
-      const senhaValida = await entrar(senhaLocal)
-      if (!senhaValida) {
-        throw new Error('Senha do cofre incorreta. Tente novamente.')
-      }
-
-      // 2. Senha correta — inicia o fluxo OAuth de vinculação via redirect
-      //    O Supabase redireciona para o Google e volta ao mesmo URL com o link feito.
       const { error } = await supabase.auth.linkIdentity({
-        provider: providerParaLigar as 'google',
+        provider,
         options: {
           redirectTo: window.location.origin + window.location.pathname,
         },
       })
 
       if (error) throw error
-      // O browser será redirecionado automaticamente — não há mais código após esse ponto
     } catch (err: any) {
-      setErroSenha(err.message || 'Erro ao validar senha e vincular conta.')
-      setValidandoSenha(false)
+      mostrarToast(err.message || 'Erro ao vincular conta.', 'erro')
     }
   }
 
@@ -101,7 +64,7 @@ export function CloudIdentityManager() {
             ☁️ Segurança e Nuvem
           </h3>
           <p className="text-xs text-on-surface-variant mt-1">
-            Você pode mesclar sua conta com um login social (como Google). A sua <strong>Senha do Cofre</strong> continua sendo necessária para decifrar os dados (Zero-Knowledge), garantindo privacidade total.
+            Vincule sua conta a um login social, como Google, para também poder entrar por esse provedor.
           </p>
         </div>
 
@@ -143,38 +106,6 @@ export function CloudIdentityManager() {
         </div>
       </Card>
 
-      {/* Modal para pedir senha do cofre local antes de vincular */}
-      {pedindoSenha && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-           <Card className="w-full max-w-sm bg-surface p-5 border border-primary/20 shadow-2xl flex flex-col gap-4">
-             <h2 className="text-lg font-bold text-on-surface">Confirme sua Senha Atual</h2>
-             <p className="text-xs text-on-surface-variant">
-               Para garantir sua segurança antes de alterar sua forma de login, digite sua <strong>Senha do Cofre</strong> local.
-             </p>
-             
-             <div className="flex flex-col gap-1">
-               <TextField
-                 id="confirm-senha"
-                 rotulo="Senha do Cofre"
-                 type="password"
-                 value={senhaLocal}
-                 onChange={(e) => setSenhaLocal(e.target.value)}
-                 erro={erroSenha ?? undefined}
-                 placeholder="Sua senha secreta"
-               />
-             </div>
-
-             <div className="flex items-center justify-end gap-2 mt-2">
-               <Button type="button" variante="ghost" onClick={() => setPedindoSenha(false)}>
-                 Cancelar
-               </Button>
-               <Button type="button" onClick={confirmarEProsseguir} disabled={validandoSenha || !senhaLocal}>
-                 {validandoSenha ? 'Validando...' : 'Confirmar e Vincular'}
-               </Button>
-             </div>
-           </Card>
-         </div>
-      )}
     </>
   )
 }
