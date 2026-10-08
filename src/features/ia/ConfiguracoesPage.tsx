@@ -7,8 +7,14 @@ import {
   obterPersonalidade,
   type Personalidade,
 } from './iaConfigRepo'
-import { configurarChaveGemini } from './geminiClient'
+import { configurarChaveGemini, obterEstadoGemini, removerChaveGemini, type EstadoGemini } from './geminiClient'
 
+const estadoPadrao: EstadoGemini = { status: 'disconnected', message: 'Desconectado: nenhuma chave Gemini cadastrada.' }
+const estiloDoEstado = {
+  connected: 'bg-success',
+  disconnected: 'bg-error',
+  problem: 'bg-warning',
+} satisfies Record<EstadoGemini['status'], string>
 
 export function ConfiguracoesPage() {
   const { mostrarToast } = useToast()
@@ -16,11 +22,26 @@ export function ConfiguracoesPage() {
   const [personalidade, setPersonalidadeEstado] = useState<Personalidade>('tecnica')
   const [chaveGemini, setChaveGemini] = useState('')
   const [salvandoChave, setSalvandoChave] = useState(false)
+  const [removendoChave, setRemovendoChave] = useState(false)
+  const [estadoGemini, setEstadoGemini] = useState<EstadoGemini>(estadoPadrao)
 
   async function recarregar() {
     const personalidadeAtual = await obterPersonalidade()
     if (!montado.current) return
     setPersonalidadeEstado(personalidadeAtual)
+  }
+
+  async function recarregarEstadoGemini() {
+    try {
+      const estado = await obterEstadoGemini()
+      if (montado.current) setEstadoGemini(estado)
+    } catch (falha) {
+      if (!montado.current) return
+      setEstadoGemini({
+        status: 'problem',
+        message: falha instanceof Error ? falha.message : 'Não foi possível verificar a chave Gemini.',
+      })
+    }
   }
 
   useEffect(() => {
@@ -29,6 +50,7 @@ export function ConfiguracoesPage() {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao carregar configurações.', 'erro')
     })
+    recarregarEstadoGemini()
     return () => {
       montado.current = false
     }
@@ -60,6 +82,7 @@ export function ConfiguracoesPage() {
       if (!montado.current) return
       setChaveGemini('')
       mostrarToast('Chave Gemini salva com segurança no servidor.', 'sucesso')
+      await recarregarEstadoGemini()
     } catch (falha) {
       if (!montado.current) return
       mostrarToast(falha instanceof Error ? falha.message : 'Erro ao salvar a chave Gemini.', 'erro')
@@ -67,6 +90,24 @@ export function ConfiguracoesPage() {
       if (montado.current) setSalvandoChave(false)
     }
   }
+
+  async function handleRemoverChave() {
+    setRemovendoChave(true)
+    try {
+      await removerChaveGemini()
+      if (!montado.current) return
+      setChaveGemini('')
+      setEstadoGemini(estadoPadrao)
+      mostrarToast('Chave Gemini removida.', 'sucesso')
+    } catch (falha) {
+      if (!montado.current) return
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao remover a chave Gemini.', 'erro')
+    } finally {
+      if (montado.current) setRemovendoChave(false)
+    }
+  }
+
+  const chaveCadastrada = estadoGemini.status !== 'disconnected'
 
   return (
     <div className="flex flex-col gap-6">
@@ -94,7 +135,11 @@ export function ConfiguracoesPage() {
           <form onSubmit={handleSalvarChave} className="flex flex-col gap-3">
             <div>
               <label htmlFor="chave-gemini" className="text-sm font-medium text-on-surface">Chave da API Gemini</label>
-              <p className="mt-1 text-xs text-on-surface-variant">A chave é enviada diretamente ao servidor seguro e não fica salva neste navegador.</p>
+              <p className="mt-1 text-xs text-on-surface-variant">A chave da sua conta é enviada ao servidor seguro, não fica neste navegador e usa somente os seus créditos.</p>
+            </div>
+            <div id="status-chave-gemini" role="status" aria-live="polite" className="flex items-center gap-2 text-xs text-on-surface-variant">
+              <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${estiloDoEstado[estadoGemini.status]}`} />
+              <span>{estadoGemini.message}</span>
             </div>
             <input
               id="chave-gemini"
@@ -102,10 +147,18 @@ export function ConfiguracoesPage() {
               autoComplete="off"
               value={chaveGemini}
               onChange={(evento) => setChaveGemini(evento.target.value)}
+              disabled={chaveCadastrada || salvandoChave || removendoChave}
+              placeholder={chaveCadastrada ? 'Remova a chave cadastrada para informar outra.' : 'Cole sua chave Gemini'}
+              aria-describedby="status-chave-gemini"
               className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             />
-            <div>
-              <Button type="submit" disabled={salvandoChave}>{salvandoChave ? 'Salvando...' : 'Salvar chave Gemini'}</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={chaveCadastrada || salvandoChave || removendoChave}>{salvandoChave ? 'Salvando...' : 'Salvar chave Gemini'}</Button>
+              {chaveCadastrada && (
+                <Button type="button" variante="ghost" className="text-error hover:bg-error/10 hover:text-error" disabled={salvandoChave || removendoChave} onClick={handleRemoverChave}>
+                  {removendoChave ? 'Removendo...' : 'Remover chave'}
+                </Button>
+              )}
             </div>
           </form>
         </Card>

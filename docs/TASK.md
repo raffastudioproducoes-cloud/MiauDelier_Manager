@@ -79,7 +79,7 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 
 | ID | Tarefa | Prioridade | Status |
 | --- | --- | --- | --- |
-| 5.1 | Implementar assistente Gemini via Edge Function com chave própria por usuária, fora do navegador e sem fallback compartilhado | Média | Concluída |
+| 5.1 | Implementar assistente Gemini via Edge Function com chave própria por usuária, fora do navegador e sem fallback compartilhado; incluir verificação de estado e remoção segura da chave | Média | Concluída |
 | 5.2 | Implementar resumo do Dashboard com indicadores reais, cache por assinatura e atualização manual | Média | Concluída |
 | 5.3 | Implementar exportação e importação de backups JSON com validação de checksum SHA-256 | Alta | Concluída |
 | 5.4 | Implementar opção de apagar dados na aba de backup mantendo preservados os dados do Perfil do Ateliê e a senha de acesso | Alta | Concluída |

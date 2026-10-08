@@ -78,3 +78,8 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 - **Comando de Build**: `npx vite build`
 - **Localização do Vault Obsidian de Apoio**: `https://github.com/raffastudioproducoes-cloud/RaffaStudio-Vault`
 - **Diretório Local do Projeto**: `G:\.shortcut-targets-by-id\181ELvcABCaCM1Gik13jlEQ4ERpBRwO9o\Projetos\MiauDelier Manager`
+# Atualização 08/10/2026 — Chave Gemini por Usuária
+
+- A chave Gemini de cada usuária permanece exclusivamente no Vault do Supabase, vinculada ao `user.id`; o frontend nunca lê seu valor e não há chave compartilhada do servidor.
+- A tela **Configurações** consulta a Edge Function para exibir `desconectado`, `com problema` ou `conectado`. A consulta verifica o acesso ao modelo sem gerar conteúdo.
+- Quando existe uma chave persistida, o campo fica bloqueado. A remoção apaga o vínculo e o segredo do Vault pelo gatilho do banco; só então uma nova chave pode ser cadastrada.

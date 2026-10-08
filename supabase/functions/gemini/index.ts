@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 type GeminiContent = { role?: string; parts: Array<{ text: string }> }
+type GeminiAction = 'configure' | 'generate' | 'remove' | 'status'
 
 function mensagemErroGemini(status: number) {
   if (status === 400) return 'O Gemini recusou esta solicitação. Tente reformular a pergunta.'
@@ -50,7 +51,7 @@ Deno.serve(async (request) => {
   const { data: { user }, error: userError } = await userClient.auth.getUser()
   if (userError || !user) return response({ error: 'Unauthorized' }, 401, origin)
 
-  const body = await request.json() as { action?: string; apiKey?: string; contents?: GeminiContent[] }
+  const body = await request.json() as { action?: GeminiAction; apiKey?: string; contents?: GeminiContent[] }
   const admin = createClient(url, serviceRoleKey)
 
   if (body.action === 'configure') {
@@ -61,6 +62,26 @@ Deno.serve(async (request) => {
     const { error } = await admin.rpc('set_user_gemini_key', { p_user_id: user.id, p_key: apiKey })
     if (error) return response({ error: 'Não foi possível salvar a chave Gemini.' }, 500, origin)
     return response({ configured: true }, 200, origin)
+  }
+
+  if (body.action === 'remove') {
+    const { error } = await admin.from('user_gemini_keys').delete().eq('user_id', user.id)
+    if (error) return response({ error: 'Não foi possível remover a chave Gemini.' }, 500, origin)
+    return response({ removed: true }, 200, origin)
+  }
+
+  if (body.action === 'status') {
+    const { data: apiKey, error: keyError } = await admin.rpc('get_user_gemini_key', { p_user_id: user.id })
+    if (keyError) return response({ status: 'problem', message: 'Não foi possível consultar a configuração da chave Gemini.' }, 200, origin)
+    if (!apiKey) return response({ status: 'disconnected', message: 'Desconectado: nenhuma chave Gemini cadastrada.' }, 200, origin)
+
+    try {
+      const verification = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash?key=' + encodeURIComponent(apiKey))
+      if (!verification.ok) return response({ status: 'problem', message: mensagemErroGemini(verification.status) }, 200, origin)
+      return response({ status: 'connected', message: 'Conectado: chave cadastrada e conexão verificada.' }, 200, origin)
+    } catch {
+      return response({ status: 'problem', message: 'Não foi possível verificar a conexão com o Gemini.' }, 200, origin)
+    }
   }
 
   if (body.action !== 'generate' || !Array.isArray(body.contents) || body.contents.length === 0) {

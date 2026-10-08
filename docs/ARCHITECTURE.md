@@ -42,7 +42,7 @@ flowchart TD
 1. **Autenticação de identidade:** o usuário entra por e-mail/senha confirmado, Google ou Apple. O Supabase Auth emite a sessão e o RLS impõe `auth.uid()` nas operações remotas.
 2. **Vínculo de provedores:** uma identidade Google ou Apple pode ser vinculada à conta autenticada quando o projeto Supabase habilita *manual linking*. Depois do vínculo, o login deve usar o provedor correspondente; o formulário não induz a um novo cadastro.
 3. **Sincronização:** alterações do Dexie entram no Ledger local e são enviadas como eventos JSON autorizados. Ao entrar, reconectar ou voltar ao foco, o cliente baixa eventos autorizados e os aplica no cache.
-4. **Gemini:** cada usuária envia sua própria chave apenas para uma Edge Function autenticada. Ela é guardada no Vault do Supabase vinculada ao `user.id`, fica fora do navegador e é a única usada pelo servidor para chamar Gemini. Não há fallback de chave compartilhada. O dashboard fornece ao modelo apenas indicadores pertinentes do ateliê, sem fabricar tendências de mercado.
+4. **Gemini:** cada usuária envia sua própria chave apenas para uma Edge Function autenticada. Ela é guardada no Vault do Supabase vinculada ao `user.id`, fica fora do navegador e é a única usada pelo servidor para chamar Gemini. Não há fallback de chave compartilhada. A tela de configurações verifica o acesso ao modelo sem gerar conteúdo, informa se a chave está desconectada, com problema ou conectada, e permite removê-la antes de cadastrar outra. O dashboard fornece ao modelo apenas indicadores pertinentes do ateliê, sem fabricar tendências de mercado.
 
 ---
 

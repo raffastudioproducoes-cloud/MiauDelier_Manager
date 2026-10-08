@@ -8,6 +8,13 @@ export class IaIndisponivelError extends Error {
   }
 }
 
+export type StatusGemini = 'connected' | 'disconnected' | 'problem'
+
+export interface EstadoGemini {
+  status: StatusGemini
+  message: string
+}
+
 async function mensagemErroDaFunction(error: unknown): Promise<string | null> {
   if (!error || typeof error !== 'object' || !('context' in error)) return null
   const context = error.context
@@ -35,6 +42,27 @@ export async function configurarChaveGemini(apiKey: string): Promise<void> {
 
   if (error || data?.error) {
     throw new IaIndisponivelError(data?.error ?? 'Não foi possível salvar a chave Gemini.')
+  }
+}
+
+export async function obterEstadoGemini(): Promise<EstadoGemini> {
+  const { data, error } = await supabase.functions.invoke<Partial<EstadoGemini> & { error?: string }>('gemini', {
+    body: { action: 'status' },
+  })
+
+  if (error || data?.error || !data?.status || !data.message) {
+    throw new IaIndisponivelError(data?.error ?? await mensagemErroDaFunction(error) ?? 'Não foi possível verificar a chave Gemini.')
+  }
+  return { status: data.status, message: data.message }
+}
+
+export async function removerChaveGemini(): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ error?: string }>('gemini', {
+    body: { action: 'remove' },
+  })
+
+  if (error || data?.error) {
+    throw new IaIndisponivelError(data?.error ?? await mensagemErroDaFunction(error) ?? 'Não foi possível remover a chave Gemini.')
   }
 }
 
