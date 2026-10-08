@@ -59,6 +59,10 @@ describe('Módulo de Logging de Sistema (logger)', () => {
       expect(resultado).toContain('[REDACTED]')
       expect(resultado).not.toContain('123')
     })
+
+    it('omite texto excessivamente longo antes de analisá-lo', () => {
+      expect(sanitizarDadoLog('a'.repeat(10_001))).toBe('[TEXTO_LONGO_OMITIDO]')
+    })
   })
 
   describe('registrarLog e listagem', () => {

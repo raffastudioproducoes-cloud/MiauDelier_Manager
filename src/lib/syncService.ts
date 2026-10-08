@@ -24,7 +24,7 @@ let isSyncing = false
 
 function addSyncQueueEvent(event: SyncEvent) {
   Dexie.ignoreTransaction(() => db.syncQueue.add(event)).catch(err => {
-    console.error(`[DEBUG FATAL] ERRO ao adicionar ${event.tabela} na fila de upload (syncQueue):`, err)
+    console.error('[DEBUG FATAL] ERRO ao adicionar na fila de upload (syncQueue):', event.tabela, err)
   })
 }
 
@@ -121,7 +121,7 @@ export function registerDexieHooks() {
             sincronizado: false,
           })
         }).catch(err => {
-          console.error(`[DEBUG FATAL] ERRO ao adicionar ${tableName} na fila de upload (syncQueue):`, err)
+          console.error('[DEBUG FATAL] ERRO ao adicionar na fila de upload (syncQueue):', tableName, err)
         })
       }
     })

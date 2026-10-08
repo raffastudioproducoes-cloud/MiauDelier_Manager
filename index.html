@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="Gestão local-first para ateliê de resina epóxi e moldes de silicone. Cálculo exato de volume (ml/L), precificação com margem real e estoque 100% offline." />
     <!-- Security Headers / CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://dimjnihremxztedueoob.supabase.co; frame-ancestors 'none';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://dimjnihremxztedueoob.supabase.co; frame-ancestors 'none';" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <!-- SEO & GEO Optimization -->
@@ -27,12 +27,6 @@
     <meta name="twitter:description" content="Gestão para ateliês de resina e silicone. Cálculos de volume, precificação realista, controle de cura e estoque sincronizado com segurança." />
     <link rel="icon" type="image/png" href="%BASE_URL%favicon.png" />
     <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon-180x180.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
     <title>MiauDelier Manager | Gestão & Calculadora de Resina Epóxi</title>
     <!-- JSON-LD Structured Data (GEO / SEO 2026) -->
     <script type="application/ld+json">
@@ -128,10 +122,10 @@
       }
       #pwa-splash.is-ready { opacity: 0; pointer-events: none; }
       #pwa-splash img { height: 112px; margin-bottom: 20px; width: 112px; }
-      #pwa-splash strong { font: 700 28px/1.1 Manrope, system-ui, sans-serif; }
-      #pwa-splash .product { color: #ffc48d; font: 800 12px/1.2 Manrope, system-ui, sans-serif; letter-spacing: .11em; margin-top: 5px; }
-      #pwa-splash .version { color: #bcb4ae; font: 500 12px/1.4 Manrope, system-ui, sans-serif; margin: 18px 0 28px; }
-      #pwa-splash footer { color: #bcb4ae; font: 500 11px/1.5 Manrope, system-ui, sans-serif; }
+      #pwa-splash strong { font: 700 28px/1.1 system-ui, sans-serif; }
+      #pwa-splash .product { color: #ffc48d; font: 800 12px/1.2 system-ui, sans-serif; letter-spacing: .11em; margin-top: 5px; }
+      #pwa-splash .version { color: #bcb4ae; font: 500 12px/1.4 system-ui, sans-serif; margin: 18px 0 28px; }
+      #pwa-splash footer { color: #bcb4ae; font: 500 11px/1.5 system-ui, sans-serif; }
       #pwa-splash .gitguard { border: 1px solid #4b433e; border-radius: 999px; color: #f6eee7; display: inline-block; font-size: 10px; margin-top: 8px; padding: 3px 8px; }
     </style>
   </head>

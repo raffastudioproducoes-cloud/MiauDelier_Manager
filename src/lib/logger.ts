@@ -1,14 +1,45 @@
 import { db, type LogSistema, type NivelLog } from '../db/schema'
 
-// Expressões regulares e nomes de propriedades sensíveis para higienização estrita
-const CHAVES_SENSIVEIS_REGEX =
-  /(senha|password|hash|salt|key|token|secret|sessao|session|cifrado|chavedesessao|auth|authorization|pin|jwt|private|credenciais|creditcard|cartao|cvv|cpf|rg|saldoCriptografado|valorCriptografado)/i
-
-const CHAVE_HEX_REGEX = /^[0-9a-fA-F]{64}$/
-const BASE64_CIPHERTEXT_REGEX = /^[A-Za-z0-9+/]+={0,2}$/
+// Nomes de propriedades sensíveis e limites para higienização estrita.
+const CHAVES_SENSIVEIS = [
+  'senha', 'password', 'hash', 'salt', 'key', 'token', 'secret', 'sessao', 'session',
+  'cifrado', 'chavedesessao', 'auth', 'authorization', 'pin', 'jwt', 'private',
+  'credenciais', 'creditcard', 'cartao', 'cvv', 'cpf', 'rg', 'saldocriptografado',
+  'valorcriptografado',
+]
+const LIMITE_CARACTERES_STRING_LOG = 10_000
 
 const LIMITE_MAXIMO_LOGS = 1000
 const bufferLogsMemoria: LogSistema[] = []
+
+function ehHexadecimal64(valor: string): boolean {
+  if (valor.length !== 64) return false
+  return [...valor].every((caractere) => {
+    const codigo = caractere.charCodeAt(0)
+    return (
+      (codigo >= 48 && codigo <= 57) ||
+      (codigo >= 65 && codigo <= 70) ||
+      (codigo >= 97 && codigo <= 102)
+    )
+  })
+}
+
+function parecePayloadBase64(valor: string): boolean {
+  if (valor.length <= 80) return false
+  return [...valor].every((caractere, indice) => {
+    const codigo = caractere.charCodeAt(0)
+    const alfanumerico =
+      (codigo >= 48 && codigo <= 57) ||
+      (codigo >= 65 && codigo <= 90) ||
+      (codigo >= 97 && codigo <= 122)
+    return (
+      alfanumerico ||
+      caractere === '+' ||
+      caractere === '/' ||
+      (caractere === '=' && indice >= valor.length - 2)
+    )
+  })
+}
 
 /**
  * Sanitiza recursivamente objetos, strings, arrays e estruturas de dados,
@@ -20,12 +51,13 @@ export function sanitizarDadoLog(dado: unknown, profundidade = 0): unknown {
   if (profundidade > 6) return '[Profundidade Máxima de Inspeção Excedida]'
 
   if (typeof dado === 'string') {
+    if (dado.length > LIMITE_CARACTERES_STRING_LOG) return '[TEXTO_LONGO_OMITIDO]'
     // Omite se a string tiver formato de chave criptográfica de 256-bit (hex)
-    if (CHAVE_HEX_REGEX.test(dado)) {
+    if (ehHexadecimal64(dado)) {
       return '[CHAVE_CRIPTOGRAFICA_OMITIDA]'
     }
     // Omite strings base64 longas que parecem ser payloads cifrados
-    if (dado.length > 80 && BASE64_CIPHERTEXT_REGEX.test(dado)) {
+    if (parecePayloadBase64(dado)) {
       return '[PAYLOAD_CIFRADO_OMITIDO]'
     }
     // Se a string contiver JSON serializado, analisa e sanitiza internamente
@@ -59,7 +91,8 @@ export function sanitizarDadoLog(dado: unknown, profundidade = 0): unknown {
   if (typeof dado === 'object') {
     const objetoSanitizado: Record<string, unknown> = {}
     for (const [chave, valor] of Object.entries(dado as Record<string, unknown>)) {
-      if (CHAVES_SENSIVEIS_REGEX.test(chave)) {
+      const chaveNormalizada = chave.toLowerCase()
+      if (CHAVES_SENSIVEIS.some((termo) => chaveNormalizada.includes(termo))) {
         objetoSanitizado[chave] = '[REDACTED]'
       } else {
         objetoSanitizado[chave] = sanitizarDadoLog(valor, profundidade + 1)
