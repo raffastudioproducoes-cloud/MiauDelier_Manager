@@ -431,7 +431,7 @@ export function AnalyticsPage() {
               </p>
               {resumo.historicoVencido > 0 && (
                 <div className="mt-3">
-                  <Button variante="secondary" onClick={() => setConfirmandoLimpeza(true)}>
+                  <Button variante="primary" onClick={() => setConfirmandoLimpeza(true)}>
                     Limpar registros vencidos
                   </Button>
                 </div>
