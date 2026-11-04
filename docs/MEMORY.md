@@ -83,3 +83,10 @@ A suíte de testes com **Vitest** possui **326 testes automatizados** distribuí
 - A chave Gemini de cada usuária permanece exclusivamente no Vault do Supabase, vinculada ao `user.id`; o frontend nunca lê seu valor e não há chave compartilhada do servidor.
 - A tela **Configurações** consulta a Edge Function para exibir `desconectado`, `com problema` ou `conectado`. A consulta verifica o acesso ao modelo sem gerar conteúdo.
 - Quando existe uma chave persistida, o campo fica bloqueado. A remoção apaga o vínculo e o segredo do Vault pelo gatilho do banco; só então uma nova chave pode ser cadastrada.
+
+# Atualização 04/11/2026 — Rascunhos e validade de sessão
+
+- Requisito aprovado: salvar automaticamente rascunhos dos formulários de negócio no IndexedDB, isolados por usuário/perfil e sem sincronizar rascunhos.
+- Senhas, tokens, chaves privadas, arquivos e segredos ficam fora dos rascunhos.
+- Encerrar sessão Supabase na próxima abertura quando o site ficou sete dias ou mais sem ser aberto; aberturas dentro do limite renovam a data local.
+- Tarefa 8.3 concluída e validada: 332 testes em 76 arquivos, checagem TypeScript, lint e build aprovados.

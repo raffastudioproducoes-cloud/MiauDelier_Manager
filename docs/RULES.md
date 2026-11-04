@@ -31,6 +31,8 @@ Este documento estabelece as diretrizes obrigatórias de desenvolvimento, padrõ
 3. **Dados de negócio sem cifra interna**: não reintroduzir `cifrarCampo`, DEK/KEK ou cofre local. O transporte HTTPS, Auth e RLS são as proteções definidas para este projeto.
 3. **Proibição de Exposição de Segredos**: Nunca inclua chaves de API, tokens, senhas ou segredos em arquivos de código, commits ou documentação markdown.
 4. **Validação Rigorosa de Backup**: Nenhum backup deve ser importado para o banco de dados sem antes verificar o formato do envelope JSON e validar o checksum SHA-256.
+5. **Rascunhos locais**: Rascunhos de formulários devem ser isolados por usuário e perfil no IndexedDB, não sincronizados e removidos após salvamento ou descarte. Nunca persistir senhas, tokens, chaves privadas, arquivos ou segredos em rascunhos.
+6. **Validade da sessão**: Ao abrir o site, exigir novo login quando a última abertura tiver sido há sete dias ou mais; atualizar o marcador somente após validar que a sessão está dentro do prazo.
 
 ---
 

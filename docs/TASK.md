@@ -121,3 +121,4 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | --- | --- | --- | --- |
 | 8.1 | Padronizar ícones, tema escuro e tela de abertura do PWA Android | Alta | Concluída em `testes` — aguarda validação manual |
 | 8.2 | Enriquecer o resumo Gemini com descontos, histórico de compras, prazos e precificação | Alta | Concluída em `testes` — aguarda validação manual |
+| 8.3 | Persistir rascunhos de formulários localmente por conta/perfil e encerrar sessões após sete dias sem abrir o site | Alta | Concluída |

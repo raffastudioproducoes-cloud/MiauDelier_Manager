@@ -3,6 +3,9 @@ import { hasAccountConfigured, setupAccount, login, clearSession, recuperarCofre
 import { prepareLocalCacheForUser, syncOnLogin } from '../lib/syncService'
 import { supabase } from '../lib/supabase'
 
+const SESSION_LAST_OPEN_PREFIX = 'miaudelier:last-open:'
+const SESSION_MAX_IDLE_MS = 7 * 24 * 60 * 60 * 1000
+
 interface AuthState {
   autenticado: boolean
   contaConfigurada: boolean | null
@@ -25,6 +28,20 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ contaConfigurada: false, autenticado: false })
       return
     }
+
+    const sessionKey = `${SESSION_LAST_OPEN_PREFIX}${cloudSession.user.id}`
+    const lastOpen = Number(localStorage.getItem(sessionKey))
+    if (Number.isFinite(lastOpen) && lastOpen > 0 && Date.now() - lastOpen >= SESSION_MAX_IDLE_MS) {
+      try {
+        const { error } = await supabase.auth.signOut()
+        if (!error) localStorage.removeItem(sessionKey)
+      } finally {
+        clearSession()
+        set({ contaConfigurada: true, autenticado: false })
+      }
+      return
+    }
+    localStorage.setItem(sessionKey, String(Date.now()))
 
     // O Supabase e a fonte de verdade da sessão. IndexedDB é apenas cache por usuário.
     await prepareLocalCacheForUser(cloudSession.user.id)
@@ -68,7 +85,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   sair: async () => {
     try {
+      const { data: { session: cloudSession } } = await supabase.auth.getSession()
       await supabase.auth.signOut()
+      if (cloudSession?.user) localStorage.removeItem(`${SESSION_LAST_OPEN_PREFIX}${cloudSession.user.id}`)
     } finally {
       clearSession()
       set({ contaConfigurada: false, autenticado: false })

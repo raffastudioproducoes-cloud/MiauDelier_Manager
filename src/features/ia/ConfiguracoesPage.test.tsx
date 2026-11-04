@@ -30,8 +30,8 @@ describe('ConfiguracoesPage', () => {
     render(<ToastProvider><ConfiguracoesPage /></ToastProvider>)
 
     const campo = await screen.findByLabelText(/chave da api gemini/i)
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/conectado/i))
     expect(campo).toBeDisabled()
-    expect(screen.getByRole('status')).toHaveTextContent(/conectado/i)
 
     fireEvent.click(screen.getByRole('button', { name: /remover chave/i }))
     await waitFor(() => expect(removerChaveGemini).toHaveBeenCalledOnce())

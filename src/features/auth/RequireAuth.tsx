@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useAuthStore } from '../../stores/authStore'
+import { FormDraftPersistence } from '../../components/FormDraftPersistence'
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
@@ -25,5 +26,5 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (contaConfigurada === null) return null
   if (!autenticado && location.pathname !== '/login') return null
 
-  return <>{children}</>
+  return <><FormDraftPersistence />{children}</>
 }

@@ -298,6 +298,16 @@ export interface PerfilAtelieDB {
   updatedAt: string
 }
 
+export interface RascunhoFormulario {
+  id: string
+  usuarioId: string
+  perfilId: string
+  rota: string
+  formulario: string
+  campos: Record<string, string | boolean>
+  atualizadoEm: string
+}
+
 export class MiauDelierDB extends Dexie {
   categoriasMaterial!: EntityTable<CategoriaMaterial, 'id'>
   materiais!: EntityTable<Material, 'id'>
@@ -321,6 +331,7 @@ export class MiauDelierDB extends Dexie {
   syncQueue!: EntityTable<SyncEvent, 'id'>
   syncMetadata!: EntityTable<SyncMetadata, 'id'>
   perfisAtelie!: EntityTable<PerfilAtelieDB, 'id'>
+  rascunhosFormulario!: EntityTable<RascunhoFormulario, 'id'>
 
   constructor(dbName?: string) {
     super(dbName || getDbNameForPerfil())
@@ -395,6 +406,9 @@ export class MiauDelierDB extends Dexie {
     })
     this.version(8).stores({
       historicoPrecosMateriais: '++id, materialId, dataCompra, registradoEm',
+    })
+    this.version(9).stores({
+      rascunhosFormulario: '&id, usuarioId, perfilId, rota, atualizadoEm',
     })
   }
 }

@@ -7,6 +7,8 @@ Este documento descreve a estrutura técnica, os componentes de software, o mode
 ## 1. Arquitetura de Alto Nível
 O **MiauDelier Manager** usa uma arquitetura **híbrida (cache local + sincronização em nuvem)**. Dexie/IndexedDB mantém a cópia local para resposta rápida e uso offline; o Supabase fornece identidade, RLS, banco remoto, Edge Functions e transporte HTTPS. Dados de negócio não passam por cifra interna no cliente: o frontend usa somente as chaves públicas de comunicação do Supabase.
 
+Rascunhos de formulários são armazenados na tabela local `rascunhosFormulario`, isolados por usuário, perfil, rota e formulário. Senhas, tokens, chaves, arquivos e campos secretos são excluídos; os rascunhos não são sincronizados com a nuvem. Ao abrir o site, a sessão Supabase é encerrada se a última abertura registrada ocorreu há sete dias ou mais. Abrir o site antes do limite renova a data local.
+
 ```mermaid
 flowchart TD
     subgraph Browser ["Navegador / Cliente PWA (Híbrido)"]
@@ -55,7 +57,7 @@ flowchart TD
 | **Roteamento** | TanStack Router v1 | Roteamento baseado em arquivos tipado estaticamente (`src/routes`) |
 | **Build & Bundler** | Vite 8.2 | Servidor de dev e empacotamento de produção com Rolldown/ESBuild |
 | **Testes** | Vitest 3 + Testing Library | Execução de suítes de testes unitários e de integração de componentes |
-| **Banco de Dados** | Dexie.js 4.4 + IndexedDB | Banco de dados NoSQL indexado local no navegador |
+| **Banco de Dados** | Dexie.js 4.4 + IndexedDB | Banco de dados NoSQL indexado local no navegador, incluindo rascunhos por conta e perfil |
 | **Sincronização & Nuvem (Fase 7)** | Supabase (PostgreSQL) | Banco de dados na nuvem para backup e sincronização |
 | **Gerenciamento de Estado** | Zustand 5.0 | Estado global reativo de autenticação e sessão do usuário |
 | **Segurança de acesso** | Supabase Auth + RLS + HTTPS | Identidade, autorização por usuário/perfil e transporte seguro |

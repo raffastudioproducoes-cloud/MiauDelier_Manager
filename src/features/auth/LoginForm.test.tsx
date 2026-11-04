@@ -157,6 +157,7 @@ describe('LoginForm', () => {
       error: { message: 'Invalid login credentials' },
     } as any)
     render(<LoginForm />)
+    navegarMock.mockClear()
 
     fireEvent.change(await screen.findByPlaceholderText('Digite seu usuário ou e-mail'), { target: { value: 'nao-existe@example.com' } })
     fireEvent.change(screen.getByPlaceholderText('Digite sua senha'), { target: { value: 'senha-incorreta' } })

@@ -15,6 +15,8 @@ O **MiauDelier Manager** é um aplicativo web progressivo (PWA), operando no mod
 
 Os dados operacionais são mantidos em cache no dispositivo (IndexedDB via Dexie.js), permitindo continuidade offline, e são sincronizados com o Supabase via Event Sourcing. O controle de acesso é fornecido por Supabase Auth, RLS e HTTPS; dados de negócio não possuem criptografia interna no frontend.
 
+Formulários de negócio preservam automaticamente rascunhos locais por conta e perfil para recuperação após fechamento do navegador ou interrupção da conexão. Credenciais, tokens, chaves privadas e arquivos não são preservados. A sessão permanece ativa entre aberturas do site se o intervalo desde a abertura anterior for inferior a sete dias; ao atingir sete dias sem abrir, a próxima abertura exige login novamente.
+
 ---
 
 ## 2. Declaração do Problema

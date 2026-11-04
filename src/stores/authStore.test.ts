@@ -33,6 +33,37 @@ describe('authStore', () => {
     expect(useAuthStore.getState()).toMatchObject({ contaConfigurada: true, autenticado: true })
   })
 
+  it('encerra uma sessão que não abre o site há sete dias', async () => {
+    const { supabase } = await import('../lib/supabase')
+    const getSessionSpy = vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce({
+      data: { session: { user: { id: 'usuario-inativo' } } },
+      error: null,
+    } as any)
+    const signOutSpy = vi.spyOn(supabase.auth, 'signOut').mockResolvedValueOnce({ error: null } as any)
+    localStorage.setItem('miaudelier:last-open:usuario-inativo', String(Date.now() - 7 * 24 * 60 * 60 * 1000))
+
+    await useAuthStore.getState().carregarEstadoInicial()
+
+    expect(signOutSpy).toHaveBeenCalledOnce()
+    expect(useAuthStore.getState()).toMatchObject({ contaConfigurada: true, autenticado: false })
+    expect(localStorage.getItem('miaudelier:last-open:usuario-inativo')).toBeNull()
+    getSessionSpy.mockRestore()
+  })
+
+  it('mantém a sessão recente e registra a abertura atual', async () => {
+    const { supabase } = await import('../lib/supabase')
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce({
+      data: { session: { user: { id: 'usuario-recente' } } },
+      error: null,
+    } as any)
+    localStorage.setItem('miaudelier:last-open:usuario-recente', String(Date.now() - 6 * 24 * 60 * 60 * 1000))
+
+    await useAuthStore.getState().carregarEstadoInicial()
+
+    expect(useAuthStore.getState().autenticado).toBe(true)
+    expect(Number(localStorage.getItem('miaudelier:last-open:usuario-recente'))).toBeGreaterThan(Date.now() - 1000)
+  })
+
   it('reabre a sessão local quando o dispositivo já foi configurado', async () => {
     await useAuthStore.getState().criarConta('senha-forte')
     useAuthStore.getState().sair()
