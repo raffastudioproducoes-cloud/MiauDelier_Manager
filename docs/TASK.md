@@ -122,5 +122,5 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | 8.1 | Padronizar ícones, tema escuro e tela de abertura do PWA Android | Alta | Concluída em `testes` — aguarda validação manual |
 | 8.2 | Enriquecer o resumo Gemini com descontos, histórico de compras, prazos e precificação | Alta | Concluída em `testes` — aguarda validação manual |
 | 8.3 | Persistir rascunhos de formulários localmente por conta/perfil e encerrar sessões após sete dias sem abrir o site | Alta | Concluída |
-| 8.4 | Estimar silicone e organizar cadastro de moldes retangulares em fases, com consumo automático | Média | Implementada e validada localmente; validação visual no site de testes pendente |
+| 8.4 | Estimar silicone e organizar cadastro de moldes retangulares em fases, com consumo automático | Média | Publicada no GitHub Pages; validação visual no site pendente |
 | 8.5 | Avaliar e corrigir alertas de dependências de produção identificados em 04/11/2026 | Alta | Pendente: dompurify crítico; seroval e zod altos |

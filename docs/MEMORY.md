@@ -13,6 +13,8 @@ Atualização 04/11/2026: formas retangulares usam fluxo por fases, caixa obriga
 
 Versão 1.2.0: funcionalidade aditiva de cálculo e cadastro guiado de moldes. Auditoria de produção em 04/11/2026 identificou três pacotes com alertas: dompurify (crítico), seroval e zod (altos). Avaliação e correção permanecem pendentes e fora do escopo dos moldes.
 
+O commit `58d8abb` passou na suíte completa, lint, tipos e build no GitHub Actions, com publicação concluída no GitHub Pages. A branch `testes` e o endereço Cloudflare de testes não foram atualizados por esse push; a validação visual continua pendente.
+
 ---
 
 ## 2. Fase Atual
