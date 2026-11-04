@@ -752,8 +752,12 @@ export function FormasPage() {
               {calculoSilicone.resultado && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-on-surface" aria-live="polite">
                   <h3 className="text-sm font-semibold text-primary sm:col-span-2">Fase 3: Resultado técnico do molde</h3>
+                  <p>Capacidade interna da caixa: <strong>{(calculoSilicone.resultado.volumeCaixaCm3 / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L</strong></p>
+                  <p>Volume ocupado pela madeira: <strong>{(calculoSilicone.resultado.volumeMadeiraTotalCm3 / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} L</strong></p>
                   <p>Volume líquido: <strong>{calculoSilicone.resultado.volumeLiquidoCm3.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} cm³</strong></p>
                   <p>Volume líquido em litros: <strong>{(calculoSilicone.resultado.volumeLiquidoCm3 / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} L</strong></p>
+                  <p>Massa de silicone sem margem: <strong>{(calculoSilicone.resultado.volumeLiquidoCm3 / 1000 * (parseNumeroPtBr(densidadeSilicone) ?? 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</strong></p>
+                  <p className="text-xs text-on-surface-variant sm:col-span-2">Caixa menos madeira é o espaço para silicone. A massa em kg depende da densidade; a margem é acrescentada depois.</p>
                   <p>Silicone com 8% de margem: <strong>{calculoSilicone.resultado.volumeMinimoLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L · {calculoSilicone.resultado.massaMinimaKg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</strong></p>
                   <p>Silicone com 12% de margem: <strong>{calculoSilicone.resultado.volumeMaximoLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L · {calculoSilicone.resultado.massaMaximaKg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</strong></p>
                   {margemSiliconeValida && <p>Estimativa com margem escolhida: <strong>{(calculoSilicone.resultado.volumeLiquidoCm3 / 1000 * (1 + margemSiliconeNumero / 100) * (parseNumeroPtBr(densidadeSilicone) ?? 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</strong></p>}

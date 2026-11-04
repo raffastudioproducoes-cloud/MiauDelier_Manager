@@ -23,6 +23,8 @@ Versão 1.2.2: forma antiga pode ter quantidade salva sem baixa real; ao editar,
 
 Correção 1.2.3: o usuário esclareceu que os furos da mesa são vazados e preenchidos com silicone. A fórmula anterior que supunha insertos de madeira foi substituída por caixa interna − (tampo maciço − furos). Os furos atravessam a espessura completa no cálculo do silicone; a profundidade informada continua usada no cálculo de resina. Quantidades reais já registradas e saldos não são alterados automaticamente.
 
+Correção 1.2.4: resultados exibem também capacidade da caixa, volume da madeira e massa de silicone sem margem. A fórmula continua `caixa − madeira`; litros de madeira não são kg de madeira. Três casos testados estão em `docs/CALCULO-SILICONE-EXEMPLOS.md`.
+
 ---
 
 ## 2. Fase Atual

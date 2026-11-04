@@ -37,6 +37,18 @@ describe('calcularVolumeSiliconeMolde', () => {
     expect(resultado.massaMaximaKg).toBeCloseTo(volume * 1.12 / 1000 * 1.1)
   })
 
+  it.each([
+    [{ comprimento: 60, largura: 70, altura: 8 }, 25.3787453331, 30.1499494558, 31.2666142504],
+    [{ comprimento: 60, largura: 80, altura: 6.25 }, 21.7787453331, 25.8731494558, 26.8314142504],
+    [{ comprimento: 70, largura: 80, altura: 5 }, 19.7787453331, 23.4971494558, 24.3674142504],
+  ])('calcula caixa %o, com margens de 8%% e 12%%', async (caixa, litros, massa8, massa12) => {
+    const { calcularVolumeSiliconeMolde } = await import('./volume')
+    const resultado = calcularVolumeSiliconeMolde({ caixaInternaCm: caixa, tampoMesaCm: { comprimento: 55.5, largura: 66.5, espessura: 3 }, furosVazados: [{ quantidade: 10, diametroCm: 11 }], densidadeSiliconeGcm3: 1.1 })
+    expect(resultado.volumeLiquidoCm3 / 1000).toBeCloseTo(litros, 6)
+    expect(resultado.massaMinimaKg).toBeCloseTo(massa8, 6)
+    expect(resultado.massaMaximaKg).toBeCloseTo(massa12, 6)
+  })
+
   it('aceita furo retangular usando profundidade padrão igual à espessura do tampo', async () => {
     const { calcularVolumeSiliconeMolde } = await import('./volume')
     const resultado = calcularVolumeSiliconeMolde({

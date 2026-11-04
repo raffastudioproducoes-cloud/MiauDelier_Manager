@@ -126,4 +126,5 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | 8.5 | Avaliar e corrigir alertas de dependências de produção identificados em 04/11/2026 | Alta | Pendente: dompurify crítico; seroval e zod altos |
 | 8.6 | Corrigir consumo de silicone e amortização na criação e edição de moldes | Alta | Implementada; validação visual no site pendente |
 | 8.7 | Regularizar baixa de silicone em forma antiga com quantidade salva sem desconto | Alta | Publicada; usuário deverá confirmar o consumo pendente ao editar |
-| 8.8 | Corrigir estimativa de silicone para preencher furos vazados de ponta a ponta | Alta | Implementada e em validação; revisão visual no site pendente |
+| 8.8 | Corrigir estimativa de silicone para preencher furos vazados de ponta a ponta | Alta | Publicada; revisão visual no site pendente |
+| 8.9 | Esclarecer volumes da caixa, madeira e silicone e documentar três exemplos verificáveis | Alta | Implementada; validação visual no site pendente |
