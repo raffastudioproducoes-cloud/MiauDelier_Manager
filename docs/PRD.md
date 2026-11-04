@@ -70,6 +70,7 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
   - Conversão de unidades de medida (massa, volume, unidade).
   - Alertas visuais para itens com estoque zerado ou baixo.
 - **Gestão de Moldes / Formas**:
+  - Para moldes retangulares, fluxo por fases com medidas internas obrigatórias da caixa, cálculo de silicone e margens de 8% a 12%. A madeira total é o tampo maciço menos os vazios mais os insertos que os preenchem; os insertos usam as dimensões dos furos. A margem escolhida determina a quantidade debitada na unidade de massa ou volume do material; a edição preserva a baixa já realizada.
   - Cálculo de silicone utilizado e débito automático no estoque.
   - Cálculo de caixa de contenção/estrutura externa (MDF, madeira, acrílico).
   - Controle de vida útil (usos realizados / total) e amortização por peça.

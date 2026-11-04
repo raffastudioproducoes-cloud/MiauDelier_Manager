@@ -7,10 +7,11 @@ import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { calcularVolumeMl, calcularVolumeMesaResina, type FuroVazadoInput, type PeMesaInput } from '../calculator/volume'
+import { calcularVolumeMl, calcularVolumeMesaResina, calcularVolumeSiliconeMolde, parseNumeroPtBr, type FuroVazadoInput, type PeMesaInput } from '../calculator/volume'
 import { criarForma, listarFormas, atualizarForma, excluirForma, finalizarCuraForma } from './formasRepo'
 import { listarMateriais } from './materiaisRepo'
 import { SeletorImagem } from '../../components/ui/SeletorImagem'
+import { converterQuantidade } from '../../lib/unidades'
 import type { Forma, FormaGeometria, Material, FuroVazadoForma } from '../../db/schema'
 
 const schemaForma = z.object({
@@ -37,14 +38,14 @@ function dimensoesGeometria(geometria: FormaGeometria, dimensoes: {
   switch (geometria) {
     case 'retangular':
       return {
-        comprimento: Number(dimensoes.comprimento),
-        largura: Number(dimensoes.largura),
-        profundidade: Number(dimensoes.profundidade),
+        comprimento: parseNumeroPtBr(dimensoes.comprimento) ?? NaN,
+        largura: parseNumeroPtBr(dimensoes.largura) ?? NaN,
+        profundidade: parseNumeroPtBr(dimensoes.profundidade) ?? NaN,
       }
     case 'cilindrico':
-      return { raio: Number(dimensoes.raio), altura: Number(dimensoes.altura) }
+      return { raio: parseNumeroPtBr(dimensoes.raio) ?? NaN, altura: parseNumeroPtBr(dimensoes.altura) ?? NaN }
     case 'esferico':
-      return { raio: Number(dimensoes.raio) }
+      return { raio: parseNumeroPtBr(dimensoes.raio) ?? NaN }
     case 'direto':
       return {}
   }
@@ -114,6 +115,11 @@ export function FormasPage() {
   const [compPes, setCompPes] = useState('4')
   const [largPes, setLargPes] = useState('4')
   const [margemSeguranca, setMargemSeguranca] = useState('10')
+  const [caixaComprimento, setCaixaComprimento] = useState('')
+  const [caixaLargura, setCaixaLargura] = useState('')
+  const [caixaAltura, setCaixaAltura] = useState('')
+  const [densidadeSilicone, setDensidadeSilicone] = useState('1.1')
+  const [margemSilicone, setMargemSilicone] = useState('10')
 
   // Silicone & Caixa de Contenção & Amortização do Molde & Cura
   const [materialSiliconeId, setMaterialSiliconeId] = useState('')
@@ -189,19 +195,19 @@ export function FormasPage() {
   const resultadoMesaResina = useMemo(() => {
     if (geometria !== 'retangular') return null
     if (furos.length === 0 && !temPes) return null
-    const c = Number(comprimento)
-    const l = Number(largura)
-    const e = Number(profundidade)
+    const c = parseNumeroPtBr(comprimento) ?? NaN
+    const l = parseNumeroPtBr(largura) ?? NaN
+    const e = parseNumeroPtBr(profundidade) ?? NaN
     if (isNaN(c) || c <= 0 || isNaN(l) || l <= 0 || isNaN(e) || e <= 0) return null
 
     const furosConvertidos: FuroVazadoInput[] = furos
       .map((f) => ({
-        quantidade: Number(f.quantidade) || 0,
+        quantidade: parseNumeroPtBr(f.quantidade) ?? 0,
         geometria: f.geometria,
-        diametroCm: Number(f.diametroCm) || 0,
-        comprimentoCm: Number(f.comprimentoCm) || 0,
-        larguraCm: Number(f.larguraCm) || 0,
-        profundidadeCm: f.profundidadeCm ? Number(f.profundidadeCm) : undefined,
+        diametroCm: parseNumeroPtBr(f.diametroCm) ?? 0,
+        comprimentoCm: parseNumeroPtBr(f.comprimentoCm) ?? 0,
+        larguraCm: parseNumeroPtBr(f.larguraCm) ?? 0,
+        profundidadeCm: f.profundidadeCm ? parseNumeroPtBr(f.profundidadeCm) ?? undefined : undefined,
       }))
       .filter((f) => f.quantidade > 0)
 
@@ -222,9 +228,65 @@ export function FormasPage() {
       espessuraCm: e,
       furosVazados: furosConvertidos,
       pesMesa: pesConvertidos,
-      margemSegurancaPercentual: Number(margemSeguranca || '10'),
+      margemSegurancaPercentual: parseNumeroPtBr(margemSeguranca || '10') ?? 10,
     })
   }, [geometria, comprimento, largura, profundidade, furos, temPes, qtdPes, geometriaPes, raioPes, alturaPes, compPes, largPes, margemSeguranca])
+
+  const caixaSiliconeAtiva = geometria === 'retangular' && [caixaComprimento, caixaLargura, caixaAltura].some((valor) => valor.trim() !== '')
+  const calculoSilicone = useMemo(() => {
+    if (!caixaSiliconeAtiva) return { resultado: null, erro: null }
+    const dimensoes = [caixaComprimento, caixaLargura, caixaAltura].map(parseNumeroPtBr)
+    const c = parseNumeroPtBr(comprimento)
+    const l = parseNumeroPtBr(largura)
+    const e = parseNumeroPtBr(profundidade)
+    const densidade = parseNumeroPtBr(densidadeSilicone)
+    if (dimensoes.some((valor) => valor === null)) {
+      return { resultado: null, erro: 'Preencha as três dimensões internas da caixa com números válidos.' }
+    }
+    if (c === null || l === null || e === null || densidade === null) {
+      return { resultado: null, erro: 'Preencha dimensões válidas para a mesa e a densidade do silicone.' }
+    }
+    try {
+      const furosConvertidos: FuroVazadoInput[] = furos.map((furo) => ({
+        quantidade: parseNumeroPtBr(furo.quantidade) ?? NaN,
+        geometria: furo.geometria,
+        diametroCm: parseNumeroPtBr(furo.diametroCm) ?? NaN,
+        comprimentoCm: parseNumeroPtBr(furo.comprimentoCm) ?? NaN,
+        larguraCm: parseNumeroPtBr(furo.larguraCm) ?? NaN,
+        profundidadeCm: furo.profundidadeCm.trim() ? parseNumeroPtBr(furo.profundidadeCm) ?? NaN : undefined,
+      }))
+      return {
+        resultado: calcularVolumeSiliconeMolde({
+          caixaInternaCm: { comprimento: dimensoes[0]!, largura: dimensoes[1]!, altura: dimensoes[2]! },
+          tampoMesaCm: { comprimento: c, largura: l, espessura: e },
+          furosVazados: furosConvertidos,
+          densidadeSiliconeGcm3: densidade,
+        }),
+        erro: null,
+      }
+    } catch (falha) {
+      return { resultado: null, erro: falha instanceof Error ? falha.message : 'Não foi possível calcular o silicone.' }
+    }
+  }, [caixaSiliconeAtiva, caixaComprimento, caixaLargura, caixaAltura, comprimento, largura, profundidade, densidadeSilicone, furos])
+
+  const margemSiliconeNumero = parseNumeroPtBr(margemSilicone)
+  const margemSiliconeValida = margemSiliconeNumero !== null && margemSiliconeNumero >= 8 && margemSiliconeNumero <= 12
+  const materialSelecionado = materiais.find((material) => String(material.id) === materialSiliconeId)
+  const unidadeSilicone = materialSelecionado?.unidade.trim().toLowerCase() ?? ''
+  const unidadeMassa = ['g', 'grama', 'gramas', 'kg', 'kilo', 'quilograma', 'quilogramas'].includes(unidadeSilicone)
+  const unidadeVolume = ['ml', 'l', 'litro', 'litros'].includes(unidadeSilicone)
+  const quantidadeCalculada = calculoSilicone.resultado && margemSiliconeValida && materialSelecionado && (unidadeMassa || unidadeVolume)
+    ? converterQuantidade(
+      calculoSilicone.resultado.volumeLiquidoCm3 / 1000 * (1 + margemSiliconeNumero / 100) * (unidadeMassa ? (parseNumeroPtBr(densidadeSilicone) ?? 0) : 1),
+      unidadeMassa ? 'kg' : 'l', materialSelecionado.unidade,
+    ).quantidadeConvertida : null
+
+  useEffect(() => {
+    if (geometria === 'retangular' && quantidadeCalculada !== null && formaEmEdicaoId === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setQtdSilicone(String(quantidadeCalculada))
+    }
+  }, [geometria, quantidadeCalculada, formaEmEdicaoId])
 
   const volumeCalculado = useMemo(() => {
     if (geometria === 'retangular' && resultadoMesaResina) {
@@ -234,7 +296,7 @@ export function FormasPage() {
       return calcularVolumeMl({
         geometria,
         ...dimensoesGeometria(geometria, { comprimento, largura, profundidade, raio, altura, volumeMl }),
-        volumeMl: Number(volumeMl),
+        volumeMl: parseNumeroPtBr(volumeMl) ?? NaN,
       })
     } catch {
       return null
@@ -291,6 +353,11 @@ export function FormasPage() {
     setCompPes('4')
     setLargPes('4')
     setMargemSeguranca('10')
+    setCaixaComprimento('')
+    setCaixaLargura('')
+    setCaixaAltura('')
+    setDensidadeSilicone('1.1')
+    setMargemSilicone('10')
     setMaterialSiliconeId('')
     setQtdSilicone('')
     setMaterialCaixaEstrutura('')
@@ -347,6 +414,11 @@ export function FormasPage() {
     }
 
     setMargemSeguranca(forma.margemSegurancaPercentual !== undefined ? String(forma.margemSegurancaPercentual) : '10')
+    setCaixaComprimento(forma.dimensoesCaixaSiliconeCm ? String(forma.dimensoesCaixaSiliconeCm.comprimento) : '')
+    setCaixaLargura(forma.dimensoesCaixaSiliconeCm ? String(forma.dimensoesCaixaSiliconeCm.largura) : '')
+    setCaixaAltura(forma.dimensoesCaixaSiliconeCm ? String(forma.dimensoesCaixaSiliconeCm.altura) : '')
+    setDensidadeSilicone(String(forma.densidadeSiliconeGcm3 ?? 1.1))
+    setMargemSilicone(String(forma.margemSiliconePercentual ?? 10))
 
     setMaterialSiliconeId(forma.materialSiliconeId !== undefined ? String(forma.materialSiliconeId) : '')
     setQtdSilicone(forma.quantidadeSiliconeUsada !== undefined ? String(forma.quantidadeSiliconeUsada) : '')
@@ -370,6 +442,11 @@ export function FormasPage() {
 
     if (volumeCalculado === null || volumeCalculado <= 0) {
       setErro('Preencha as dimensões corretamente')
+      return
+    }
+
+    if (geometria === 'retangular' && (!calculoSilicone.resultado || calculoSilicone.erro || !margemSiliconeValida || (materialSelecionado && quantidadeCalculada === null))) {
+      setErro(calculoSilicone.erro ?? 'Corrija as dimensões da caixa para calcular o silicone.')
       return
     }
 
@@ -416,8 +493,15 @@ export function FormasPage() {
         margemSegurancaPercentual: Number(margemSeguranca || '10'),
         litrosResina: litros,
         massaResinaKg: massaKg,
+        dimensoesCaixaSiliconeCm: calculoSilicone.resultado ? {
+          comprimento: parseNumeroPtBr(caixaComprimento)!,
+          largura: parseNumeroPtBr(caixaLargura)!,
+          altura: parseNumeroPtBr(caixaAltura)!,
+        } : undefined,
+        densidadeSiliconeGcm3: calculoSilicone.resultado ? parseNumeroPtBr(densidadeSilicone)! : undefined,
+        margemSiliconePercentual: calculoSilicone.resultado ? parseNumeroPtBr(margemSilicone) ?? undefined : undefined,
         materialSiliconeId: materialSiliconeId ? Number(materialSiliconeId) : undefined,
-        quantidadeSiliconeUsada: qtdSilicone ? Number(qtdSilicone) : undefined,
+        quantidadeSiliconeUsada: geometria === 'retangular' && formaEmEdicaoId === null && materialSelecionado ? quantidadeCalculada ?? undefined : qtdSilicone ? Number(qtdSilicone) : undefined,
         materialCaixaEstrutura: materialCaixaEstrutura.trim() || undefined,
         custoCaixaEstrutura: custoCaixaEstrutura ? Number(custoCaixaEstrutura) : undefined,
         custoFabricacao: custoFabricacao ? Number(custoFabricacao) : undefined,
@@ -498,6 +582,7 @@ export function FormasPage() {
 
           {geometria === 'retangular' && (
             <div className="flex flex-col gap-4 border-l-2 border-primary/30 pl-3 py-1">
+              <h3 className="text-sm font-semibold text-primary">Fase 1: Modelo da peça / mesa</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <TextField id="comprimento-forma" rotulo="Comprimento (cm)" type="number" value={comprimento} onChange={(e) => setComprimento(e.target.value)} />
                 <TextField id="largura-forma" rotulo="Largura (cm)" type="number" value={largura} onChange={(e) => setLargura(e.target.value)} />
@@ -557,12 +642,13 @@ export function FormasPage() {
               <div className="w-full sm:w-64">
                 <TextField
                   id="margem-seguranca"
-                  rotulo="Margem de Segurança (%)"
+                  rotulo="Margem de Segurança da Resina (%)"
                   type="number"
                   value={margemSeguranca}
                   onChange={(e) => setMargemSeguranca(e.target.value)}
                 />
               </div>
+              {parseNumeroPtBr(comprimento) && parseNumeroPtBr(largura) && parseNumeroPtBr(profundidade) && <p className="text-sm text-on-surface-variant">Tampo maciço: {((parseNumeroPtBr(comprimento) ?? 0) * (parseNumeroPtBr(largura) ?? 0) * (parseNumeroPtBr(profundidade) ?? 0)).toFixed(1)} ml · Vazios: {(resultadoMesaResina?.volumeVazadosMl ?? 0).toFixed(1)} ml · Madeira do tampo: {Math.max(0, (parseNumeroPtBr(comprimento) ?? 0) * (parseNumeroPtBr(largura) ?? 0) * (parseNumeroPtBr(profundidade) ?? 0) - (resultadoMesaResina?.volumeVazadosMl ?? 0)).toFixed(1)} ml</p>}
             </div>
           )}
           {geometria === 'cilindrico' && (
@@ -622,8 +708,35 @@ export function FormasPage() {
             </p>
           )}
 
+          {geometria === 'retangular' && (
+            <section className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col gap-3" aria-labelledby="silicone-calculo-titulo">
+              <h3 id="silicone-calculo-titulo" className="text-sm font-semibold text-primary">Fase 2: Caixa de contenção e silicone</h3>
+              <p className="text-xs text-on-surface-variant">Informe as medidas internas da caixa. Os insertos de madeira preenchem os furos nas dimensões informadas; a estimativa inclui margem de 8% a 12%.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <TextField id="caixa-silicone-comprimento" rotulo="Comprimento interno da caixa (cm)" inputMode="decimal" value={caixaComprimento} onChange={(e) => setCaixaComprimento(e.target.value)} />
+                <TextField id="caixa-silicone-largura" rotulo="Largura interna da caixa (cm)" inputMode="decimal" value={caixaLargura} onChange={(e) => setCaixaLargura(e.target.value)} />
+                <TextField id="caixa-silicone-altura" rotulo="Altura interna da caixa (cm)" inputMode="decimal" value={caixaAltura} onChange={(e) => setCaixaAltura(e.target.value)} />
+                <TextField id="densidade-silicone" rotulo="Densidade do silicone (g/cm³)" inputMode="decimal" value={densidadeSilicone} onChange={(e) => setDensidadeSilicone(e.target.value)} />
+                <TextField id="margem-silicone" rotulo="Margem do silicone (%) — 8 a 12" inputMode="decimal" value={margemSilicone} onChange={(e) => setMargemSilicone(e.target.value)} />
+              </div>
+              <p className="text-xs text-on-surface-variant">As medidas internas da caixa devem acomodar a mesa, com espaço para o silicone.</p>
+              {!margemSiliconeValida && <p role="alert" className="text-sm text-error">Informe uma margem de silicone entre 8% e 12%.</p>}
+              {calculoSilicone.erro && <p role="alert" className="text-sm text-error">{calculoSilicone.erro}</p>}
+              {calculoSilicone.resultado && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-on-surface" aria-live="polite">
+                  <h3 className="text-sm font-semibold text-primary sm:col-span-2">Fase 3: Resultado técnico do molde</h3>
+                  <p>Volume líquido: <strong>{calculoSilicone.resultado.volumeLiquidoCm3.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} cm³</strong></p>
+                  <p>Volume líquido em litros: <strong>{(calculoSilicone.resultado.volumeLiquidoCm3 / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} L</strong></p>
+                  <p>Silicone com 8% de margem: <strong>{calculoSilicone.resultado.volumeMinimoLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L · {calculoSilicone.resultado.massaMinimaKg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</strong></p>
+                  <p>Silicone com 12% de margem: <strong>{calculoSilicone.resultado.volumeMaximoLitros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L · {calculoSilicone.resultado.massaMaximaKg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</strong></p>
+                  {margemSiliconeValida && <p>Estimativa com margem escolhida: <strong>{(calculoSilicone.resultado.volumeLiquidoCm3 / 1000 * (1 + margemSiliconeNumero / 100) * (parseNumeroPtBr(densidadeSilicone) ?? 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg</strong></p>}
+                </div>
+              )}
+            </section>
+          )}
+
           <div className="mt-3 pt-3 border-t border-outline-variant flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-on-surface">Fabricação & Amortização do Molde (Silicone)</h3>
+            <h3 className="text-sm font-semibold text-on-surface">Fase 4: Fabricação, amortização e registro</h3>
             
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
@@ -652,6 +765,11 @@ export function FormasPage() {
             </div>
 
             {materialSiliconeId !== '' && (
+              geometria === 'retangular' ? (
+                <div className="text-sm text-on-surface-variant">
+                  {formaEmEdicaoId !== null ? `Quantidade registrada: ${qtdSilicone || '—'} ${materialSelecionado?.unidade ?? ''}. A edição não altera o estoque já debitado.` : quantidadeCalculada !== null ? `Quantidade calculada para o estoque: ${quantidadeCalculada.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${materialSelecionado?.unidade ?? ''}` : 'Informe a caixa e selecione um material com unidade de massa ou volume para calcular a quantidade.'}
+                </div>
+              ) : (
               <TextField
                 id="qtd-silicone"
                 rotulo="Quantidade de Silicone Usada (subtraída do estoque)"
@@ -659,6 +777,7 @@ export function FormasPage() {
                 value={qtdSilicone}
                 onChange={(e) => setQtdSilicone(e.target.value)}
               />
+              )
             )}
 
             {/* Caixa de Contenção / Estrutura Externa da Forma */}
@@ -737,7 +856,7 @@ export function FormasPage() {
 
           {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
           <div className="flex gap-2">
-            <Button type="submit" disabled={volumeCalculado === null || volumeCalculado <= 0 || !nome.trim()}>
+            <Button type="submit" disabled={volumeCalculado === null || volumeCalculado <= 0 || !nome.trim() || (geometria === 'retangular' && (!calculoSilicone.resultado || !margemSiliconeValida || (materialSelecionado !== undefined && quantidadeCalculada === null)))}>
               {formaEmEdicaoId !== null ? 'Salvar' : 'Cadastrar forma'}
             </Button>
             {formaEmEdicaoId !== null && (

@@ -102,6 +102,9 @@ export interface Forma {
   margemSegurancaPercentual?: number
   massaResinaKg?: number
   litrosResina?: number
+  dimensoesCaixaSiliconeCm?: { comprimento: number; largura: number; altura: number }
+  densidadeSiliconeGcm3?: number
+  margemSiliconePercentual?: number
   imagemUrl?: string
 }
 
