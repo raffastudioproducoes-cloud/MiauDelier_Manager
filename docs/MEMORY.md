@@ -21,6 +21,8 @@ Validação 1.2.1: 27 testes direcionados, checagem de tipos, lint e build aprov
 
 Versão 1.2.2: forma antiga pode ter quantidade salva sem baixa real; ao editar, uma confirmação explícita regulariza o consumo uma vez, com registro da confirmação na própria forma. Não se presume que todos os registros antigos estejam pendentes, para evitar débito em duplicidade.
 
+Correção 1.2.3: o usuário esclareceu que os furos da mesa são vazados e preenchidos com silicone. A fórmula anterior que supunha insertos de madeira foi substituída por caixa interna − (tampo maciço − furos). Os furos atravessam a espessura completa no cálculo do silicone; a profundidade informada continua usada no cálculo de resina. Quantidades reais já registradas e saldos não são alterados automaticamente.
+
 ---
 
 ## 2. Fase Atual

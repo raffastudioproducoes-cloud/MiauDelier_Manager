@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 describe('calcularVolumeSiliconeMolde', () => {
-  it('desconta os vazios do tampo e adiciona os insertos, sem contar madeira duas vezes', async () => {
+  it('inclui no silicone os furos vazados da mesa', async () => {
     const { calcularVolumeSiliconeMolde } = await import('./volume')
     const resultado = calcularVolumeSiliconeMolde({
       caixaInternaCm: { comprimento: 20, largura: 15, altura: 10 },
@@ -11,15 +11,30 @@ describe('calcularVolumeSiliconeMolde', () => {
     })
 
     const madeiraTampo = 10 * 8 * 2
-    const insertosMadeira = 2 * Math.PI * 1 ** 2 * 2
-    const siliconeLiquido = 20 * 15 * 10 - (madeiraTampo - insertosMadeira + insertosMadeira)
+    const volumeFuros = 2 * Math.PI * 1 ** 2 * 2
+    const siliconeLiquido = 20 * 15 * 10 - (madeiraTampo - volumeFuros)
     expect(resultado.volumeTampoMadeiraCm3).toBeCloseTo(madeiraTampo)
-    expect(resultado.volumeInsertosMadeiraCm3).toBeCloseTo(insertosMadeira)
+    expect(resultado.volumeFurosCm3).toBeCloseTo(volumeFuros)
     expect(resultado.volumeLiquidoCm3).toBeCloseTo(siliconeLiquido)
     expect(resultado.volumeMinimoLitros).toBeCloseTo(siliconeLiquido * 1.08 / 1000)
     expect(resultado.volumeMaximoLitros).toBeCloseTo(siliconeLiquido * 1.12 / 1000)
     expect(resultado.massaMinimaKg).toBeCloseTo(siliconeLiquido * 1.08 / 1000 * 1.1)
     expect(resultado.massaMaximaKg).toBeCloseTo(siliconeLiquido * 1.12 / 1000 * 1.1)
+  })
+
+  it('calcula a mesa de 55,5 × 66,5 × 3 cm com 10 furos vazados de 11 cm', async () => {
+    const { calcularVolumeSiliconeMolde } = await import('./volume')
+    const resultado = calcularVolumeSiliconeMolde({
+      caixaInternaCm: { comprimento: 60, largura: 71, altura: 5 },
+      tampoMesaCm: { comprimento: 55.5, largura: 66.5, espessura: 3 },
+      furosVazados: [{ quantidade: 10, geometria: 'circulo', diametroCm: 11 }],
+      densidadeSiliconeGcm3: 1.1,
+    })
+    const furos = 10 * Math.PI * 5.5 ** 2 * 3
+    const volume = 60 * 71 * 5 - (55.5 * 66.5 * 3 - furos)
+    expect(resultado.volumeLiquidoCm3).toBeCloseTo(volume)
+    expect(resultado.massaMinimaKg).toBeCloseTo(volume * 1.08 / 1000 * 1.1)
+    expect(resultado.massaMaximaKg).toBeCloseTo(volume * 1.12 / 1000 * 1.1)
   })
 
   it('aceita furo retangular usando profundidade padrão igual à espessura do tampo', async () => {
@@ -31,7 +46,18 @@ describe('calcularVolumeSiliconeMolde', () => {
       densidadeSiliconeGcm3: 1,
     })
 
-    expect(resultado.volumeInsertosMadeiraCm3).toBe(12)
+    expect(resultado.volumeFurosCm3).toBe(12)
+  })
+
+  it('considera o furo atravessando toda a tábua mesmo com outra profundidade de resina', async () => {
+    const { calcularVolumeSiliconeMolde } = await import('./volume')
+    const resultado = calcularVolumeSiliconeMolde({
+      caixaInternaCm: { comprimento: 20, largura: 15, altura: 10 },
+      tampoMesaCm: { comprimento: 10, largura: 8, espessura: 2 },
+      furosVazados: [{ quantidade: 1, geometria: 'circulo', diametroCm: 2, profundidadeCm: 1 }],
+      densidadeSiliconeGcm3: 1,
+    })
+    expect(resultado.volumeFurosCm3).toBeCloseTo(Math.PI * 2)
   })
 
   it('rejeita caixa ou densidade não positivas, furos inválidos, volumes não finitos e encaixe impossível', async () => {
@@ -46,6 +72,7 @@ describe('calcularVolumeSiliconeMolde', () => {
     expect(() => calcularVolumeSiliconeMolde({ ...base, caixaInternaCm: { comprimento: 0, largura: 15, altura: 10 } })).toThrow()
     expect(() => calcularVolumeSiliconeMolde({ ...base, caixaInternaCm: { comprimento: 9, largura: 15, altura: 10 } })).toThrow()
     expect(() => calcularVolumeSiliconeMolde({ ...base, furosVazados: [{ quantidade: -1, diametroCm: 2 }] })).toThrow()
+    expect(() => calcularVolumeSiliconeMolde({ ...base, furosVazados: [{ quantidade: 1, diametroCm: 9 }] })).toThrow(/diâmetro/i)
     expect(() => calcularVolumeSiliconeMolde({ ...base, furosVazados: [{ quantidade: 1, diametroCm: 2, profundidadeCm: 3 }] })).toThrow(/profundidade/i)
     expect(() => calcularVolumeSiliconeMolde({
       ...base,

@@ -117,7 +117,7 @@ export interface VolumeSiliconeMoldeInput {
 export interface ResultadoVolumeSiliconeMolde {
   volumeCaixaCm3: number
   volumeTampoMadeiraCm3: number
-  volumeInsertosMadeiraCm3: number
+  volumeFurosCm3: number
   volumeMadeiraTotalCm3: number
   volumeLiquidoCm3: number
   volumeMinimoLitros: number
@@ -170,39 +170,40 @@ export function calcularVolumeSiliconeMolde(input: VolumeSiliconeMoldeInput): Re
 
   const volumeCaixaCm3 = caixa.comprimento * caixa.largura * caixa.altura
   const volumeTampoMadeiraCm3 = tampo.comprimento * tampo.largura * tampo.espessura
-  let volumeInsertosMadeiraCm3 = 0
+  let volumeFurosCm3 = 0
 
   for (const furo of input.furosVazados ?? []) {
     if (!Number.isSafeInteger(furo.quantidade) || furo.quantidade < 0) {
-      throw new Error('A quantidade de insertos de madeira deve ser um inteiro não negativo.')
+      throw new Error('A quantidade de furos deve ser um inteiro não negativo.')
     }
     if (furo.quantidade === 0) continue
 
-    const profundidadeCm = furo.profundidadeCm ?? tampo.espessura
-    validarMedidaPositivaSilicone('Profundidade do inserto', profundidadeCm)
-    if (profundidadeCm > tampo.espessura) {
-      throw new Error('A profundidade dos insertos não pode exceder a espessura do tampo.')
+    if (furo.profundidadeCm !== undefined && (!Number.isFinite(furo.profundidadeCm) || furo.profundidadeCm <= 0 || furo.profundidadeCm > tampo.espessura)) {
+      throw new Error('A profundidade do furo deve ser positiva e não pode exceder a espessura do tampo.')
     }
 
     if (furo.geometria === 'retangulo') {
       const comprimentoCm = furo.comprimentoCm ?? 0
       const larguraCm = furo.larguraCm ?? 0
-      validarMedidaPositivaSilicone('Comprimento do inserto retangular', comprimentoCm)
-      validarMedidaPositivaSilicone('Largura do inserto retangular', larguraCm)
-      volumeInsertosMadeiraCm3 += furo.quantidade * comprimentoCm * larguraCm * profundidadeCm
+      validarMedidaPositivaSilicone('Comprimento do furo retangular', comprimentoCm)
+      validarMedidaPositivaSilicone('Largura do furo retangular', larguraCm)
+      if (!((comprimentoCm <= tampo.comprimento && larguraCm <= tampo.largura) || (larguraCm <= tampo.comprimento && comprimentoCm <= tampo.largura))) {
+        throw new Error('O furo retangular deve caber nas dimensões do tampo.')
+      }
+      volumeFurosCm3 += furo.quantidade * comprimentoCm * larguraCm * tampo.espessura
     } else {
       const diametroCm = furo.diametroCm ?? 0
-      validarMedidaPositivaSilicone('Diâmetro do inserto cilíndrico', diametroCm)
+      validarMedidaPositivaSilicone('Diâmetro do furo cilíndrico', diametroCm)
+      if (diametroCm > Math.min(tampo.comprimento, tampo.largura)) throw new Error('O diâmetro do furo deve caber nas dimensões do tampo.')
       const raioCm = diametroCm / 2
-      volumeInsertosMadeiraCm3 += furo.quantidade * Math.PI * raioCm ** 2 * profundidadeCm
+      volumeFurosCm3 += furo.quantidade * Math.PI * raioCm ** 2 * tampo.espessura
     }
   }
 
-  if (volumeInsertosMadeiraCm3 > volumeTampoMadeiraCm3) {
+  if (volumeFurosCm3 > volumeTampoMadeiraCm3) {
     throw new Error('O volume dos furos não pode exceder o volume do tampo.')
   }
-  // Os insertos preenchem os furos com as mesmas dimensões informadas.
-  const volumeMadeiraTotalCm3 = volumeTampoMadeiraCm3 - volumeInsertosMadeiraCm3 + volumeInsertosMadeiraCm3
+  const volumeMadeiraTotalCm3 = volumeTampoMadeiraCm3 - volumeFurosCm3
   const volumeLiquidoCm3 = volumeCaixaCm3 - volumeMadeiraTotalCm3
   const volumeMinimoLitros = volumeLiquidoCm3 * 1.08 / 1000
   const volumeMaximoLitros = volumeLiquidoCm3 * 1.12 / 1000
@@ -210,7 +211,7 @@ export function calcularVolumeSiliconeMolde(input: VolumeSiliconeMoldeInput): Re
   const massaMaximaKg = volumeMaximoLitros * input.densidadeSiliconeGcm3
 
   if (
-    ![volumeCaixaCm3, volumeTampoMadeiraCm3, volumeInsertosMadeiraCm3, volumeMadeiraTotalCm3,
+    ![volumeCaixaCm3, volumeTampoMadeiraCm3, volumeFurosCm3, volumeMadeiraTotalCm3,
       volumeLiquidoCm3, volumeMinimoLitros, volumeMaximoLitros, massaMinimaKg, massaMaximaKg].every(Number.isFinite)
   ) {
     throw new Error('As dimensões informadas excedem o limite numérico suportado.')
@@ -222,7 +223,7 @@ export function calcularVolumeSiliconeMolde(input: VolumeSiliconeMoldeInput): Re
   return {
     volumeCaixaCm3,
     volumeTampoMadeiraCm3,
-    volumeInsertosMadeiraCm3,
+    volumeFurosCm3,
     volumeMadeiraTotalCm3,
     volumeLiquidoCm3,
     volumeMinimoLitros,

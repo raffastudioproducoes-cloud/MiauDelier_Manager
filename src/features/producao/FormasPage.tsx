@@ -237,6 +237,24 @@ export function FormasPage() {
     })
   }, [geometria, comprimento, largura, profundidade, furos, temPes, qtdPes, geometriaPes, raioPes, alturaPes, compPes, largPes, margemSeguranca])
 
+  const resultadoModeloMadeira = useMemo(() => {
+    const c = parseNumeroPtBr(comprimento)
+    const l = parseNumeroPtBr(largura)
+    const e = parseNumeroPtBr(profundidade)
+    if (geometria !== 'retangular' || c === null || l === null || e === null || c <= 0 || l <= 0 || e <= 0) return null
+    return calcularVolumeMesaResina({
+      comprimentoCm: c, larguraCm: l, espessuraCm: e,
+      furosVazados: furos.map((f) => ({
+        geometria: f.geometria,
+        quantidade: parseNumeroPtBr(f.quantidade) ?? 0,
+        diametroCm: parseNumeroPtBr(f.diametroCm) ?? 0,
+        comprimentoCm: parseNumeroPtBr(f.comprimentoCm) ?? 0,
+        larguraCm: parseNumeroPtBr(f.larguraCm) ?? 0,
+      })),
+      margemSegurancaPercentual: 0,
+    })
+  }, [geometria, comprimento, largura, profundidade, furos])
+
   const caixaSiliconeAtiva = geometria === 'retangular' && [caixaComprimento, caixaLargura, caixaAltura].some((valor) => valor.trim() !== '')
   const calculoSilicone = useMemo(() => {
     if (!caixaSiliconeAtiva) return { resultado: null, erro: null }
@@ -657,7 +675,7 @@ export function FormasPage() {
                   onChange={(e) => setMargemSeguranca(e.target.value)}
                 />
               </div>
-              {parseNumeroPtBr(comprimento) && parseNumeroPtBr(largura) && parseNumeroPtBr(profundidade) && <p className="text-sm text-on-surface-variant">Tampo maciço: {((parseNumeroPtBr(comprimento) ?? 0) * (parseNumeroPtBr(largura) ?? 0) * (parseNumeroPtBr(profundidade) ?? 0)).toFixed(1)} ml · Vazios: {(resultadoMesaResina?.volumeVazadosMl ?? 0).toFixed(1)} ml · Madeira do tampo: {Math.max(0, (parseNumeroPtBr(comprimento) ?? 0) * (parseNumeroPtBr(largura) ?? 0) * (parseNumeroPtBr(profundidade) ?? 0) - (resultadoMesaResina?.volumeVazadosMl ?? 0)).toFixed(1)} ml</p>}
+              {resultadoModeloMadeira && <p className="text-sm text-on-surface-variant">Tampo maciço: {resultadoModeloMadeira.volumeBrutoTampoMl.toFixed(1)} ml · Vazios: {resultadoModeloMadeira.volumeVazadosMl.toFixed(1)} ml · Madeira do tampo: {resultadoModeloMadeira.volumeLiquidoResinaMl.toFixed(1)} ml</p>}
             </div>
           )}
           {geometria === 'cilindrico' && (
@@ -720,7 +738,7 @@ export function FormasPage() {
           {geometria === 'retangular' && (
             <section className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col gap-3" aria-labelledby="silicone-calculo-titulo">
               <h3 id="silicone-calculo-titulo" className="text-sm font-semibold text-primary">Fase 2: Caixa de contenção e silicone</h3>
-              <p className="text-xs text-on-surface-variant">Informe as medidas internas da caixa. Os insertos de madeira preenchem os furos nas dimensões informadas; a estimativa inclui margem de 8% a 12%.</p>
+              <p className="text-xs text-on-surface-variant">O silicone preenche os furos vazados e o espaço livre dentro da caixa. Para o silicone, os furos atravessam toda a espessura do tampo; a profundidade informada acima é usada no cálculo de resina.</p>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <TextField id="caixa-silicone-comprimento" rotulo="Comprimento interno da caixa (cm)" inputMode="decimal" value={caixaComprimento} onChange={(e) => setCaixaComprimento(e.target.value)} />
                 <TextField id="caixa-silicone-largura" rotulo="Largura interna da caixa (cm)" inputMode="decimal" value={caixaLargura} onChange={(e) => setCaixaLargura(e.target.value)} />
@@ -778,7 +796,7 @@ export function FormasPage() {
                 <div className="flex flex-col gap-2 text-sm text-on-surface-variant">
                   <p>{quantidadeCalculada !== null ? `Quantidade calculada para o estoque: ${quantidadeCalculada.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${materialSelecionado?.unidade ?? ''}` : 'Informe a caixa e selecione um material com unidade de massa ou volume para calcular a quantidade.'}</p>
                   <TextField id="qtd-silicone-real" rotulo={`Quantidade de silicone realmente usada (${materialSelecionado?.unidade ?? ''})`} type="number" step="any" value={qtdSilicone} onChange={(e) => setQtdSilicone(e.target.value)} />
-                  {formaEmEdicaoId !== null && <p>Ao salvar, o estoque será ajustado pela diferença em relação à quantidade registrada.</p>}
+                  {formaEmEdicaoId !== null && <p>Confira a quantidade realmente usada: a sugestão foi recalculada, mas o valor registrado só muda se você editá-lo. Ao salvar, o estoque será ajustado pela diferença.</p>}
                 </div>
               ) : (
               <TextField
