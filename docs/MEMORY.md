@@ -9,11 +9,15 @@ Este documento atua como a memória operacional viva do projeto **MiauDelier Man
 - **Data**: 08/10/2026
 - **Horário**: 04:15 (BRT)
 
-Atualização 04/11/2026: formas retangulares usam fluxo por fases, caixa obrigatória e margem de silicone de 8% a 12%; a quantidade calculada é convertida à unidade do estoque. A edição preserva a baixa anterior. Testes direcionados, TypeScript, lint e build aprovados; validação visual no site de testes pendente. A execução anterior da suíte completa teve uma falha no teste de navegação do login Supabase.
+Atualização 04/11/2026: formas retangulares usam fluxo por fases, caixa obrigatória e margem de silicone de 8% a 12%; a quantidade calculada é convertida à unidade do estoque. Testes direcionados, TypeScript, lint e build aprovados; validação visual no site de testes pendente. A execução anterior da suíte completa teve uma falha no teste de navegação do login Supabase.
 
 Versão 1.2.0: funcionalidade aditiva de cálculo e cadastro guiado de moldes. Auditoria de produção em 04/11/2026 identificou três pacotes com alertas: dompurify (crítico), seroval e zod (altos). Avaliação e correção permanecem pendentes e fora do escopo dos moldes.
 
 O commit `58d8abb` passou na suíte completa, lint, tipos e build no GitHub Actions, com publicação concluída no GitHub Pages. A branch `testes` e o endereço Cloudflare de testes não foram atualizados por esse push; a validação visual continua pendente.
+
+Versão 1.2.1: o custo de silicone usado é persistido no molde e somado ao custo da caixa; cada peça recebe o custo de fabricação dividido pela vida útil. Na edição o estoque é ajustado pela diferença; ao trocar de material devolve-se o anterior e consome-se o novo em uma transação. Para registros antigos sem custo de silicone separado, usa-se o custo de fabricação anterior menos o custo da caixa como estimativa histórica.
+
+Validação 1.2.1: 27 testes direcionados, checagem de tipos, lint e build aprovados. A suíte completa local teve 349 testes aprovados e uma falha intermitente preexistente no teste de navegação do login; aguardar resultado da esteira. Auditoria de dependências manteve os alertas da tarefa 8.5.
 
 ---
 

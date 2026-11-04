@@ -5,24 +5,27 @@ export type NovaForma = Omit<Forma, 'id'>
 
 export async function criarForma(nova: NovaForma): Promise<number> {
   return db.transaction('rw', db.formas, db.materiais, db.notificacoes, async () => {
+    if (nova.materialSiliconeId && (!Number.isFinite(nova.quantidadeSiliconeUsada) || (nova.quantidadeSiliconeUsada ?? 0) <= 0)) throw new Error('Informe uma quantidade de silicone maior que zero.')
+    if (nova.materialSiliconeId && (!Number.isSafeInteger(nova.vidaUtilUsos) || (nova.vidaUtilUsos ?? 0) <= 0)) throw new Error('Informe uma vida útil em usos maior que zero.')
+    if (nova.custoCaixaEstrutura !== undefined && (!Number.isFinite(nova.custoCaixaEstrutura) || nova.custoCaixaEstrutura < 0)) throw new Error('Custo da caixa inválido.')
     let custoCalc = nova.custoFabricacao
+    let custoSiliconeFabricacao = nova.custoSiliconeFabricacao
     const agoraMs = Date.now()
 
     if (nova.materialSiliconeId && nova.quantidadeSiliconeUsada && nova.quantidadeSiliconeUsada > 0) {
       const materialSilicone = await db.materiais.get(nova.materialSiliconeId)
-      if (materialSilicone) {
-        if (nova.quantidadeSiliconeUsada > materialSilicone.quantidadeEstoque) {
-          throw new Error(
-            `Estoque insuficiente de silicone "${materialSilicone.nome}": disponível ${materialSilicone.quantidadeEstoque}, solicitado ${nova.quantidadeSiliconeUsada}`,
-          )
-        }
-        await db.materiais.update(nova.materialSiliconeId, {
-          quantidadeEstoque: materialSilicone.quantidadeEstoque - nova.quantidadeSiliconeUsada,
-        })
-        if (!custoCalc || custoCalc <= 0) {
-          custoCalc = nova.quantidadeSiliconeUsada * materialSilicone.custoUnitario
-        }
+      if (!materialSilicone) throw new Error('Material de silicone não encontrado.')
+      if (!Number.isFinite(materialSilicone.custoUnitario) || materialSilicone.custoUnitario < 0) throw new Error('Custo do silicone inválido.')
+      if (nova.quantidadeSiliconeUsada > materialSilicone.quantidadeEstoque) {
+        throw new Error(
+          `Estoque insuficiente de silicone "${materialSilicone.nome}": disponível ${materialSilicone.quantidadeEstoque}, solicitado ${nova.quantidadeSiliconeUsada}`,
+        )
       }
+      await db.materiais.update(nova.materialSiliconeId, {
+        quantidadeEstoque: materialSilicone.quantidadeEstoque - nova.quantidadeSiliconeUsada,
+      })
+      custoSiliconeFabricacao = nova.quantidadeSiliconeUsada * materialSilicone.custoUnitario
+      custoCalc = custoSiliconeFabricacao + (nova.custoCaixaEstrutura ?? 0)
     }
 
     const ehCurando = typeof nova.curaMinutos === 'number' && nova.curaMinutos > 0
@@ -32,6 +35,7 @@ export async function criarForma(nova: NovaForma): Promise<number> {
     const id = (await db.formas.add({
       ...nova,
       custoFabricacao: custoCalc,
+      custoSiliconeFabricacao,
       usosRealizados: nova.usosRealizados ?? 0,
       status: statusFinal,
       curaIniciadaEm,
@@ -71,7 +75,35 @@ export async function listarFormas(): Promise<Forma[]> {
 }
 
 export async function atualizarForma(formaId: number, dados: NovaForma): Promise<void> {
-  await db.formas.update(formaId, dados)
+  await db.transaction('rw', db.formas, db.materiais, async () => {
+    const anterior = await db.formas.get(formaId)
+    if (!anterior) throw new Error('Forma não encontrada')
+    const qtdAnterior = anterior.quantidadeSiliconeUsada ?? 0
+    const qtdNova = dados.materialSiliconeId ? dados.quantidadeSiliconeUsada ?? 0 : 0
+    if (!Number.isFinite(qtdNova) || (dados.materialSiliconeId && qtdNova <= 0)) throw new Error('Quantidade de silicone inválida.')
+    if (dados.materialSiliconeId && (!Number.isSafeInteger(dados.vidaUtilUsos) || (dados.vidaUtilUsos ?? 0) <= 0)) throw new Error('Informe uma vida útil em usos maior que zero.')
+    if (dados.custoCaixaEstrutura !== undefined && (!Number.isFinite(dados.custoCaixaEstrutura) || dados.custoCaixaEstrutura < 0)) throw new Error('Custo da caixa inválido.')
+    const custoAnterior = anterior.custoSiliconeFabricacao ?? Math.max(0, (anterior.custoFabricacao ?? 0) - (anterior.custoCaixaEstrutura ?? 0))
+    let custoSilicone = qtdAnterior > 0 ? custoAnterior : 0
+    if (anterior.materialSiliconeId && anterior.materialSiliconeId !== dados.materialSiliconeId && qtdAnterior > 0) {
+      const antigo = await db.materiais.get(anterior.materialSiliconeId)
+      if (!antigo) throw new Error('Material de silicone anterior não encontrado.')
+      await db.materiais.update(anterior.materialSiliconeId, { quantidadeEstoque: antigo.quantidadeEstoque + qtdAnterior })
+      custoSilicone = 0
+    }
+    if (dados.materialSiliconeId) {
+      const material = await db.materiais.get(dados.materialSiliconeId)
+      if (!material) throw new Error('Material de silicone não encontrado.')
+      const mesma = dados.materialSiliconeId === anterior.materialSiliconeId
+      const diferenca = qtdNova - (mesma ? qtdAnterior : 0)
+      if (diferenca > material.quantidadeEstoque) throw new Error(`Estoque insuficiente de silicone "${material.nome}".`)
+      if (!Number.isFinite(material.custoUnitario) || material.custoUnitario < 0) throw new Error('Custo do silicone inválido.')
+      if (diferenca !== 0) await db.materiais.update(dados.materialSiliconeId, { quantidadeEstoque: material.quantidadeEstoque - diferenca })
+      custoSilicone = diferenca >= 0 ? custoSilicone + diferenca * material.custoUnitario : custoSilicone * qtdNova / qtdAnterior
+    }
+    const temSilicone = !!dados.materialSiliconeId || (!!anterior.materialSiliconeId && qtdAnterior > 0)
+    await db.formas.update(formaId, { ...dados, quantidadeSiliconeUsada: dados.materialSiliconeId ? qtdNova : undefined, custoSiliconeFabricacao: temSilicone ? custoSilicone : dados.custoSiliconeFabricacao, custoFabricacao: temSilicone ? custoSilicone + (dados.custoCaixaEstrutura ?? 0) : dados.custoFabricacao })
+  })
 }
 
 export async function excluirForma(formaId: number): Promise<void> {

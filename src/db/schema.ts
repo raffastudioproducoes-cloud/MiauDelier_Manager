@@ -93,6 +93,7 @@ export interface Forma {
   usosRealizados?: number
   materialSiliconeId?: number
   quantidadeSiliconeUsada?: number
+  custoSiliconeFabricacao?: number
   curaIniciadaEm?: number
   curaMinutos?: number
   status?: StatusForma

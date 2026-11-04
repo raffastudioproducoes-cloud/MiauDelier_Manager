@@ -134,6 +134,7 @@ export function FormasPage() {
 
   const [erro, setErro] = useState<string | null>(null)
   const [formaEmEdicaoId, setFormaEmEdicaoId] = useState<number | null>(null)
+  const [formaOriginal, setFormaOriginal] = useState<Forma | null>(null)
   const [formaExcluindoId, setFormaExcluindoId] = useState<number | null>(null)
 
   const montado = useRef(true)
@@ -181,16 +182,19 @@ export function FormasPage() {
       const mat = materiais.find((m) => String(m.id) === materialSiliconeId)
       const qtd = Number(qtdSilicone)
       if (mat && !isNaN(qtd) && qtd > 0) {
-        custoSiliconeCalc = qtd * mat.custoUnitario
+        const quantidadeAnterior = formaOriginal?.materialSiliconeId === mat.id ? formaOriginal?.quantidadeSiliconeUsada ?? 0 : 0
+        const custoAnterior = quantidadeAnterior > 0 ? formaOriginal?.custoSiliconeFabricacao ?? Math.max(0, (formaOriginal?.custoFabricacao ?? 0) - (formaOriginal?.custoCaixaEstrutura ?? 0)) : 0
+        const diferenca = qtd - quantidadeAnterior
+        custoSiliconeCalc = diferenca >= 0 ? custoAnterior + diferenca * mat.custoUnitario : custoAnterior * qtd / quantidadeAnterior
       }
     }
     const custoCaixaNum = Number(custoCaixaEstrutura) || 0
     const totalCalc = custoSiliconeCalc + custoCaixaNum
-    if (totalCalc > 0) {
+    if (totalCalc > 0 || (materialSiliconeId && qtdSilicone) || (formaOriginal?.materialSiliconeId && !materialSiliconeId)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustoFabricacao(totalCalc.toFixed(2))
     }
-  }, [materialSiliconeId, qtdSilicone, custoCaixaEstrutura, materiais])
+  }, [materialSiliconeId, qtdSilicone, custoCaixaEstrutura, materiais, formaOriginal])
 
   const resultadoMesaResina = useMemo(() => {
     if (geometria !== 'retangular') return null
@@ -282,11 +286,11 @@ export function FormasPage() {
     ).quantidadeConvertida : null
 
   useEffect(() => {
-    if (geometria === 'retangular' && quantidadeCalculada !== null && formaEmEdicaoId === null) {
+    if (geometria === 'retangular' && quantidadeCalculada !== null && (formaEmEdicaoId === null || !formaOriginal?.quantidadeSiliconeUsada)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setQtdSilicone(String(quantidadeCalculada))
     }
-  }, [geometria, quantidadeCalculada, formaEmEdicaoId])
+  }, [geometria, quantidadeCalculada, formaEmEdicaoId, formaOriginal])
 
   const volumeCalculado = useMemo(() => {
     if (geometria === 'retangular' && resultadoMesaResina) {
@@ -367,11 +371,13 @@ export function FormasPage() {
     setCuraHoras('0')
     setImagemUrl(undefined)
     setFormaEmEdicaoId(null)
+    setFormaOriginal(null)
     setErro(null)
   }
 
   function iniciarEdicao(forma: Forma) {
     setFormaEmEdicaoId(forma.id ?? null)
+    setFormaOriginal(forma)
     setNome(forma.nome)
     setImagemUrl(forma.imagemUrl)
     setGeometria(forma.geometria)
@@ -501,7 +507,7 @@ export function FormasPage() {
         densidadeSiliconeGcm3: calculoSilicone.resultado ? parseNumeroPtBr(densidadeSilicone)! : undefined,
         margemSiliconePercentual: calculoSilicone.resultado ? parseNumeroPtBr(margemSilicone) ?? undefined : undefined,
         materialSiliconeId: materialSiliconeId ? Number(materialSiliconeId) : undefined,
-        quantidadeSiliconeUsada: geometria === 'retangular' && formaEmEdicaoId === null && materialSelecionado ? quantidadeCalculada ?? undefined : qtdSilicone ? Number(qtdSilicone) : undefined,
+        quantidadeSiliconeUsada: materialSelecionado && qtdSilicone ? Number(qtdSilicone) : undefined,
         materialCaixaEstrutura: materialCaixaEstrutura.trim() || undefined,
         custoCaixaEstrutura: custoCaixaEstrutura ? Number(custoCaixaEstrutura) : undefined,
         custoFabricacao: custoFabricacao ? Number(custoFabricacao) : undefined,
@@ -766,8 +772,10 @@ export function FormasPage() {
 
             {materialSiliconeId !== '' && (
               geometria === 'retangular' ? (
-                <div className="text-sm text-on-surface-variant">
-                  {formaEmEdicaoId !== null ? `Quantidade registrada: ${qtdSilicone || '—'} ${materialSelecionado?.unidade ?? ''}. A edição não altera o estoque já debitado.` : quantidadeCalculada !== null ? `Quantidade calculada para o estoque: ${quantidadeCalculada.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${materialSelecionado?.unidade ?? ''}` : 'Informe a caixa e selecione um material com unidade de massa ou volume para calcular a quantidade.'}
+                <div className="flex flex-col gap-2 text-sm text-on-surface-variant">
+                  <p>{quantidadeCalculada !== null ? `Quantidade calculada para o estoque: ${quantidadeCalculada.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${materialSelecionado?.unidade ?? ''}` : 'Informe a caixa e selecione um material com unidade de massa ou volume para calcular a quantidade.'}</p>
+                  <TextField id="qtd-silicone-real" rotulo={`Quantidade de silicone realmente usada (${materialSelecionado?.unidade ?? ''})`} type="number" step="any" value={qtdSilicone} onChange={(e) => setQtdSilicone(e.target.value)} />
+                  {formaEmEdicaoId !== null && <p>Ao salvar, o estoque será ajustado pela diferença em relação à quantidade registrada.</p>}
                 </div>
               ) : (
               <TextField
@@ -842,9 +850,10 @@ export function FormasPage() {
             </div>
 
             {custoPorUsoCalculado && (
-              <p className="text-xs text-primary font-medium">
-                Amortização por uso no preço final da peça: <strong>R$ {custoPorUsoCalculado} / uso</strong> (R$ {custoFabricacao} ÷ {vidaUtilUsos} usos)
-              </p>
+              <div className="text-xs text-primary font-medium">
+                {materialSiliconeId && qtdSilicone && <p>Custo do silicone utilizado: <strong>R$ {Math.max(0, Number(custoFabricacao) - (Number(custoCaixaEstrutura) || 0)).toFixed(2)}</strong> · Silicone por uso: <strong>R$ {(Math.max(0, Number(custoFabricacao) - (Number(custoCaixaEstrutura) || 0)) / Number(vidaUtilUsos)).toFixed(2)}</strong></p>}
+                <p>Amortização por uso no preço final da peça: <strong>R$ {custoPorUsoCalculado} / uso</strong> (R$ {custoFabricacao} ÷ {vidaUtilUsos} usos)</p>
+              </div>
             )}
 
             <SeletorImagem

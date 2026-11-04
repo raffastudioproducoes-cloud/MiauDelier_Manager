@@ -151,6 +151,7 @@ O banco de dados local utiliza as seguintes tabelas indexadas no IndexedDB (`src
 - **`formas`**: `++id, nome, geometria` (armazena também `imagemUrl` base64)
 
 O registro de forma também pode conter `dimensoesCaixaSiliconeCm`, `densidadeSiliconeGcm3` e `margemSiliconePercentual`, opcionais no armazenamento para compatibilidade com registros antigos e persistidos no mesmo objeto Dexie, sem migração de índice.
+O campo opcional `custoSiliconeFabricacao` guarda o custo acumulado do silicone consumido. A atualização do molde e o ajuste de estoque são realizados na mesma transação Dexie.
 - **`pecas`**: `++id, nome, formaId, status` (armazena `numeroSerie` `#0001` e `imagemUrl` base64)
 - **`consumosPeca`**: `++id, pecaId, materialId`
 - **`eventosPeca`**: `++id, pecaId, tipo, criadoEm`

@@ -124,3 +124,4 @@ Este documento representa o plano de execução e o estado atual das tarefas do 
 | 8.3 | Persistir rascunhos de formulários localmente por conta/perfil e encerrar sessões após sete dias sem abrir o site | Alta | Concluída |
 | 8.4 | Estimar silicone e organizar cadastro de moldes retangulares em fases, com consumo automático | Média | Publicada no GitHub Pages; validação visual no site pendente |
 | 8.5 | Avaliar e corrigir alertas de dependências de produção identificados em 04/11/2026 | Alta | Pendente: dompurify crítico; seroval e zod altos |
+| 8.6 | Corrigir consumo de silicone e amortização na criação e edição de moldes | Alta | Implementada; validação visual no site pendente |
