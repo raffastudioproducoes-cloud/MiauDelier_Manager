@@ -113,6 +113,7 @@ export function MateriaisPage() {
   const [compraMaterialId, setCompraMaterialId] = useState('')
   const [compraQtd, setCompraQtd] = useState('')
   const [compraValorTotal, setCompraValorTotal] = useState('')
+  const [compraTipoValor, setCompraTipoValor] = useState<'total' | 'unitario'>('total')
   const [compraValorFrete, setCompraValorFrete] = useState('')
   const [compraValorDesconto, setCompraValorDesconto] = useState('')
   const [compraAtualizarCusto, setCompraAtualizarCusto] = useState(true)
@@ -154,6 +155,7 @@ export function MateriaisPage() {
     setCompraMaterialId('')
     setCompraQtd('')
     setCompraValorTotal('')
+    setCompraTipoValor('total')
     setCompraValorFrete('')
     setCompraValorDesconto('')
     setCompraAtualizarCusto(true)
@@ -198,7 +200,7 @@ export function MateriaisPage() {
     setErroCompra(null)
 
     const qtd = lerValorMonetario(compraQtd)
-    const valorProdutos = lerValorMonetario(compraValorTotal)
+    const valorProdutos = valorProdutosCompra
     const valorFrete = lerValorMonetario(compraValorFrete)
     const valorDesconto = lerValorMonetario(compraValorDesconto)
     const valorTotal = valorProdutos + valorFrete - valorDesconto
@@ -322,7 +324,7 @@ export function MateriaisPage() {
 
   const materialSelecionadoCompra = materiais.find((m) => String(m.id) === compraMaterialId)
   const quantidadeCompra = lerValorMonetario(compraQtd)
-  const valorProdutosCompra = lerValorMonetario(compraValorTotal)
+  const valorProdutosCompra = lerValorMonetario(compraValorTotal) * (compraTipoValor === 'unitario' ? quantidadeCompra : 1)
   const valorFreteCompra = lerValorMonetario(compraValorFrete)
   const valorDescontoCompra = lerValorMonetario(compraValorDesconto)
   const totalCompra = valorProdutosCompra + valorFreteCompra - valorDescontoCompra
@@ -681,15 +683,22 @@ export function MateriaisPage() {
                         </p>
                       )}
                     </div>
-                    <TextField
-                      id="compra-valor-total"
-                      rotulo="Valor dos Produtos (R$)"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Ex: 3.031,19"
-                      value={compraValorTotal}
-                      onChange={(e) => setCompraValorTotal(e.target.value)}
-                    />
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="compra-tipo-valor" className="text-sm font-medium text-on-surface">Tipo de valor</label>
+                      <select id="compra-tipo-valor" value={compraTipoValor} onChange={(e) => setCompraTipoValor(e.target.value as 'total' | 'unitario')} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                        <option value="total">Valor total dos produtos</option>
+                        <option value="unitario">Valor por unidade</option>
+                      </select>
+                      <TextField
+                        id="compra-valor-total"
+                        rotulo={compraTipoValor === 'unitario' ? 'Valor unitário (R$)' : 'Valor dos Produtos (R$)'}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder={compraTipoValor === 'unitario' ? 'Ex: 100,00' : 'Ex: 3.031,19'}
+                        value={compraValorTotal}
+                        onChange={(e) => setCompraValorTotal(e.target.value)}
+                      />
+                    </div>
                     <TextField
                       id="compra-valor-frete"
                       rotulo="Valor do Frete (R$ - opcional)"

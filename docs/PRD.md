@@ -66,6 +66,7 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
   - Suporte a furos/vazados (ex: comedouros pets) e pés de mesa resinados.
   - Proporções pré-configuradas (2:1, 3:1, 1:1, 100:3) e calculador de resina + catalisador.
 - **Gestão de Estoque & Categorias**:
+  - Registro de compra aceita valor total dos produtos ou valor por unidade; no modo unitário, multiplica pela quantidade antes de aplicar frete e desconto e calcular o custo unitário final.
   - Categorias principais e subcategorias hierárquicas.
   - Conversão de unidades de medida (massa, volume, unidade).
   - Alertas visuais para itens com estoque zerado ou baixo.

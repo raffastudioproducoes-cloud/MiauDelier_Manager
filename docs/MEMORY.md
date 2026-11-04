@@ -25,6 +25,8 @@ Correção 1.2.3: o usuário esclareceu que os furos da mesa são vazados e pree
 
 Correção 1.2.4: resultados exibem também capacidade da caixa, volume da madeira e massa de silicone sem margem. A fórmula continua `caixa − madeira`; litros de madeira não são kg de madeira. Três casos testados estão em `docs/CALCULO-SILICONE-EXEMPLOS.md`.
 
+Versão 1.3.0: compra de materiais permite informar valor total dos produtos ou valor unitário; no segundo caso, o valor de produtos é multiplicado pela quantidade. Frete e desconto seguem aplicados ao total, como antes.
+
 ---
 
 ## 2. Fase Atual
