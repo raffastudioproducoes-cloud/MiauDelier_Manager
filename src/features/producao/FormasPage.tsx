@@ -135,6 +135,7 @@ export function FormasPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [formaEmEdicaoId, setFormaEmEdicaoId] = useState<number | null>(null)
   const [formaOriginal, setFormaOriginal] = useState<Forma | null>(null)
+  const [registrarConsumoPendente, setRegistrarConsumoPendente] = useState(false)
   const [formaExcluindoId, setFormaExcluindoId] = useState<number | null>(null)
 
   const montado = useRef(true)
@@ -182,7 +183,7 @@ export function FormasPage() {
       const mat = materiais.find((m) => String(m.id) === materialSiliconeId)
       const qtd = Number(qtdSilicone)
       if (mat && !isNaN(qtd) && qtd > 0) {
-        const quantidadeAnterior = formaOriginal?.materialSiliconeId === mat.id ? formaOriginal?.quantidadeSiliconeUsada ?? 0 : 0
+        const quantidadeAnterior = !registrarConsumoPendente && formaOriginal?.materialSiliconeId === mat.id ? formaOriginal?.quantidadeSiliconeUsada ?? 0 : 0
         const custoAnterior = quantidadeAnterior > 0 ? formaOriginal?.custoSiliconeFabricacao ?? Math.max(0, (formaOriginal?.custoFabricacao ?? 0) - (formaOriginal?.custoCaixaEstrutura ?? 0)) : 0
         const diferenca = qtd - quantidadeAnterior
         custoSiliconeCalc = diferenca >= 0 ? custoAnterior + diferenca * mat.custoUnitario : custoAnterior * qtd / quantidadeAnterior
@@ -194,7 +195,7 @@ export function FormasPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustoFabricacao(totalCalc.toFixed(2))
     }
-  }, [materialSiliconeId, qtdSilicone, custoCaixaEstrutura, materiais, formaOriginal])
+  }, [materialSiliconeId, qtdSilicone, custoCaixaEstrutura, materiais, formaOriginal, registrarConsumoPendente])
 
   const resultadoMesaResina = useMemo(() => {
     if (geometria !== 'retangular') return null
@@ -372,12 +373,14 @@ export function FormasPage() {
     setImagemUrl(undefined)
     setFormaEmEdicaoId(null)
     setFormaOriginal(null)
+    setRegistrarConsumoPendente(false)
     setErro(null)
   }
 
   function iniciarEdicao(forma: Forma) {
     setFormaEmEdicaoId(forma.id ?? null)
     setFormaOriginal(forma)
+    setRegistrarConsumoPendente(false)
     setNome(forma.nome)
     setImagemUrl(forma.imagemUrl)
     setGeometria(forma.geometria)
@@ -516,7 +519,7 @@ export function FormasPage() {
         imagemUrl: imagemUrl || undefined,
       }
       if (formaEmEdicaoId !== null) {
-        await atualizarForma(formaEmEdicaoId, dados)
+        await atualizarForma(formaEmEdicaoId, dados, { registrarConsumoPendente })
       } else {
         await criarForma(dados)
       }
@@ -758,7 +761,7 @@ export function FormasPage() {
               <select
                 id="silicone-material"
                 value={materialSiliconeId}
-                onChange={(e) => setMaterialSiliconeId(e.target.value)}
+                onChange={(e) => { setMaterialSiliconeId(e.target.value); setRegistrarConsumoPendente(false) }}
                 className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               >
                 <option value="">Nenhum (custo avulso)</option>
@@ -786,6 +789,13 @@ export function FormasPage() {
                 onChange={(e) => setQtdSilicone(e.target.value)}
               />
               )
+            )}
+
+            {formaOriginal?.materialSiliconeId && formaOriginal.quantidadeSiliconeUsada && !formaOriginal.baixaSiliconeConfirmada && String(formaOriginal.materialSiliconeId) === materialSiliconeId && (
+              <label className="flex items-start gap-2 text-sm text-on-surface">
+                <input type="checkbox" checked={registrarConsumoPendente} onChange={(e) => setRegistrarConsumoPendente(e.target.checked)} />
+                <span>Esta quantidade foi salva anteriormente, mas ainda não foi descontada do estoque. Descontar o consumo ao salvar.</span>
+              </label>
             )}
 
             {/* Caixa de Contenção / Estrutura Externa da Forma */}

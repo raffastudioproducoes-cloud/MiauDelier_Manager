@@ -94,6 +94,7 @@ export interface Forma {
   materialSiliconeId?: number
   quantidadeSiliconeUsada?: number
   custoSiliconeFabricacao?: number
+  baixaSiliconeConfirmada?: boolean
   curaIniciadaEm?: number
   curaMinutos?: number
   status?: StatusForma

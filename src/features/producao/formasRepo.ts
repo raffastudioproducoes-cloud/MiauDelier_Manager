@@ -36,6 +36,7 @@ export async function criarForma(nova: NovaForma): Promise<number> {
       ...nova,
       custoFabricacao: custoCalc,
       custoSiliconeFabricacao,
+      baixaSiliconeConfirmada: nova.materialSiliconeId && nova.quantidadeSiliconeUsada ? true : undefined,
       usosRealizados: nova.usosRealizados ?? 0,
       status: statusFinal,
       curaIniciadaEm,
@@ -74,17 +75,20 @@ export async function listarFormas(): Promise<Forma[]> {
   return db.formas.toArray()
 }
 
-export async function atualizarForma(formaId: number, dados: NovaForma): Promise<void> {
+export async function atualizarForma(formaId: number, dados: NovaForma, opcoes?: { registrarConsumoPendente?: boolean }): Promise<void> {
   await db.transaction('rw', db.formas, db.materiais, async () => {
     const anterior = await db.formas.get(formaId)
     if (!anterior) throw new Error('Forma não encontrada')
     const qtdAnterior = anterior.quantidadeSiliconeUsada ?? 0
     const qtdNova = dados.materialSiliconeId ? dados.quantidadeSiliconeUsada ?? 0 : 0
+    const regularizar = opcoes?.registrarConsumoPendente === true
+    if (regularizar && anterior.baixaSiliconeConfirmada) throw new Error('O consumo de silicone já foi regularizado.')
+    if (regularizar && (!anterior.materialSiliconeId || qtdAnterior <= 0 || anterior.materialSiliconeId !== dados.materialSiliconeId)) throw new Error('Para regularizar, mantenha o silicone originalmente registrado na forma.')
     if (!Number.isFinite(qtdNova) || (dados.materialSiliconeId && qtdNova <= 0)) throw new Error('Quantidade de silicone inválida.')
     if (dados.materialSiliconeId && (!Number.isSafeInteger(dados.vidaUtilUsos) || (dados.vidaUtilUsos ?? 0) <= 0)) throw new Error('Informe uma vida útil em usos maior que zero.')
     if (dados.custoCaixaEstrutura !== undefined && (!Number.isFinite(dados.custoCaixaEstrutura) || dados.custoCaixaEstrutura < 0)) throw new Error('Custo da caixa inválido.')
     const custoAnterior = anterior.custoSiliconeFabricacao ?? Math.max(0, (anterior.custoFabricacao ?? 0) - (anterior.custoCaixaEstrutura ?? 0))
-    let custoSilicone = qtdAnterior > 0 ? custoAnterior : 0
+    let custoSilicone = qtdAnterior > 0 && !regularizar ? custoAnterior : 0
     if (anterior.materialSiliconeId && anterior.materialSiliconeId !== dados.materialSiliconeId && qtdAnterior > 0) {
       const antigo = await db.materiais.get(anterior.materialSiliconeId)
       if (!antigo) throw new Error('Material de silicone anterior não encontrado.')
@@ -95,14 +99,14 @@ export async function atualizarForma(formaId: number, dados: NovaForma): Promise
       const material = await db.materiais.get(dados.materialSiliconeId)
       if (!material) throw new Error('Material de silicone não encontrado.')
       const mesma = dados.materialSiliconeId === anterior.materialSiliconeId
-      const diferenca = qtdNova - (mesma ? qtdAnterior : 0)
+      const diferenca = qtdNova - (mesma && !regularizar ? qtdAnterior : 0)
       if (diferenca > material.quantidadeEstoque) throw new Error(`Estoque insuficiente de silicone "${material.nome}".`)
       if (!Number.isFinite(material.custoUnitario) || material.custoUnitario < 0) throw new Error('Custo do silicone inválido.')
       if (diferenca !== 0) await db.materiais.update(dados.materialSiliconeId, { quantidadeEstoque: material.quantidadeEstoque - diferenca })
       custoSilicone = diferenca >= 0 ? custoSilicone + diferenca * material.custoUnitario : custoSilicone * qtdNova / qtdAnterior
     }
     const temSilicone = !!dados.materialSiliconeId || (!!anterior.materialSiliconeId && qtdAnterior > 0)
-    await db.formas.update(formaId, { ...dados, quantidadeSiliconeUsada: dados.materialSiliconeId ? qtdNova : undefined, custoSiliconeFabricacao: temSilicone ? custoSilicone : dados.custoSiliconeFabricacao, custoFabricacao: temSilicone ? custoSilicone + (dados.custoCaixaEstrutura ?? 0) : dados.custoFabricacao })
+    await db.formas.update(formaId, { ...dados, quantidadeSiliconeUsada: dados.materialSiliconeId ? qtdNova : undefined, custoSiliconeFabricacao: temSilicone ? custoSilicone : dados.custoSiliconeFabricacao, custoFabricacao: temSilicone ? custoSilicone + (dados.custoCaixaEstrutura ?? 0) : dados.custoFabricacao, baixaSiliconeConfirmada: dados.materialSiliconeId && (regularizar || anterior.baixaSiliconeConfirmada || qtdAnterior === 0) ? true : undefined })
   })
 }
 

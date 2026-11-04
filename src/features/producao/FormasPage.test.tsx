@@ -169,6 +169,22 @@ describe('FormasPage', () => {
     expect((await db.formas.get(formaId))?.custoFabricacao).toBe(225)
   })
 
+  it('permite regularizar uma forma antiga com quantidade salva sem desconto e impede desconto duplicado', async () => {
+    const materialId = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
+    const formaId = await db.formas.add({ nome: 'Mesa pendente', geometria: 'retangular', dimensoesCm: { comprimento: 10, largura: 8, profundidade: 2 }, volumeDiretoMl: 160, vidaUtilUsos: 100, materialSiliconeId: materialId, quantidadeSiliconeUsada: 2, dimensoesCaixaSiliconeCm: { comprimento: 20, largura: 15, altura: 10 }, densidadeSiliconeGcm3: 1.1 })
+    render(<ToastProvider><FormasPage /></ToastProvider>)
+    await screen.findByText('Mesa pendente')
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /ainda não foi descontada/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+    await waitFor(async () => expect((await db.formas.get(formaId))?.baixaSiliconeConfirmada).toBe(true))
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
+    expect((await db.formas.get(formaId))?.custoFabricacao).toBe(200)
+    await waitFor(() => expect(screen.getByRole('button', { name: /editar/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    expect(screen.queryByRole('checkbox', { name: /ainda não foi descontada/i })).not.toBeInTheDocument()
+  })
+
   it('exclui uma forma via confirmação', async () => {
     render(<ToastProvider><FormasPage /></ToastProvider>)
     fireEvent.change(await screen.findByLabelText(/nome da forma/i), { target: { value: 'Molde B' } })

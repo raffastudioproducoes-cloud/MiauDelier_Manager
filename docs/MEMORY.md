@@ -19,6 +19,8 @@ Versão 1.2.1: o custo de silicone usado é persistido no molde e somado ao cust
 
 Validação 1.2.1: 27 testes direcionados, checagem de tipos, lint e build aprovados. A suíte completa local teve 349 testes aprovados e uma falha intermitente preexistente no teste de navegação do login; aguardar resultado da esteira. Auditoria de dependências manteve os alertas da tarefa 8.5.
 
+Versão 1.2.2: forma antiga pode ter quantidade salva sem baixa real; ao editar, uma confirmação explícita regulariza o consumo uma vez, com registro da confirmação na própria forma. Não se presume que todos os registros antigos estejam pendentes, para evitar débito em duplicidade.
+
 ---
 
 ## 2. Fase Atual

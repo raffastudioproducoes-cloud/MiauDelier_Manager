@@ -58,6 +58,20 @@ describe('repositório de formas', () => {
     expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(9)
   })
 
+  it('regulariza uma unica vez consumo antigo salvo sem baixa', async () => {
+    const materialId = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
+    const dados = { nome: 'Forma antiga', geometria: 'direto' as const, dimensoesCm: {}, vidaUtilUsos: 100, materialSiliconeId: materialId, quantidadeSiliconeUsada: 2 }
+    const id = (await db.formas.add(dados)) as number
+    await atualizarForma(id, dados)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(10)
+    await atualizarForma(id, dados, { registrarConsumoPendente: true })
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
+    expect((await db.formas.get(id))?.custoFabricacao).toBe(200)
+    await expect(atualizarForma(id, dados, { registrarConsumoPendente: true })).rejects.toThrow(/já foi regularizado/i)
+    await atualizarForma(id, dados)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
+  })
+
   it('registra o primeiro consumo em molde antigo e preserva o custo histórico ao devolver silicone', async () => {
     const materialId = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
     const dados = { nome: 'Molde antigo', geometria: 'direto' as const, dimensoesCm: {}, vidaUtilUsos: 100, custoCaixaEstrutura: 25 }

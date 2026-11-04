@@ -3,6 +3,7 @@ import { db } from '../db/schema'
 import { CHAVE_USUARIO_NUVEM, setupAccount } from './auth'
 import { normalizeRemoteSyncObject, prepareLocalCacheForUser, registerDexieHooks } from './syncService'
 import { atualizarMaterial, criarMaterial } from '../features/producao/materiaisRepo'
+import { criarForma, atualizarForma } from '../features/producao/formasRepo'
 
 let hooksRegistered = false
 
@@ -79,6 +80,24 @@ describe('syncService Dexie hooks', () => {
       quantidadeEstoque: 100,
       custoUnitario: 0.4,
     })
+  })
+
+  it('enfileira o saldo de silicone após registrar o primeiro consumo em forma existente', async () => {
+    const materialId = await criarMaterial({ nome: 'Silicone', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
+    const dados = { nome: 'Forma existente', geometria: 'direto' as const, dimensoesCm: {}, vidaUtilUsos: 100 }
+    const formaId = await criarForma(dados)
+    await waitForSyncQueueLength(2)
+    await db.syncQueue.clear()
+    await atualizarForma(formaId, { ...dados, materialSiliconeId: materialId, quantidadeSiliconeUsada: 2 })
+    await waitForSyncQueueLength(2)
+    const eventos = await db.syncQueue.toArray()
+    const estoque = eventos.find((evento) => evento.tabela === 'materiais' && evento.acao === 'update')
+    expect(estoque).toBeDefined()
+    expect(JSON.parse(estoque!.dadosString)).toMatchObject({ id: materialId, quantidadeEstoque: 8 })
+    const forma = eventos.find((evento) => evento.tabela === 'formas' && evento.acao === 'update')
+    expect(forma).toBeDefined()
+    expect(JSON.parse(forma!.dadosString)).toMatchObject({ id: formaId, baixaSiliconeConfirmada: true })
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
   })
 })
 

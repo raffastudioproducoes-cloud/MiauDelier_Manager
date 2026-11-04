@@ -72,6 +72,7 @@ Artesãs e artesãos que trabalham com resina epóxi e confecção de moldes de 
 - **Gestão de Moldes / Formas**:
   - Para moldes retangulares, fluxo por fases com medidas internas obrigatórias da caixa, cálculo de silicone e margens de 8% a 12%. A madeira total é o tampo maciço menos os vazios mais os insertos que os preenchem; os insertos usam as dimensões dos furos. A margem escolhida determina a quantidade debitada na unidade de massa ou volume do material; na edição o estoque é ajustado pela diferença.
   - A quantidade estimada pode ser corrigida para a quantidade efetivamente utilizada. O custo do silicone utilizado é quantidade consumida multiplicada pelo custo unitário, somado ao custo da caixa e dividido pela vida útil para compor o custo por peça. Aumentos em edições usam o custo unitário atual; reduções devolvem a parcela proporcional do custo registrado.
+  - Formas antigas que já guardavam uma quantidade, mas não tiveram a baixa efetivada, podem ter o consumo regularizado na edição mediante confirmação explícita; a baixa é registrada para impedir repetição.
   - Cálculo de silicone utilizado e débito automático no estoque.
   - Cálculo de caixa de contenção/estrutura externa (MDF, madeira, acrílico).
   - Controle de vida útil (usos realizados / total) e amortização por peça.
