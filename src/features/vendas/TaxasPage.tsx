@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/useToast'
 import {
   criarTaxa,
+  atualizarTaxa,
   listarTaxas,
   excluirTaxa,
 } from './taxasRepo'
@@ -17,111 +18,28 @@ export interface PresetTaxa {
   id: string
   nome: string
   categoria: 'marketplace' | 'gateway'
-  percentual: number
-  valorFixo: number
+  percentual: number | null
+  valorFixo: number | null
   descricao: string
+  precoMinimo?: number
+  precoMaximoExclusivo?: number
 }
 
 const PRESETS_TAXAS: PresetTaxa[] = [
-  // Shopee
-  {
-    id: 'shopee-padrao',
-    nome: 'Shopee - Taxa de Vendedor Padrão (14% + R$ 4,00)',
-    categoria: 'marketplace',
-    percentual: 14,
-    valorFixo: 4.0,
-    descricao: 'Tarifa do vendedor: 14% de comissão + R$ 4,00 de taxa fixa operacional por item vendido.',
-  },
-  {
-    id: 'shopee-frete-gratis',
-    nome: 'Shopee - Taxa de Vendedor com Frete Grátis Extra (20% + R$ 4,00)',
-    categoria: 'marketplace',
-    percentual: 20,
-    valorFixo: 4.0,
-    descricao: 'Tarifa do vendedor: 20% (14% comissão padrão + 6% programa) + R$ 4,00 fixo por item vendido.',
-  },
-
-  // Mercado Livre
-  {
-    id: 'ml-classico',
-    nome: 'Mercado Livre - Taxa de Vendedor Clássico (11.5% + R$ 6,00)',
-    categoria: 'marketplace',
-    percentual: 11.5,
-    valorFixo: 6.0,
-    descricao: 'Tarifa do vendedor: 11.5% de comissão sobre a venda + R$ 6,00 de tarifa fixa por unidade.',
-  },
-  {
-    id: 'ml-premium',
-    nome: 'Mercado Livre - Taxa de Vendedor Premium (16.5% + R$ 6,00)',
-    categoria: 'marketplace',
-    percentual: 16.5,
-    valorFixo: 6.0,
-    descricao: 'Tarifa do vendedor: 16.5% de comissão com parcelamento sem juros + R$ 6,00 fixo por unidade.',
-  },
-
-  // Elo7
-  {
-    id: 'elo7-padrao',
-    nome: 'Elo7 - Taxa de Vendedor Padrão (12%)',
-    categoria: 'marketplace',
-    percentual: 12,
-    valorFixo: 0,
-    descricao: 'Tarifa do vendedor: 12% de comissão cobrada pela plataforma sobre o valor da venda.',
-  },
-  {
-    id: 'elo7-plus',
-    nome: 'Elo7 - Taxa de Vendedor Exposição Plus (18%)',
-    categoria: 'marketplace',
-    percentual: 18,
-    valorFixo: 0,
-    descricao: 'Tarifa do vendedor: 18% de comissão cobrada para manter e expor produtos no marketplace.',
-  },
-
-  // Amazon
-  {
-    id: 'amazon-artesanato',
-    nome: 'Amazon Brasil - Taxa de Vendedor Artesanato / Handmade (15% + R$ 2,00)',
-    categoria: 'marketplace',
-    percentual: 15,
-    valorFixo: 2.0,
-    descricao: 'Tarifa do vendedor: 15% de comissão de venda da categoria + R$ 2,00 de taxa fixa de fechamento.',
-  },
-  {
-    id: 'amazon-geral',
-    nome: 'Amazon Brasil - Taxa de Vendedor Produtos Gerais (14% + R$ 2,00)',
-    categoria: 'marketplace',
-    percentual: 14,
-    valorFixo: 2.0,
-    descricao: 'Tarifa do vendedor: 14% de comissão média cobrada pela plataforma + R$ 2,00 por item vendido.',
-  },
-
-  // Shein
-  {
-    id: 'shein-local',
-    nome: 'Shein Brasil - Taxa de Vendedor Local (16%)',
-    categoria: 'marketplace',
-    percentual: 16,
-    valorFixo: 0,
-    descricao: 'Tarifa do vendedor: 16% de comissão cobrada pela Shein para lojistas e fabricantes locais.',
-  },
-
-  // Gateways e Infoprodutos
-  {
-    id: 'kiwify-vendas',
-    nome: 'Kiwify - Taxa de Vendedor (8.99% + R$ 2,49)',
-    categoria: 'gateway',
-    percentual: 8.99,
-    valorFixo: 2.49,
-    descricao: 'Tarifa cobrada pela plataforma por transação de venda aprovada.',
-  },
-  {
-    id: 'hotmart-vendas',
-    nome: 'Hotmart - Taxa de Vendedor (9.9% + R$ 1,00)',
-    categoria: 'gateway',
-    percentual: 9.9,
-    valorFixo: 1.0,
-    descricao: 'Tarifa cobrada pela plataforma por intermediação de venda realizada.',
-  },
+  { id: 'shopee-ate-9', precoMinimo: 0, precoMaximoExclusivo: 9, nome: 'Shopee — item abaixo de R$ 9 (20% + 50% do preço)', categoria: 'marketplace', percentual: 70, valorFixo: 0, descricao: 'Referência CNPJ: 20% de comissão mais tarifa de 50% do preço, representados juntos como 70%. Confirme as condições da conta.' },
+  { id: 'shopee-9-80', precoMinimo: 9, precoMaximoExclusivo: 80, nome: 'Shopee — item de R$ 9 a R$ 79,99 (20% + R$ 4,50)', categoria: 'marketplace', percentual: 20, valorFixo: 4.5, descricao: 'Referência por faixa para vendedor CNPJ: confirme a faixa do preço final e as condições da sua conta. Abaixo de R$ 9 a taxa fixa é variável; vendedores CPF podem ter adicional.' },
+  { id: 'shopee-80-100', precoMinimo: 80, precoMaximoExclusivo: 100, nome: 'Shopee — item de R$ 80 a R$ 99,99 (14% + R$ 16)', categoria: 'marketplace', percentual: 14, valorFixo: 16, descricao: 'Referência por faixa para vendedor CNPJ; confirme a faixa do preço final e as condições da conta.' },
+  { id: 'shopee-100-200', precoMinimo: 100, precoMaximoExclusivo: 200, nome: 'Shopee — item de R$ 100 a R$ 199,99 (14% + R$ 20)', categoria: 'marketplace', percentual: 14, valorFixo: 20, descricao: 'Referência por faixa para vendedor CNPJ; confirme a faixa do preço final e as condições da conta.' },
+  { id: 'shopee-200', precoMinimo: 200, nome: 'Shopee — item a partir de R$ 200 (14% + R$ 26)', categoria: 'marketplace', percentual: 14, valorFixo: 26, descricao: 'Referência por faixa para vendedor CNPJ; confirme as condições da conta e eventuais custos adicionais.' },
+  { id: 'ml-classico', nome: 'Mercado Livre — Clássico (consultar categoria e logística)', categoria: 'marketplace', percentual: null, valorFixo: null, descricao: 'As taxas variam por categoria, anúncio, preço e logística. Consulte o simulador da plataforma e informe os valores.' },
+  { id: 'ml-premium', nome: 'Mercado Livre — Premium (consultar categoria e logística)', categoria: 'marketplace', percentual: null, valorFixo: null, descricao: 'As taxas variam por categoria, anúncio, preço e logística. Consulte o simulador da plataforma e informe os valores.' },
+  { id: 'elo7-padrao', nome: 'Elo7 — operações encerradas (histórico)', categoria: 'marketplace', percentual: null, valorFixo: null, descricao: 'O Elo7 deixou de receber novos pedidos em 11/05/2026. Consulte os registros históricos quando necessário.' },
+  { id: 'amazon-pet', nome: 'Amazon Brasil — Pets, plano Individual (12% + R$ 2)', categoria: 'marketplace', percentual: 12, valorFixo: 2, descricao: 'Referência para produtos para animais no plano Individual; há comissão mínima e custos de logística que podem variar.' },
+  { id: 'amazon-geral', nome: 'Amazon Brasil — outra categoria ou plano (consultar)', categoria: 'marketplace', percentual: null, valorFixo: null, descricao: 'Comissão varia pela categoria; a cobrança de R$ 2 por item é do plano Individual. Confirme também a comissão mínima e logística.' },
+  { id: 'shein-local', nome: 'SHEIN Brasil — consultar comissão da conta', categoria: 'marketplace', percentual: null, valorFixo: null, descricao: 'As fontes consultadas apresentam valores divergentes. Confirme a comissão da categoria e conta antes de preencher.' },
+  { id: 'kiwify-vendas', nome: 'Kiwify — venda aprovada (8,99% + R$ 2,49)', categoria: 'gateway', percentual: 8.99, valorFixo: 2.49, descricao: 'Taxa padrão por venda aprovada; condições negociadas e saque podem variar.' },
+  { id: 'hotmart-micro', precoMinimo: 0, precoMaximoExclusivo: 10.01, nome: 'Hotmart — venda em BRL até R$ 10 (20%)', categoria: 'gateway', percentual: 20, valorFixo: 0, descricao: 'Referência para microtransação em reais de até R$ 10. Outras condições podem se aplicar.' },
+  { id: 'hotmart-vendas', precoMinimo: 10.01, nome: 'Hotmart — venda em BRL acima de R$ 10 (9,9% + R$ 2,49)', categoria: 'gateway', percentual: 9.9, valorFixo: 2.49, descricao: 'Referência para venda em reais acima de R$ 10. Outras faixas, produtos e serviços têm condições próprias.' },
 ]
 
 export function TaxasPage() {
@@ -133,6 +51,7 @@ export function TaxasPage() {
   const [presetIdSelecionado, setPresetIdSelecionado] = useState('')
   const [presetReconhecido, setPresetReconhecido] = useState<PresetTaxa | null>(null)
   const [taxaExcluindoId, setTaxaExcluindoId] = useState<number | null>(null)
+  const [taxaEditandoId, setTaxaEditandoId] = useState<number | null>(null)
   const montado = useRef(true)
 
   async function recarregar() {
@@ -157,24 +76,24 @@ export function TaxasPage() {
   function aplicarPreset(preset: PresetTaxa) {
     setPresetIdSelecionado(preset.id)
     setNome(preset.nome)
-    setPercentual(String(preset.percentual))
-    setValorFixo(preset.valorFixo > 0 ? String(preset.valorFixo) : '0')
+    setPercentual(preset.percentual === null ? '' : String(preset.percentual))
+    setValorFixo(preset.valorFixo === null ? '' : String(preset.valorFixo))
     setPresetReconhecido(preset)
   }
 
   function handleMudarNome(val: string) {
     setNome(val)
-    setPresetIdSelecionado('')
+    if (presetIdSelecionado) return
 
     // Busca automática por palavra-chave se o usuário digitar o nome da plataforma
     const valLower = val.toLowerCase().trim()
     if (valLower.length >= 3) {
       const encontrado = PRESETS_TAXAS.find((p) => {
         const pNomeLower = p.nome.toLowerCase()
-        if (valLower.includes('shopee') && p.id === 'shopee-frete-gratis') return true
+        if (valLower.includes('shopee')) return false
         if (valLower.includes('mercado') && p.id === 'ml-classico') return true
         if (valLower.includes('elo7') && p.id === 'elo7-padrao') return true
-        if (valLower.includes('amazon') && p.id === 'amazon-artesanato') return true
+        if (valLower.includes('amazon') && p.id === 'amazon-geral') return true
         if (valLower.includes('shein') && p.id === 'shein-local') return true
         if (valLower.includes('kiwify') && p.id === 'kiwify-vendas') return true
         if (valLower.includes('hotmart') && p.id === 'hotmart-vendas') return true
@@ -184,8 +103,8 @@ export function TaxasPage() {
       if (encontrado) {
         setPresetReconhecido(encontrado)
         if (percentual === '' && valorFixo === '') {
-          setPercentual(String(encontrado.percentual))
-          setValorFixo(encontrado.valorFixo > 0 ? String(encontrado.valorFixo) : '0')
+          setPercentual(encontrado.percentual === null ? '' : String(encontrado.percentual))
+          setValorFixo(encontrado.valorFixo === null ? '' : String(encontrado.valorFixo))
         }
       } else {
         setPresetReconhecido(null)
@@ -203,17 +122,26 @@ export function TaxasPage() {
     }
     const perc = Number(percentual)
     const fixo = Number(valorFixo || 0)
-    if (isNaN(perc) || perc < 0 || perc >= 100) {
+    if (percentual.trim() === '' || !Number.isFinite(perc) || perc < 0 || perc >= 100) {
       mostrarToast('Percentual inválido (deve ser entre 0% e 99.9%)', 'erro')
+      return
+    }
+    if ((presetReconhecido?.valorFixo === null && valorFixo.trim() === '') || !Number.isFinite(fixo) || fixo < 0) {
+      mostrarToast('Informe uma taxa fixa válida e não negativa.', 'erro')
       return
     }
 
     try {
-      await criarTaxa({
+      const taxaAnterior = taxas.find(t => t.id === taxaEditandoId)
+      const dados = {
         nome: nome.trim(),
         percentual: perc,
         valorFixo: fixo,
-      })
+        precoMinimo: presetReconhecido ? presetReconhecido.precoMinimo : taxaAnterior?.precoMinimo,
+        precoMaximoExclusivo: presetReconhecido ? presetReconhecido.precoMaximoExclusivo : taxaAnterior?.precoMaximoExclusivo,
+      }
+      if (taxaEditandoId !== null) await atualizarTaxa(taxaEditandoId, dados)
+      else await criarTaxa(dados)
 
       mostrarToast('Taxa de vendedor cadastrada com sucesso!')
       setNome('')
@@ -221,6 +149,7 @@ export function TaxasPage() {
       setValorFixo('')
       setPresetIdSelecionado('')
       setPresetReconhecido(null)
+      setTaxaEditandoId(null)
       await recarregar()
     } catch (err) {
       mostrarToast(err instanceof Error ? err.message : 'Erro ao cadastrar taxa de vendedor.', 'erro')
@@ -256,7 +185,7 @@ export function TaxasPage() {
               ⚡ Preenchimento Automático por Plataforma (Taxa de Vendedor)
             </label>
             <p className="text-xs text-on-surface-variant">
-              Selecione a plataforma de venda ou digite o nome para carregar as tarifas oficiais cobradas do vendedor (comissão percentual da plataforma e taxa fixa por unidade). Você pode ajustar os valores livremente.
+              Selecione uma referência e confirme as tarifas da sua conta. Elas podem variar por preço, categoria, plano e logística. Os valores cadastrados anteriormente não são alterados automaticamente.
             </p>
 
             <select
@@ -281,7 +210,7 @@ export function TaxasPage() {
                 <span>
                   💡 <strong>{presetReconhecido.nome}:</strong> {presetReconhecido.descricao}
                 </span>
-                <Badge variant="success" className="whitespace-nowrap">Taxa de Vendedor Carregada</Badge>
+                <Badge variant="success" className="whitespace-nowrap">{presetReconhecido.percentual === null ? 'Informe as taxas da conta' : 'Referência para conferir'}</Badge>
               </div>
             )}
           </div>
@@ -319,7 +248,8 @@ export function TaxasPage() {
             </div>
           </div>
 
-          <Button type="submit">Cadastrar Taxa de Vendedor</Button>
+          <Button type="submit">{taxaEditandoId !== null ? 'Salvar Taxa de Vendedor' : 'Cadastrar Taxa de Vendedor'}</Button>
+          {taxaEditandoId !== null && <Button type="button" variante="ghost" onClick={() => { setTaxaEditandoId(null); setNome(''); setPercentual(''); setValorFixo(''); setPresetIdSelecionado(''); setPresetReconhecido(null) }}>Cancelar edição</Button>}
         </form>
       </Card>
 
@@ -342,9 +272,10 @@ export function TaxasPage() {
                       {tx.valorFixo > 0 ? ` + R$ ${tx.valorFixo.toFixed(2)} fixo da plataforma` : ''}
                     </p>
                   </div>
-                  <Button variante="ghost" onClick={() => setTaxaExcluindoId(tx.id ?? null)}>
-                    Excluir
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variante="ghost" onClick={() => { setTaxaEditandoId(tx.id ?? null); setNome(tx.nome); setPercentual(String(tx.percentual)); setValorFixo(String(tx.valorFixo)); setPresetIdSelecionado(''); setPresetReconhecido(null); document.getElementById('nome-taxa')?.focus() }}>Editar</Button>
+                    <Button variante="ghost" onClick={() => setTaxaExcluindoId(tx.id ?? null)}>Excluir</Button>
+                  </div>
                 </div>
               </Card>
             ))}

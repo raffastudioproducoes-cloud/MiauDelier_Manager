@@ -257,6 +257,8 @@ export interface Taxa {
   nome: string
   percentual: number
   valorFixo: number
+  precoMinimo?: number
+  precoMaximoExclusivo?: number
   criadoEm: string
 }
 

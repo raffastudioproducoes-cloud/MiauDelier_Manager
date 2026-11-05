@@ -50,6 +50,15 @@ describe('PecaDetalhePage', () => {
     await waitFor(() => expect(screen.getByText(/peça não encontrada/i)).toBeInTheDocument())
   })
 
+  it('não quebra a tela se uma peça antiga possuir taxa inválida', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    const id = await criarPeca({ nome: 'Peça', formaId, consumos: [] })
+    await db.pecas.update(id, { percentualTaxas: 100 })
+    pecaIdAtual = String(id)
+    render(<ToastProvider><PecaDetalhePage /></ToastProvider>)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/não foi possível calcular o preço/i)
+  })
+
   it('vender peça pede valor e cria transação', async () => {
     await setupAccount('senha-teste')
     const contaId = await criarConta({ nome: 'Caixa', saldoInicial: 0 })

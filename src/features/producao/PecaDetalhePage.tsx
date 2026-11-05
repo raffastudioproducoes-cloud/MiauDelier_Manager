@@ -188,7 +188,7 @@ export function PecaDetalhePage() {
     const custoAcc = (peca.custoEpiInsumos || 0) + custoPropagandaDia + (peca.valorFrete || 0)
     const forma = formas.find(item => item.id === peca.formaId)
     const custoForma = forma?.vidaUtilUsos && forma.vidaUtilUsos > 0 ? (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos : 0
-    return calcularPrecificacao({
+    try { return calcularPrecificacao({
       custoMaterial: custoMateriaisTotal,
       custoAcessorios: custoAcc,
       horasProducao: peca.horasMaoDeObra || 0,
@@ -200,7 +200,7 @@ export function PecaDetalhePage() {
       litrosAgua: peca.litrosAgua || 0,
       custoForma,
       percentualTaxas: peca.percentualTaxas || 0,
-    })
+    }) } catch { return null }
   }, [peca, custoMateriaisTotal, custoPropagandaDia, valorHoraMaoDeObra, tarifaKwh, formas])
 
   async function handleMudarStatus(novoStatus: StatusPeca) {
@@ -500,6 +500,7 @@ export function PecaDetalhePage() {
               </div>
             </div>
           )}
+          {!precificacaoRes && <p role="alert" className="text-xs text-error">Não foi possível calcular o preço. Confira os dados e a taxa da peça.</p>}
         </Card>
       </div>
 

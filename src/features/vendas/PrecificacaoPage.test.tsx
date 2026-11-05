@@ -7,6 +7,7 @@ import { criarMaterial } from '../producao/materiaisRepo'
 import { criarPeca } from '../producao/pecasRepo'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 import { PrecificacaoPage } from './PrecificacaoPage'
+import { criarTaxa } from './taxasRepo'
 
 vi.mock('../producao/estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => fn() }))
 
@@ -25,6 +26,31 @@ describe('PrecificacaoPage', () => {
     await db.delete()
     await db.open()
     await setupAccount('senha-do-ateliê')
+  })
+
+  it('aplica taxa cadastrada de 14% sem multiplicá-la e preserva o lucro', async () => {
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 1000, custoUnitario: 1 })
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 100 })
+    const pecaId = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId, quantidade: 100 }] })
+    const taxaId = await criarTaxa({ nome: 'Shopee', percentual: 14, valorFixo: 4 })
+    await renderPagina()
+    fireEvent.change(screen.getByLabelText(/peça \(opcional\)/i), { target: { value: String(pecaId) } })
+    await waitFor(() => expect(screen.getAllByText(/R\$\s*100,00/).length).toBeGreaterThan(0))
+    fireEvent.change(screen.getByLabelText(/margem de lucro/i), { target: { value: '30' } })
+    expect(screen.getByText(/preço final:/i)).toHaveTextContent('130,00')
+    fireEvent.change(screen.getByLabelText(/canal de venda/i), { target: { value: String(taxaId) } })
+    expect(screen.getByText(/taxa aplicada:/i)).toHaveTextContent('14.0%')
+    expect(screen.getByText(/preço final:/i)).toHaveTextContent('155,81')
+    expect(screen.getByText(/^lucro:/i, { selector: 'p' })).toHaveTextContent('30,00')
+  })
+
+  it('impede aplicar uma taxa de faixa incompatível com o preço calculado', async () => {
+    const taxaId = await criarTaxa({ nome: 'Shopee faixa 9 a 80', percentual: 20, valorFixo: 4.5, precoMinimo: 9, precoMaximoExclusivo: 80 })
+    await renderPagina()
+    fireEvent.change(screen.getByLabelText(/horas de produção/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/canal de venda/i), { target: { value: String(taxaId) } })
+    expect(screen.getByRole('alert')).toHaveTextContent(/fora da faixa/i)
+    expect(screen.getByText(/preço final: —/i)).toBeInTheDocument()
   })
 
   it('calcula o preço final ao adicionar embalagem do estoque, horas e margem', async () => {

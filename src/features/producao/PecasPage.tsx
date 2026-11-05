@@ -317,7 +317,7 @@ export function PecasPage() {
 
   const precificacaoRes = useMemo(() => {
     const custoAcc = custoPropagandaDia + (Number(valorFrete) || 0)
-    return calcularPrecificacao({
+    try { return calcularPrecificacao({
       custoMaterial: custoMateriaisCalculado,
       custoAcessorios: custoAcc,
       horasProducao: Number(horasMaoDeObra) || 0,
@@ -329,7 +329,7 @@ export function PecasPage() {
       litrosAgua: Number(litrosAgua) || 0,
       custoForma: custoFormaAmortizacao,
       percentualTaxas: Number(percentualTaxas) || 0,
-    })
+    }) } catch { return null }
   }, [
     custoMateriaisCalculado,
     custoPropagandaDia,
@@ -370,6 +370,7 @@ export function PecasPage() {
   async function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
     setErro(null)
+    if (!precificacaoRes) { setErro('Confira os valores de precificação; a taxa deve ser menor que 100%.'); setEtapaFormulario(4); return }
     if (errosEstoque.length || erroConexaoEstoque) {
       setErro(errosEstoque[0] ?? erroConexaoEstoque)
       return
@@ -1112,7 +1113,7 @@ export function PecasPage() {
                 label="Foto do Produto (Câmera do Ateliê ou Galeria)"
               />
 
-              <div className="rounded-xl border border-primary/50 bg-slate-900/90 p-4 flex flex-col gap-3 shadow-lg mt-2">
+              {precificacaoRes ? <div className="rounded-xl border border-primary/50 bg-slate-900/90 p-4 flex flex-col gap-3 shadow-lg mt-2">
                 <div className="flex items-center justify-between border-b border-outline-variant/40 pb-2">
                   <span className="text-sm font-semibold text-on-surface">📊 Resumo de Custos e Precificação Realista</span>
                   <Badge variant="success" className="text-[11px] font-mono">
@@ -1157,7 +1158,7 @@ export function PecasPage() {
                     <strong className="text-on-surface font-mono">R$ {precificacaoRes.custoTotal.toFixed(2)}</strong>
                   </div>
                 </div>
-              </div>
+              </div> : <p role="alert" className="text-sm text-error">Confira os valores de precificação; a taxa deve ser menor que 100%.</p>}
 
               {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
 
@@ -1165,7 +1166,7 @@ export function PecasPage() {
                 <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(3)}>
                   ← Voltar
                 </Button>
-                <Button type="submit" disabled={faltamPreRequisitos || errosEstoque.length > 0 || !!erroConexaoEstoque} variante="primary" className="py-2.5 font-bold">
+                <Button type="submit" disabled={faltamPreRequisitos || errosEstoque.length > 0 || !!erroConexaoEstoque || !precificacaoRes} variante="primary" className="py-2.5 font-bold">
                   Fabricar nova peça
                 </Button>
               </div>

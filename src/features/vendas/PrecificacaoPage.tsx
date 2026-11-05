@@ -264,7 +264,7 @@ export function PrecificacaoPage() {
     }
     const encontrada = taxasDisponiveis.find((t) => String(t.id) === taxaIdStr)
     if (encontrada) {
-      setPercentualTaxas(String(encontrada.percentual * 100))
+      setPercentualTaxas(String(encontrada.percentual))
       setTaxaFixa(String(encontrada.valorFixo))
     }
   }
@@ -408,7 +408,7 @@ export function PrecificacaoPage() {
       for (const consumo of consumos) {
         const mat = materiais.find((m) => m.id === consumo.materialId)
         const cat = mat ? categorias.find((c) => c.id === mat.categoriaId) : undefined
-        const valorItem = consumo.quantidade * (mat?.custoUnitario ?? 0)
+        const valorItem = consumo.quantidade * (consumo.custoUnitarioNoConsumo ?? mat?.custoUnitario ?? 0)
         const nomeCat = (cat?.nome || '').toLowerCase()
 
         if (
@@ -544,6 +544,11 @@ export function PrecificacaoPage() {
         percentualTaxas: Number(percentualTaxas) || 0,
         taxaFixa: Number(taxaFixa) || 0,
       })
+      const taxaSelecionada = taxasDisponiveis.find(t => String(t.id) === taxaSelecionadaId)
+      const precoEmCentavos = Math.round(calculado.precoFinal * 100) / 100
+      if (taxaSelecionada && ((taxaSelecionada.precoMinimo !== undefined && precoEmCentavos < taxaSelecionada.precoMinimo) || (taxaSelecionada.precoMaximoExclusivo !== undefined && precoEmCentavos >= taxaSelecionada.precoMaximoExclusivo))) {
+        throw new Error(`Preço calculado ${formatarMoeda(calculado.precoFinal)} fora da faixa da taxa selecionada. Escolha a faixa correspondente em Taxas & Canais.`)
+      }
       return { resultado: calculado, erroValidacao: null }
     } catch (falha) {
       return { resultado: null, erroValidacao: falha instanceof Error ? falha.message : 'Dados inválidos.' }
@@ -565,6 +570,8 @@ export function PrecificacaoPage() {
     margemLucroPercent,
     percentualTaxas,
     taxaFixa,
+    taxasDisponiveis,
+    taxaSelecionadaId,
   ])
 
   async function handleSalvarPreco() {
@@ -1064,15 +1071,19 @@ export function PrecificacaoPage() {
               <option value="">Venda Direta / Sem Taxa de Plataforma (0%)</option>
               {taxasDisponiveis.map((taxa) => (
                 <option key={taxa.id} value={taxa.id}>
-                  {taxa.nome} — {(taxa.percentual * 100).toFixed(1)}% {taxa.valorFixo > 0 ? `+ ${formatarMoeda(taxa.valorFixo)}` : ''}
+                  {taxa.nome} — {taxa.percentual.toFixed(1)}% {taxa.valorFixo > 0 ? `+ ${formatarMoeda(taxa.valorFixo)}` : ''}
                 </option>
               ))}
             </select>
+            <p className="text-xs text-on-surface-variant">A margem é calculada sobre o custo e preservada após as taxas da plataforma.</p>
             {taxaSelecionadaId && (
               <p className="text-xs text-on-surface-variant">
                 Taxa aplicada: <strong>{(Number(percentualTaxas)).toFixed(1)}%</strong>
                 {Number(taxaFixa) > 0 ? ` + ${formatarMoeda(Number(taxaFixa))} taxa fixa` : ''} por venda.
               </p>
+            )}
+            {taxasDisponiveis.some(t => String(t.id) === taxaSelecionadaId && /shopee/i.test(t.nome) && t.precoMinimo === undefined) && (
+              <p role="status" className="text-xs text-on-surface-variant">Esta taxa cadastrada não possui faixa de preço. Confira e atualize a tarifa em Taxas &amp; Canais.</p>
             )}
           </div>
 

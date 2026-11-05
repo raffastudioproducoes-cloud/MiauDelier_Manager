@@ -3,8 +3,10 @@ import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
 export interface NovaTaxa {
   nome: string
-  percentual: number // Ex: 0.14 para 14% da Shopee
+  percentual: number // Ex: 14 para 14%.
   valorFixo: number  // Ex: 3.00 para R$ 3,00 taxa fixa
+  precoMinimo?: number
+  precoMaximoExclusivo?: number
 }
 
 export async function criarTaxa(nova: NovaTaxa): Promise<number> {
@@ -13,6 +15,8 @@ export async function criarTaxa(nova: NovaTaxa): Promise<number> {
     nome: nova.nome,
     percentual: nova.percentual,
     valorFixo: nova.valorFixo,
+    precoMinimo: nova.precoMinimo,
+    precoMaximoExclusivo: nova.precoMaximoExclusivo,
     criadoEm: agora,
   })
   return id as number
@@ -27,6 +31,8 @@ export async function atualizarTaxa(id: number, dados: NovaTaxa): Promise<void> 
     nome: dados.nome,
     percentual: dados.percentual,
     valorFixo: dados.valorFixo,
+    precoMinimo: dados.precoMinimo,
+    precoMaximoExclusivo: dados.precoMaximoExclusivo,
   })
 }
 

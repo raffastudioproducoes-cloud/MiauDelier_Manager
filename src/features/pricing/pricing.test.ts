@@ -56,8 +56,10 @@ describe('motor de precificação', () => {
     expect(resultado.custoFixo).toBeCloseTo(14.5)
     expect(resultado.custoTotal).toBeCloseTo(159.5)
 
-    // Preço Ideal = (159.5 + 3) / (1 - (0.14 + 0.30)) = 162.5 / 0.56 = 290.1785
-    expect(resultado.precoFinal).toBeCloseTo(290.178, 2)
+    // Preserva o lucro de 30% sobre o custo após descontar a taxa.
+    expect(resultado.precoFinal).toBeCloseTo((159.5 * 1.3 + 3) / 0.86, 2)
+    expect(resultado.lucro).toBeCloseTo(159.5 * 0.3, 2)
+    expect(resultado.precoFinal - resultado.taxaMarketplace - resultado.custoTotal).toBeCloseTo(resultado.lucro, 2)
   })
 
   it('inclui amortização do molde de silicone (custoForma) nos custos diretos', () => {
@@ -106,5 +108,10 @@ describe('motor de precificação', () => {
   it('lança se margemLucroPercent estiver fora de 0-1000', () => {
     expect(() => calcularPrecificacao({ ...base, margemLucroPercent: -1 })).toThrow(/margemLucroPercent/i)
     expect(() => calcularPrecificacao({ ...base, margemLucroPercent: 1001 })).toThrow(/margemLucroPercent/i)
+  })
+
+  it('rejeita taxas iguais ou superiores a 100%', () => {
+    expect(() => calcularPrecificacao({ ...base, percentualTaxas: 100 })).toThrow(/menor que 100/i)
+    expect(() => calcularPrecificacao({ ...base, percentualTaxas: 1400 })).toThrow(/menor que 100/i)
   })
 })

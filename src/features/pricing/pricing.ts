@@ -64,6 +64,7 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
   validarNaoNegativoFinito('custoForma', custoForma)
   validarNaoNegativoFinito('percentualDesperdicio', percentualDesperdicio)
   validarNaoNegativoFinito('percentualTaxas', percentualTaxas)
+  if (percentualTaxas >= 100) throw new Error('A taxa da plataforma deve ser menor que 100%.')
   validarNaoNegativoFinito('taxaFixa', taxaFixa)
 
   // Cálculo de Energia Elétrica (Luz)
@@ -103,21 +104,9 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
   const custoFixo = subtotal * (input.rateioFixoPercent / 100)
   const custoTotal = subtotal + custoFixo
 
-  let precoFinal: number
-  let lucro: number
-  let taxaMarketplace: number
-
-  if (percentualTaxas > 0) {
-    const taxasEMargemDec = (percentualTaxas + input.margemLucroPercent) / 100
-    const divisor = 1 - taxasEMargemDec
-    precoFinal = divisor > 0.01 ? (custoTotal + taxaFixa) / divisor : custoTotal + taxaFixa
-    taxaMarketplace = precoFinal * (percentualTaxas / 100) + taxaFixa
-    lucro = precoFinal - custoTotal - taxaMarketplace
-  } else {
-    lucro = custoTotal * (input.margemLucroPercent / 100)
-    precoFinal = custoTotal + lucro + taxaFixa
-    taxaMarketplace = taxaFixa
-  }
+  const lucro = custoTotal * (input.margemLucroPercent / 100)
+  const precoFinal = (custoTotal + lucro + taxaFixa) / (1 - percentualTaxas / 100)
+  const taxaMarketplace = precoFinal * (percentualTaxas / 100) + taxaFixa
 
   return {
     custoMaterial: input.custoMaterial,
