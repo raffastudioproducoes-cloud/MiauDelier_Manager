@@ -76,6 +76,7 @@ export function PecasPage() {
   const [formaId, setFormaId] = useState('')
   const [volumeResinaMl, setVolumeResinaMl] = useState('')
   const [consumos, setConsumos] = useState<LinhaConsumo[]>([linhaConsumoVazia()])
+  const [episCura, setEpisCura] = useState<LinhaConsumo[]>([])
 
   const [valorTempoCura, setValorTempoCura] = useState('')
   const [unidadeTempoCura, setUnidadeTempoCura] = useState<'dias' | 'horas' | 'minutos'>('horas')
@@ -170,6 +171,7 @@ export function PecasPage() {
     setFormaId('')
     setVolumeResinaMl('')
     setConsumos([linhaConsumoVazia()])
+    setEpisCura([])
     setValorTempoCura('')
     setUnidadeTempoCura('horas')
     setUsosEnergiaCura([linhaEquipamentoVazia()])
@@ -268,7 +270,7 @@ export function PecasPage() {
 
   const custoMateriaisCalculado = useMemo(() => {
     let total = 0
-    for (const linha of consumos) {
+    for (const linha of [...consumos, ...episCura]) {
       if (!linha.materialId || !Number(linha.quantidade)) continue
       const mat = materiais.find((m) => m.id === Number(linha.materialId))
       if (!mat) continue
@@ -277,11 +279,11 @@ export function PecasPage() {
       total += quantidadeConvertida * mat.custoUnitario
     }
     return total
-  }, [consumos, materiais])
+  }, [consumos, episCura, materiais])
 
   const totaisConsumo = useMemo(() => {
     const totais = new Map<number, number>()
-    for (const linha of consumos) {
+    for (const linha of [...consumos, ...episCura]) {
       const material = materiais.find((item) => item.id === Number(linha.materialId))
       const quantidade = Number(linha.quantidade)
       if (!material?.id || !Number.isFinite(quantidade) || quantidade <= 0) continue
@@ -289,7 +291,7 @@ export function PecasPage() {
       totais.set(material.id, (totais.get(material.id) ?? 0) + convertida)
     }
     return totais
-  }, [consumos, materiais])
+  }, [consumos, episCura, materiais])
   const errosEstoque = materiais.flatMap((material) => {
     const necessario = material.id ? totaisConsumo.get(material.id) : undefined
     const mensagem = necessario !== undefined ? mensagemEstoqueInsuficiente(material, necessario) : null
@@ -385,8 +387,8 @@ export function PecasPage() {
       return
     }
 
-    const linhasValidas = consumos.filter((linha) => linha.materialId && Number(linha.quantidade) > 0)
-    if (linhasValidas.length === 0) {
+    const linhasValidas = [...consumos, ...episCura].filter((linha) => linha.materialId && Number(linha.quantidade) > 0)
+    if (!consumos.some((linha) => linha.materialId && Number(linha.quantidade) > 0)) {
       setErro('Adicione ao menos um material com quantidade maior que zero')
       setEtapaFormulario(1)
       return
@@ -855,14 +857,54 @@ export function PecasPage() {
                 </Button>
               </div>
 
+              <div className="border-t border-outline-variant/30 pt-3">
+                <h4 className="text-sm font-semibold text-on-surface mb-2">EPIs utilizados na cura</h4>
+                {episCura.map((linha, indice) => {
+                  const material = materiais.find((m) => m.id === Number(linha.materialId))
+                  const unidade = linha.unidade || material?.unidade || ''
+                  const quantidade = Number(linha.quantidade) || 0
+                  const convertida = material && quantidade > 0 ? converterQuantidade(quantidade, unidade, material.unidade).quantidadeConvertida : 0
+                  const restante = material ? material.quantidadeEstoque - (totaisConsumo.get(material.id!) ?? 0) : 0
+                  const atualizar = (dados: Partial<LinhaConsumo>) => setEpisCura((atuais) => atuais.map((item, i) => i === indice ? { ...item, ...dados } : item))
+                  return (
+                    <div key={indice} className="flex flex-col gap-2 rounded-xl border border-outline-variant/60 bg-surface-container/30 p-3 mb-2">
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="flex flex-1 min-w-[200px] flex-col gap-1">
+                          <label htmlFor={`epi-cura-${indice}`} className="text-xs font-medium text-on-surface">EPI</label>
+                          <select id={`epi-cura-${indice}`} value={linha.materialId} onChange={(e) => {
+                            const selecionado = materiais.find((m) => m.id === Number(e.target.value))
+                            atualizar({ materialId: e.target.value, unidade: selecionado?.unidade ?? '' })
+                          }} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                            <option value="">Selecione o EPI do estoque...</option>
+                            {materiais.map((m) => <option key={m.id} value={String(m.id)}>{m.nome} ({m.quantidadeEstoque} {m.unidade} em estoque)</option>)}
+                          </select>
+                        </div>
+                        <div className="w-32">
+                          <TextField id={`quantidade-epi-cura-${indice}`} rotulo="Quantidade de EPI" type="number" step="0.001" value={linha.quantidade} onChange={(e) => atualizar({ quantidade: e.target.value })} />
+                        </div>
+                        <div className="flex flex-col gap-1 w-28">
+                          <label htmlFor={`unidade-epi-cura-${indice}`} className="text-xs font-medium text-on-surface">Unidade do EPI</label>
+                          <select id={`unidade-epi-cura-${indice}`} value={unidade} onChange={(e) => atualizar({ unidade: e.target.value })} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                            {(material ? obterOpcoesUnidadeCompativeis(material.unidade) : ['']).map((opcao) => <option key={opcao} value={opcao}>{opcao}</option>)}
+                          </select>
+                        </div>
+                        <Button type="button" variante="ghost" onClick={() => setEpisCura((atuais) => atuais.filter((_, i) => i !== indice))} className="mb-0.5 text-error" aria-label={`Remover EPI ${indice + 1}`}>×</Button>
+                      </div>
+                      {material && quantidade > 0 && <p className={`text-xs ${restante < 0 ? 'text-error font-medium' : 'text-on-surface-variant'}`}>
+                        {unidade !== material.unidade && `Equivale a ${convertida.toFixed(3)} ${material.unidade} do estoque. `}
+                        {restante < 0 ? 'Quantidade total acima do estoque.' : <>Estoque após consumo: <strong>{restante.toFixed(3)} {material.unidade}</strong></>}
+                      </p>}
+                    </div>
+                  )
+                })}
+                <Button type="button" variante="ghost" onClick={() => setEpisCura((atuais) => [...atuais, linhaConsumoVazia()])} className="text-xs font-medium">+ Adicionar EPI</Button>
+              </div>
+
               <div className="flex justify-between items-center pt-2">
                 <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(1)}>
                   ← Voltar
                 </Button>
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={faltamPreRequisitos || errosEstoque.length > 0 || !!erroConexaoEstoque} variante="primary">
-                    Fabricar nova peça
-                  </Button>
                   <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(3)}>
                     Próxima Etapa: Desmolde & Acabamento →
                   </Button>
