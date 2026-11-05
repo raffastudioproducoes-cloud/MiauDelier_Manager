@@ -32,6 +32,34 @@ describe('PecasPage', () => {
     await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 500, custoUnitario: 0.15 })
   })
 
+  it('registra EPI no acabamento e mantém o botão de fabricação na última etapa', async () => {
+    await criarMaterial({ nome: 'Luva', categoriaId: 1, unidade: 'un', quantidadeEstoque: 10, custoUnitario: 2, tipoClassificacao: 'epi' })
+    const salvar = vi.spyOn(pecasRepo, 'criarPeca').mockResolvedValue(1)
+    try {
+      await renderPagina()
+      fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Mesa' } })
+      fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
+      fireEvent.change(screen.getByLabelText(/^material$/i), { target: { value: '1' } })
+      fireEvent.change(screen.getByLabelText(/^quantidade$/i), { target: { value: '20' } })
+      fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
+      fireEvent.click(screen.getByRole('button', { name: /próxima etapa: desmolde/i }))
+      expect(screen.queryByLabelText(/custo de epis e consumíveis/i)).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /fabricar nova peça/i })).not.toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: /adicionar epi/i }))
+      fireEvent.change(screen.getByLabelText(/^epi$/i), { target: { value: '2' } })
+      fireEvent.change(screen.getByLabelText(/quantidade de epi/i), { target: { value: '2' } })
+      expect(screen.getByLabelText(/unidade do epi/i)).toHaveValue('un')
+      expect(screen.getByText(/estoque após consumo/i)).toHaveTextContent('8.000 un')
+      fireEvent.click(screen.getByRole('button', { name: /próxima etapa: custos/i }))
+      fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
+      await waitFor(() => expect(salvar).toHaveBeenCalledWith(expect.objectContaining({ consumos: expect.arrayContaining([
+        expect.objectContaining({ materialId: 2, quantidade: 2, unidade: 'un' }),
+      ]) })))
+    } finally {
+      salvar.mockRestore()
+    }
+  })
+
   it('inclui o EPI usado na cura no consumo e mantém o cadastro nas etapas seguintes', async () => {
     await criarMaterial({ nome: 'Luva', categoriaId: 1, unidade: 'un', quantidadeEstoque: 10, custoUnitario: 2, tipoClassificacao: 'epi' })
     const salvar = vi.spyOn(pecasRepo, 'criarPeca').mockResolvedValue(1)
@@ -49,6 +77,7 @@ describe('PecasPage', () => {
       expect(screen.getByLabelText(/unidade do epi/i)).toHaveValue('un')
       expect(screen.getByText(/estoque após consumo/i)).toHaveTextContent('8.000 un')
       fireEvent.click(screen.getByRole('button', { name: /próxima etapa: desmolde/i }))
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: custos/i }))
       fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
       await waitFor(() => expect(salvar).toHaveBeenCalledWith(expect.objectContaining({ consumos: expect.arrayContaining([
         expect.objectContaining({ materialId: 2, quantidade: 2, unidade: 'un' }),
@@ -68,6 +97,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getByLabelText(/quantidade de epi/i), { target: { value: '300' } })
     expect(screen.getByRole('alert')).toHaveTextContent('Necessário: 600 ml')
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: desmolde/i }))
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: custos/i }))
     expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled()
   })
 
@@ -83,6 +113,7 @@ describe('PecasPage', () => {
     expect(screen.queryByRole('button', { name: /fabricar nova peça/i })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: desmolde/i }))
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: custos/i }))
     expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled()
   })
 
@@ -95,6 +126,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '5000' } })
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: desmolde/i }))
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: custos/i }))
     fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
 
     await waitFor(() => expect(screen.getByText(/estoque insuficiente/i)).toBeInTheDocument())
@@ -112,6 +144,7 @@ describe('PecasPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Disponível: 500 ml')
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: desmolde/i }))
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: custos/i }))
     expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled()
   })
 
@@ -124,6 +157,7 @@ describe('PecasPage', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(/conecte-se/i)
       fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: desmolde/i }))
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: custos/i }))
       expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled()
       conexao.mockReturnValue(true)
       fireEvent(window, new Event('online'))
@@ -139,6 +173,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     fireEvent.click(screen.getByRole('button', { name: /próxima etapa: desmolde/i }))
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: custos/i }))
     expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeEnabled()
     await db.materiais.update(1, { quantidadeEstoque: 10 })
     await waitFor(() => expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled())
