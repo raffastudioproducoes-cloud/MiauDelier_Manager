@@ -6,9 +6,10 @@ import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/useToast'
-import { criarPedido, listarPedidos, excluirPedido, listarPecaIdsJaVinculadas, type PedidoComCliente } from './pedidosRepo'
+import { criarPedido, listarPedidos, excluirPedido, listarPecaIdsJaVinculadas, editarPecasPedido, concluirVendaPedido, type PedidoComCliente } from './pedidosRepo'
 import { listarClientes, type ClienteDecifrado } from './clientesRepo'
 import { listarPecas, type PecaComForma } from '../producao/pecasRepo'
+import { listarContas, type ContaDecifrada } from '../financeiro/contasRepo'
 
 export function PedidosPage() {
   const { mostrarToast } = useToast()
@@ -21,19 +22,27 @@ export function PedidosPage() {
   const [pecaIdsSelecionadas, setPecaIdsSelecionadas] = useState<number[]>([])
   const [carregado, setCarregado] = useState(false)
   const [pedidoExcluindoId, setPedidoExcluindoId] = useState<number | null>(null)
+  const [pedidoEditando, setPedidoEditando] = useState<PedidoComCliente | null>(null)
+  const [pecasEditadas, setPecasEditadas] = useState<number[]>([])
+  const [pedidoVenda, setPedidoVenda] = useState<PedidoComCliente | null>(null)
+  const [contas, setContas] = useState<ContaDecifrada[]>([])
+  const [contaVenda, setContaVenda] = useState('')
+  const [salvando, setSalvando] = useState(false)
 
   async function recarregar() {
-    const [listaPedidos, listaClientes, listaPecas, vinculadas] = await Promise.all([
+    const [listaPedidos, listaClientes, listaPecas, vinculadas, listaContas] = await Promise.all([
       listarPedidos(),
       listarClientes(),
       listarPecas(),
       listarPecaIdsJaVinculadas(),
+      listarContas(),
     ])
     if (!montado.current) return
     setPedidos(listaPedidos)
     setClientes(listaClientes)
     setPecas(listaPecas)
     setPecaIdsVinculadas(vinculadas)
+    setContas(listaContas)
   }
 
   useEffect(() => {
@@ -60,7 +69,7 @@ export function PedidosPage() {
     )
   }
 
-  const pecasDisponiveis = pecas.filter((peca) => !pecaIdsVinculadas.includes(peca.id!))
+  const pecasDisponiveis = pecas.filter((peca) => !pecaIdsVinculadas.includes(peca.id!) && peca.status !== 'vendida' && peca.status !== 'cancelada')
   const faltamPreRequisitos = clientes.length === 0 || pecasDisponiveis.length === 0
 
   async function handleSubmit(evento: React.FormEvent) {
@@ -72,8 +81,8 @@ export function PedidosPage() {
     const nomeCliente = clientes.find((cliente) => cliente.id === clienteIdNumero)?.nome ?? '—'
     const valorTotal = pecaIdsEnviadas.reduce((soma, pecaId) => {
       const peca = pecas.find((p) => p.id === pecaId)
-      return soma + (peca?.precoVenda ?? 0)
-    }, 0)
+      return soma + Math.round((peca?.precoVenda ?? 0) * 100)
+    }, 0) / 100
     // Atualização otimista: exibe o pedido imediatamente, antes da escrita no banco,
     // para não depender do tempo de resposta assíncrono do IndexedDB na renderização.
     const pedidoOtimista: PedidoComCliente = {
@@ -115,6 +124,32 @@ export function PedidosPage() {
     mostrarToast('Pedido excluído com sucesso')
     setPedidoExcluindoId(null)
     await recarregar()
+  }
+
+  async function handleSalvarEdicao() {
+    if (!pedidoEditando?.id || salvando) return
+    setSalvando(true)
+    try {
+      await editarPecasPedido(pedidoEditando.id, pecasEditadas)
+      setPedidoEditando(null)
+      await recarregar()
+      mostrarToast('Pedido atualizado com sucesso')
+    } catch (falha) { mostrarToast(falha instanceof Error ? falha.message : 'Erro ao atualizar pedido.', 'erro') }
+    finally { setSalvando(false) }
+  }
+
+  async function handleConcluirVenda() {
+    if (!pedidoVenda?.id || salvando) return
+    if (!contaVenda) { mostrarToast('Selecione a carteira que receberá a venda.', 'erro'); return }
+    setSalvando(true)
+    try {
+      await concluirVendaPedido(pedidoVenda.id, Number(contaVenda), pedidoVenda.valorTotal)
+      setPedidoVenda(null)
+      setContaVenda('')
+      await recarregar()
+      mostrarToast('Venda registrada na carteira!')
+    } catch (falha) { mostrarToast(falha instanceof Error ? falha.message : 'Erro ao registrar venda.', 'erro') }
+    finally { setSalvando(false) }
   }
 
   if (!carregado) {
@@ -232,6 +267,7 @@ export function PedidosPage() {
                         <Badge variant={statusVariant} className="uppercase font-bold tracking-wider text-[10px] px-2.5 py-0.5">
                           {statusFormatado}
                         </Badge>
+                        {pedido.vendaRegistradaEm && <Badge variant="success">Venda concluída</Badge>}
                       </div>
                       <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
                         R$ {pedido.valorTotal.toFixed(2)}
@@ -254,6 +290,8 @@ export function PedidosPage() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
+                        <Button variante="ghost" className="text-xs" disabled={!pedido.id || pedido.id < 0 || !!pedido.vendaRegistradaEm || pedido.status === 'cancelado'} onClick={() => { setPedidoEditando(pedido); setPecasEditadas([...pedido.pecaIds]) }}>Editar pedido</Button>
+                        <Button variante="primary" className="text-xs" disabled={!pedido.id || pedido.id < 0 || !!pedido.vendaRegistradaEm || pedido.status === 'cancelado'} onClick={() => { setPedidoVenda(pedido); setContaVenda('') }}>Concluir venda</Button>
                         <Link to="/pedidos/$pedidoId" params={{ pedidoId: String(pedido.id) }}>
                           <Button variante="ghost" className="text-xs">
                             Ver pedido →
@@ -271,6 +309,30 @@ export function PedidosPage() {
           </div>
         )}
       </section>
+
+      <ConfirmModal
+        aberto={pedidoEditando !== null}
+        titulo="Editar peças do pedido"
+        descricao="Selecione as peças deste pedido. O cliente permanece o mesmo."
+        onConfirmar={handleSalvarEdicao}
+        onCancelar={() => setPedidoEditando(null)}
+      >
+        <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+          {pecas.filter(p => p.id && (pedidoEditando?.pecaIds.includes(p.id) || (!pecaIdsVinculadas.includes(p.id) && p.status !== 'vendida' && p.status !== 'cancelada'))).map(p => (
+            <label key={p.id} className="flex items-center gap-2 text-sm text-on-surface"><input type="checkbox" checked={pecasEditadas.includes(p.id!)} onChange={() => setPecasEditadas(atuais => atuais.includes(p.id!) ? atuais.filter(id => id !== p.id) : [...atuais, p.id!])} />{p.nome} — R$ {(p.precoVenda ?? 0).toFixed(2)}</label>
+          ))}
+        </div>
+      </ConfirmModal>
+
+      <ConfirmModal
+        aberto={pedidoVenda !== null}
+        titulo="Concluir venda do pedido"
+        descricao={`O valor de R$ ${(pedidoVenda?.valorTotal ?? 0).toFixed(2)} será registrado como entrada na carteira selecionada.`}
+        onConfirmar={handleConcluirVenda}
+        onCancelar={() => setPedidoVenda(null)}
+      >
+        <div className="flex flex-col gap-1"><label htmlFor="conta-venda-pedido" className="text-sm font-medium text-on-surface">Carteira</label><select id="conta-venda-pedido" value={contaVenda} onChange={e => setContaVenda(e.target.value)} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"><option value="">Selecione a carteira</option>{contas.map(conta => <option key={conta.id} value={conta.id}>{conta.nome}</option>)}</select>{contas.length === 0 && <p className="text-xs text-error">Cadastre uma carteira antes de registrar a venda.</p>}</div>
+      </ConfirmModal>
 
       <ConfirmModal
         aberto={pedidoExcluindoId !== null}

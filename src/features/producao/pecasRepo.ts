@@ -165,12 +165,13 @@ export async function listarConsumosDaPeca(pecaId: number): Promise<ConsumoComMa
 }
 
 async function atualizarStatusPecaInterno(pecaId: number, novoStatus: StatusPeca): Promise<void> {
-  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas], async () => {
+  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.pedidos], async () => {
     const peca = await db.pecas.get(pecaId)
     if (!peca) throw new Error(`Peça ${pecaId} não encontrada`)
 
     const statusAnterior = peca.status
     if (statusAnterior === novoStatus) return
+    if (statusAnterior === 'vendida' && (await db.pedidos.toArray()).some(pedido => pedido.vendaRegistradaEm && pedido.pecaIds.includes(pecaId))) throw new Error('Esta peça pertence a um pedido com venda registrada.')
 
     // Se transicionando PARA 'cancelada' (e antes não era cancelada): devolve material ao estoque e estorna o uso da forma
     if (novoStatus === 'cancelada' && statusAnterior !== 'cancelada') {
@@ -261,9 +262,10 @@ async function registrarVendaPecaInterno(
   const valorCriptografado = precoVenda.toString()
   const agora = new Date().toISOString()
 
-  await db.transaction('rw', [db.pecas, db.eventosPeca, db.contas, db.transacoes, db.auditoria, db.consumosPeca, db.materiais, db.formas], async () => {
+  await db.transaction('rw', [db.pecas, db.eventosPeca, db.contas, db.transacoes, db.auditoria, db.consumosPeca, db.materiais, db.formas, db.pedidos], async () => {
     const peca = await db.pecas.get(pecaId)
     if (!peca) throw new Error(`Peça ${pecaId} não encontrada`)
+    if (peca.status === 'vendida' || (await db.pedidos.toArray()).some(pedido => pedido.vendaRegistradaEm && pedido.pecaIds.includes(pecaId))) throw new Error('A venda desta peça já foi registrada.')
     if (peca.status === 'cancelada') await atualizarStatusPeca(pecaId, 'planejada')
     await db.pecas.update(pecaId, { status: 'vendida', precoVenda })
     await db.eventosPeca.add({
@@ -284,8 +286,9 @@ async function registrarVendaPecaInterno(
 }
 
 async function excluirPecaInterno(pecaId: number): Promise<void> {
-  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.auditoria], async () => {
+  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.auditoria, db.pedidos], async () => {
     const peca = await db.pecas.get(pecaId)
+    if ((await db.pedidos.toArray()).some(pedido => pedido.vendaRegistradaEm && pedido.pecaIds.includes(pecaId))) throw new Error('Não é possível excluir uma peça de pedido com venda registrada.')
     // Se a peça NÃO estava cancelada, devolve o material ao estoque e estorna o uso do molde
     if (peca && peca.status !== 'cancelada') {
       const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()

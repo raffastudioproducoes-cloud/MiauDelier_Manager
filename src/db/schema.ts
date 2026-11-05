@@ -182,6 +182,9 @@ export interface Pedido {
   prazoEntrega?: string
   etapa?: string
   progresso?: number
+  vendaRegistradaEm?: string
+  transacaoVendaId?: number
+  valorVenda?: number
 }
 
 export type TipoTransacao = 'entrada' | 'saida'
