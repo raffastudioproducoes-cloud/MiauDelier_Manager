@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '../db/schema'
 import { CHAVE_USUARIO_NUVEM, setupAccount } from './auth'
 import { normalizeRemoteSyncObject, prepareLocalCacheForUser, registerDexieHooks } from './syncService'
 import { atualizarMaterial, criarMaterial } from '../features/producao/materiaisRepo'
 import { criarForma, atualizarForma } from '../features/producao/formasRepo'
+
+vi.mock('../features/producao/estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => fn() }))
 
 let hooksRegistered = false
 

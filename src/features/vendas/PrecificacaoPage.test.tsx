@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
@@ -7,6 +7,8 @@ import { criarMaterial } from '../producao/materiaisRepo'
 import { criarPeca } from '../producao/pecasRepo'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 import { PrecificacaoPage } from './PrecificacaoPage'
+
+vi.mock('../producao/estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => fn() }))
 
 async function renderPagina() {
   const utils = render(

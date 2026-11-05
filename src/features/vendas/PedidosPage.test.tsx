@@ -9,6 +9,8 @@ import { criarPeca } from '../producao/pecasRepo'
 import { atualizarPrecoVendaPeca } from '../producao/pecasRepo'
 import { ToastProvider } from '../../components/ui/ToastProvider'
 
+vi.mock('../producao/estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => fn() }))
+
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, to, params, ...props }: { children: React.ReactNode; to: string; params?: Record<string, string> }) => (
     <a href={to.replace('$pedidoId', params?.pedidoId ?? '')} {...props}>{children}</a>

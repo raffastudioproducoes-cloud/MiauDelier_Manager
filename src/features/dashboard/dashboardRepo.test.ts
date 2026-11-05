@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
 import { criarConta } from '../financeiro/contasRepo'
@@ -9,6 +9,8 @@ import { criarPeca } from '../producao/pecasRepo'
 import { criarCliente } from '../vendas/clientesRepo'
 import { criarPedido } from '../vendas/pedidosRepo'
 import { obterResumoDashboard } from './dashboardRepo'
+
+vi.mock('../producao/estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => fn() }))
 
 describe('resumo do dashboard', () => {
   beforeEach(async () => {
