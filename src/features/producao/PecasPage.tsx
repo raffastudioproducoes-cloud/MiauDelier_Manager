@@ -1297,7 +1297,7 @@ export function PecasPage() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }}>
+                        <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} hash="editar">
                           <Button variante="ghost" className="text-xs">
                             Detalhes & Etapas →
                           </Button>

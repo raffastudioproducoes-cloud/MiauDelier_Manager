@@ -12,6 +12,7 @@ import {
   atualizarStatusPeca,
   registrarVendaPeca,
   atualizarPrecoVendaPeca,
+  editarConsumosPeca,
 } from './pecasRepo'
 import { listarMateriais } from './materiaisRepo'
 import { criarConta } from '../financeiro/contasRepo'
@@ -24,6 +25,56 @@ describe('repositório de peças', () => {
     await db.open()
     clearSession()
     await setupAccount('senha-do-ateliê')
+  })
+
+  it('ajusta estoque pela diferença e conserva o custo antigo da quantidade existente', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
+    const id = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId, quantidade: 2 }] })
+    await db.materiais.update(materialId, { custoUnitario: 150 })
+    await editarConsumosPeca(id, [{ materialId, quantidade: 3, unidade: 'kg' }], {})
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(7)
+    const linhas = await db.consumosPeca.where('pecaId').equals(id).toArray()
+    expect(linhas.map(c => [c.quantidade, c.custoUnitarioNoConsumo])).toEqual([[2, 100], [1, 150]])
+    expect((await db.pecas.get(id))?.precoVenda).toBe(525)
+    await editarConsumosPeca(id, [{ materialId, quantidade: 1, unidade: 'kg' }], {})
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(9)
+    expect((await db.pecas.get(id))?.precoVenda).toBe(150)
+    await expect(editarConsumosPeca(id, [{ materialId, quantidade: 20, unidade: 'kg' }], {})).rejects.toThrow(/estoque insuficiente/i)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(9)
+  })
+
+  it('edita uma peça cancelada sem movimentar o estoque devolvido', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
+    const id = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId, quantidade: 2 }] })
+    await atualizarStatusPeca(id, 'cancelada')
+    await editarConsumosPeca(id, [{ materialId, quantidade: 3, unidade: 'kg' }], {})
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(10)
+    await atualizarStatusPeca(id, 'planejada')
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(7)
+  })
+
+  it('não altera nenhum saldo ou consumo se um material estiver insuficiente', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    const resina = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
+    const luva = await criarMaterial({ nome: 'Luva', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 2 })
+    const id = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId: resina, quantidade: 2 }] })
+    await expect(editarConsumosPeca(id, [{ materialId: resina, quantidade: 3 }, { materialId: luva, quantidade: 2 }], {})).rejects.toThrow(/estoque insuficiente/i)
+    expect((await db.materiais.get(resina))?.quantidadeEstoque).toBe(8)
+    expect((await db.materiais.get(luva))?.quantidadeEstoque).toBe(1)
+    expect((await db.consumosPeca.where('pecaId').equals(id).toArray()).map(c => c.quantidade)).toEqual([2])
+  })
+
+  it('atualiza os usos do molde ao trocar a forma da peça', async () => {
+    const antiga = await criarForma({ nome: 'Antiga', geometria: 'direto', dimensoesCm: {} })
+    const nova = await criarForma({ nome: 'Nova', geometria: 'direto', dimensoesCm: {} })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
+    const id = await criarPeca({ nome: 'Mesa', formaId: antiga, consumos: [{ materialId, quantidade: 2 }] })
+    await editarConsumosPeca(id, [{ materialId, quantidade: 2, unidade: 'kg' }], { formaId: nova })
+    expect((await db.formas.get(antiga))?.usosRealizados).toBe(0)
+    expect((await db.formas.get(nova))?.usosRealizados).toBe(1)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
   })
 
   it('cria peça, registra consumo, decrementa estoque e abre evento inicial', async () => {

@@ -16,7 +16,7 @@ import {
   atualizarStatusPeca,
   registrarVendaPeca,
   atualizarImagemPeca,
-  atualizarDadosProducaoPeca,
+  editarConsumosPeca,
   type PecaComForma,
   type ConsumoComMaterial,
 } from './pecasRepo'
@@ -24,8 +24,10 @@ import { SeletorImagem } from '../../components/ui/SeletorImagem'
 import { listarContas } from '../financeiro/contasRepo'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 import { calcularPrecificacao } from '../pricing/pricing'
-import { formatarVolumeEMassaLegivel } from '../../lib/unidades'
+import { formatarVolumeEMassaLegivel, obterOpcoesUnidadeCompativeis } from '../../lib/unidades'
 import { listarMateriais } from './materiaisRepo'
+import { listarFormas } from './formasRepo'
+import { listarEquipamentos } from './equipamentosRepo'
 import { ERRO_CONEXAO_ESTOQUE, mensagemEstoqueInsuficiente } from './estoque'
 import { useConexaoEstoque } from './useConexaoEstoque'
 import {
@@ -34,7 +36,7 @@ import {
   formatarTempoRestanteCura,
   adicionarTempoCura,
 } from './curaRepo'
-import type { EventoPeca, Material, StatusPeca } from '../../db/schema'
+import type { Equipamento, EventoPeca, Forma, Material, StatusPeca } from '../../db/schema'
 
 const routeApi = getRouteApi('/pecas/$pecaId')
 
@@ -49,6 +51,8 @@ export function PecaDetalhePage() {
   const [peca, setPeca] = useState<PecaComForma | undefined>(undefined)
   const [consumos, setConsumos] = useState<ConsumoComMaterial[]>([])
   const [materiais, setMateriais] = useState<Material[]>([])
+  const [formas, setFormas] = useState<Forma[]>([])
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([])
   const [eventos, setEventos] = useState<EventoPeca[]>([])
   const [tarifaKwh, setTarifaKwh] = useState(0.85)
   const [valorHoraMaoDeObra, setValorHoraMaoDeObra] = useState(25)
@@ -58,6 +62,12 @@ export function PecaDetalhePage() {
   const [erroValorVenda, setErroValorVenda] = useState<string | null>(null)
 
   const [editandoEtapas, setEditandoEtapas] = useState(false)
+  const [editNome, setEditNome] = useState('')
+  const [editVolume, setEditVolume] = useState('')
+  const [editCura, setEditCura] = useState('')
+  const [editForma, setEditForma] = useState('')
+  const [editEquipamentos, setEditEquipamentos] = useState<{ equipamentoId: string; minutos: string }[]>([])
+  const [editConsumos, setEditConsumos] = useState<{ materialId: string; quantidade: string; unidade: string }[]>([])
   const [editHorasMaoDeObra, setEditHorasMaoDeObra] = useState('')
   const [editValorPropagandaTotal, setEditValorPropagandaTotal] = useState('')
   const [editDiasPropaganda, setEditDiasPropaganda] = useState('')
@@ -74,6 +84,7 @@ export function PecaDetalhePage() {
   const [agora, setAgora] = useState(() => Date.now())
 
   const montado = useRef(true)
+  const abriuEdicaoAutomatica = useRef(false)
   const id = Number(pecaId)
 
   useEffect(() => {
@@ -89,23 +100,33 @@ export function PecaDetalhePage() {
   }, [])
 
   async function recarregar() {
-    const [pecas, consumosCarregados, eventosCarregados, tarifasConfig, materiaisCarregados] = await Promise.all([
+    const [pecas, consumosCarregados, eventosCarregados, tarifasConfig, materiaisCarregados, formasCarregadas, equipamentosCarregados] = await Promise.all([
       listarPecas(),
       listarConsumosDaPeca(id),
       listarEventosDaPeca(id),
       obterTarifasConfig(),
       listarMateriais(),
+      listarFormas(),
+      listarEquipamentos(),
     ])
     if (!montado.current) return
     const pecaEncontrada = pecas.find((p) => p.id === id)
     setPeca(pecaEncontrada)
     setConsumos(consumosCarregados)
     setMateriais(materiaisCarregados)
+    setFormas(formasCarregadas)
+    setEquipamentos(equipamentosCarregados)
     setEventos(eventosCarregados)
     setTarifaKwh(tarifasConfig.tarifaKwh || 0.85)
     setValorHoraMaoDeObra(tarifasConfig.valorHoraMaoDeObra || 25)
 
     if (pecaEncontrada) {
+      setEditNome(pecaEncontrada.nome)
+      setEditForma(String(pecaEncontrada.formaId))
+      setEditEquipamentos((pecaEncontrada.usosEnergia ?? []).map(uso => ({ equipamentoId: String(uso.equipamentoId), minutos: String(uso.minutosUso) })))
+      setEditVolume(pecaEncontrada.volumeResinaMl !== undefined ? String(pecaEncontrada.volumeResinaMl) : '')
+      setEditCura(pecaEncontrada.curaMinutos !== undefined ? String(pecaEncontrada.curaMinutos) : '')
+      setEditConsumos(consumosCarregados.map(c => ({ materialId: String(c.materialId), quantidade: String(c.quantidade), unidade: c.unidade ?? '' })))
       setEditHorasMaoDeObra(pecaEncontrada.horasMaoDeObra ? String(pecaEncontrada.horasMaoDeObra) : '')
       setEditValorPropagandaTotal(pecaEncontrada.valorPropagandaTotal ? String(pecaEncontrada.valorPropagandaTotal) : '')
       setEditDiasPropaganda(pecaEncontrada.diasPropaganda ? String(pecaEncontrada.diasPropaganda) : '')
@@ -114,6 +135,10 @@ export function PecaDetalhePage() {
       setEditMargemDesejada(pecaEncontrada.margemDesejada !== undefined ? String(pecaEncontrada.margemDesejada) : '50')
       setEditLitrosAgua(pecaEncontrada.litrosAgua ? String(pecaEncontrada.litrosAgua) : '')
       setEditCustoEpiInsumos(pecaEncontrada.custoEpiInsumos ? String(pecaEncontrada.custoEpiInsumos) : '')
+      if (!abriuEdicaoAutomatica.current && window.location.hash === '#editar') {
+        abriuEdicaoAutomatica.current = true
+        setEditandoEtapas(true)
+      }
     }
 
     setCarregado(true)
@@ -147,8 +172,8 @@ export function PecaDetalhePage() {
   }, [pecaId])
 
   const custoMateriaisTotal = useMemo(() => {
-    return consumos.reduce((total, c) => total + (c.quantidade * 0.15), 0)
-  }, [consumos])
+    return consumos.reduce((total, c) => total + c.quantidade * (c.custoUnitarioNoConsumo ?? materiais.find(m => m.id === c.materialId)?.custoUnitario ?? 0), 0)
+  }, [consumos, materiais])
 
   const custoPropagandaDia = useMemo(() => {
     if (!peca) return 0
@@ -161,20 +186,22 @@ export function PecaDetalhePage() {
   const precificacaoRes = useMemo(() => {
     if (!peca) return null
     const custoAcc = (peca.custoEpiInsumos || 0) + custoPropagandaDia + (peca.valorFrete || 0)
+    const forma = formas.find(item => item.id === peca.formaId)
+    const custoForma = forma?.vidaUtilUsos && forma.vidaUtilUsos > 0 ? (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos : 0
     return calcularPrecificacao({
       custoMaterial: custoMateriaisTotal,
       custoAcessorios: custoAcc,
       horasProducao: peca.horasMaoDeObra || 0,
       valorHora: valorHoraMaoDeObra,
       rateioFixoPercent: 0,
-      margemLucroPercent: peca.margemDesejada || 50,
+      margemLucroPercent: peca.margemDesejada ?? 50,
       usosEnergia: peca.usosEnergia || [],
       tarifaKwh,
       litrosAgua: peca.litrosAgua || 0,
-      custoForma: 0,
+      custoForma,
       percentualTaxas: peca.percentualTaxas || 0,
     })
-  }, [peca, custoMateriaisTotal, custoPropagandaDia, valorHoraMaoDeObra, tarifaKwh])
+  }, [peca, custoMateriaisTotal, custoPropagandaDia, valorHoraMaoDeObra, tarifaKwh, formas])
 
   async function handleMudarStatus(novoStatus: StatusPeca) {
     if (novoStatus === 'vendida') {
@@ -236,22 +263,37 @@ export function PecaDetalhePage() {
       const dProp = Number(editDiasPropaganda) || 0
       const cProp = vProp > 0 && dProp > 0 ? vProp / dProp : 0
 
-      await atualizarDadosProducaoPeca(id, {
+      if (!editNome.trim()) throw new Error('Informe o nome da peça.')
+      if ([editVolume, editCura, editHorasMaoDeObra, editValorPropagandaTotal, editDiasPropaganda, editValorFrete, editPercentualTaxas, editMargemDesejada, editLitrosAgua, editCustoEpiInsumos].some(v => v.trim() !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0))) throw new Error('Informe valores numéricos não negativos.')
+      if (editConsumos.some(c => !c.materialId || !Number.isFinite(Number(c.quantidade)) || Number(c.quantidade) <= 0)) throw new Error('Informe um material e uma quantidade válida para cada linha.')
+      if (!editForma) throw new Error('Selecione uma forma.')
+      const usosEnergia = editEquipamentos.map(linha => {
+        const eq = equipamentos.find(item => item.id === Number(linha.equipamentoId))
+        const minutos = Number(linha.minutos)
+        if (!eq || !Number.isFinite(minutos) || minutos <= 0) throw new Error('Informe equipamento e tempo válidos.')
+        return { equipamentoId: eq.id!, nomeEquipamento: eq.nome, potenciaWatts: eq.potenciaWatts, minutosUso: minutos }
+      })
+      await editarConsumosPeca(id, editConsumos.map(c => ({ materialId: Number(c.materialId), quantidade: Number(c.quantidade), unidade: c.unidade })), {
+        nome: editNome.trim(),
+        formaId: Number(editForma),
+        usosEnergia,
+        volumeResinaMl: Number(editVolume) || undefined,
+        curaMinutos: Number(editCura) || undefined,
         horasMaoDeObra: Number(editHorasMaoDeObra) || undefined,
         valorPropagandaTotal: vProp || undefined,
         diasPropaganda: dProp || undefined,
         custoPropagandaCalculado: cProp || undefined,
         valorFrete: Number(editValorFrete) || undefined,
         percentualTaxas: Number(editPercentualTaxas) || 0,
-        margemDesejada: Number(editMargemDesejada) || 50,
+        margemDesejada: editMargemDesejada.trim() === '' ? 50 : Number(editMargemDesejada),
         litrosAgua: Number(editLitrosAgua) || undefined,
         custoEpiInsumos: Number(editCustoEpiInsumos) || undefined,
       })
       mostrarToast('Etapas e precificação atualizadas!', 'sucesso')
       setEditandoEtapas(false)
       await recarregar()
-    } catch {
-      mostrarToast('Erro ao atualizar etapas da peça.', 'erro')
+    } catch (falha) {
+      mostrarToast(falha instanceof Error ? falha.message : 'Erro ao atualizar etapas da peça.', 'erro')
     }
   }
 
@@ -489,11 +531,43 @@ export function PecaDetalhePage() {
       <ConfirmModal
         aberto={editandoEtapas}
         titulo="Editar Parâmetros de Produção & Custos"
-        descricao="Atualize os valores de mão de obra, propaganda, frete e consumíveis da peça."
+        descricao="Atualize os dados da peça; os materiais serão ajustados pela diferença no estoque."
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
         onConfirmar={handleSalvarEtapas}
-        onCancelar={() => setEditandoEtapas(false)}
+        onCancelar={() => { setEditandoEtapas(false); void recarregar().catch(() => mostrarToast('Erro ao recarregar peça.', 'erro')) }}
       >
         <div className="flex flex-col gap-3 text-left">
+          <h3 className="text-sm font-semibold text-on-surface">Etapas 1 e 2: molde, materiais e cura</h3>
+          <TextField id="edit-nome-peca" rotulo="Nome da peça" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+          <div className="flex flex-col gap-1"><label htmlFor="edit-forma-peca" className="text-xs font-medium text-on-surface">Forma</label><select id="edit-forma-peca" value={editForma} onChange={e => setEditForma(e.target.value)} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface">{formas.filter(f => f.id === peca.formaId || f.status === undefined || f.status === 'pronta').map(f => <option key={f.id} value={String(f.id)}>{f.nome}</option>)}</select></div>
+          <TextField id="edit-volume-peca" rotulo="Volume real de resina (ml)" type="number" min="0" value={editVolume} onChange={(e) => setEditVolume(e.target.value)} />
+          <TextField id="edit-cura-peca" rotulo="Tempo de cura (minutos)" type="number" min="0" value={editCura} onChange={(e) => setEditCura(e.target.value)} />
+          <h3 className="text-sm font-semibold text-on-surface">Materiais e EPIs consumidos</h3>
+          {editConsumos.map((linha, indice) => {
+            const material = materiais.find(m => m.id === Number(linha.materialId))
+            const atualizar = (dados: Partial<typeof linha>) => setEditConsumos(atuais => atuais.map((item, i) => i === indice ? { ...item, ...dados } : item))
+            return <div key={indice} className="flex flex-wrap items-end gap-2 rounded-xl border border-outline-variant/60 p-3">
+              <div className="flex flex-1 min-w-[160px] flex-col gap-1">
+                <label htmlFor={`edit-material-${indice}`} className="text-xs font-medium text-on-surface">Material</label>
+                <select id={`edit-material-${indice}`} value={linha.materialId} onChange={e => { const m = materiais.find(item => item.id === Number(e.target.value)); atualizar({ materialId: e.target.value, unidade: m?.unidade ?? '' }) }} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface">
+                  <option value="">Selecione o material...</option>
+                  {materiais.map(m => <option key={m.id} value={String(m.id)}>{m.nome} ({m.quantidadeEstoque} {m.unidade} em estoque)</option>)}
+                </select>
+              </div>
+              <div className="w-28"><TextField id={`edit-quantidade-${indice}`} rotulo="Quantidade" type="number" min="0" step="0.001" value={linha.quantidade} onChange={e => atualizar({ quantidade: e.target.value })} /></div>
+              <div className="flex w-24 flex-col gap-1"><label htmlFor={`edit-unidade-${indice}`} className="text-xs font-medium text-on-surface">Unidade</label><select id={`edit-unidade-${indice}`} value={linha.unidade} onChange={e => atualizar({ unidade: e.target.value })} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface">{(material ? obterOpcoesUnidadeCompativeis(material.unidade) : ['']).map(u => <option key={u} value={u}>{u}</option>)}</select></div>
+              <Button type="button" variante="ghost" aria-label={`Remover material ${indice + 1}`} onClick={() => setEditConsumos(atuais => atuais.filter((_, i) => i !== indice))}>×</Button>
+            </div>
+          })}
+          <Button type="button" variante="ghost" onClick={() => setEditConsumos(atuais => [...atuais, { materialId: '', quantidade: '', unidade: '' }])}>+ Adicionar material ou EPI</Button>
+          <h3 className="text-sm font-semibold text-on-surface">Etapas 2 e 3: equipamentos utilizados</h3>
+          {editEquipamentos.map((linha, indice) => <div key={indice} className="flex flex-wrap items-end gap-2 rounded-xl border border-outline-variant/60 p-3">
+            <div className="flex flex-1 min-w-[160px] flex-col gap-1"><label htmlFor={`edit-equipamento-${indice}`} className="text-xs font-medium text-on-surface">Equipamento</label><select id={`edit-equipamento-${indice}`} value={linha.equipamentoId} onChange={e => setEditEquipamentos(atuais => atuais.map((item, i) => i === indice ? { ...item, equipamentoId: e.target.value } : item))} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"><option value="">Selecione...</option>{equipamentos.map(eq => <option key={eq.id} value={String(eq.id)}>{eq.nome} ({eq.potenciaWatts} W)</option>)}</select></div>
+            <div className="w-32"><TextField id={`edit-minutos-${indice}`} rotulo="Tempo (minutos)" type="number" min="0" value={linha.minutos} onChange={e => setEditEquipamentos(atuais => atuais.map((item, i) => i === indice ? { ...item, minutos: e.target.value } : item))} /></div>
+            <Button type="button" variante="ghost" aria-label={`Remover equipamento ${indice + 1}`} onClick={() => setEditEquipamentos(atuais => atuais.filter((_, i) => i !== indice))}>×</Button>
+          </div>)}
+          <Button type="button" variante="ghost" onClick={() => setEditEquipamentos(atuais => [...atuais, { equipamentoId: '', minutos: '' }])}>+ Adicionar equipamento</Button>
+          <h3 className="text-sm font-semibold text-on-surface">Etapas 3 e 4: acabamento e custos</h3>
           <TextField
             id="edit-horas-mo"
             rotulo="Horas de Mão de Obra Ativa (h)"
@@ -520,6 +594,7 @@ export function PecaDetalhePage() {
               onChange={(e) => setEditDiasPropaganda(e.target.value)}
             />
           </div>
+          <TextField id="edit-margem-peca" rotulo="Margem desejada (%)" type="number" min="0" value={editMargemDesejada} onChange={e => setEditMargemDesejada(e.target.value)} />
           <div className="grid grid-cols-2 gap-2">
             <TextField
               id="edit-frete"

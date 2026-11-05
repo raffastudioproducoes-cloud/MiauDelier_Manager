@@ -154,6 +154,7 @@ export interface ConsumoPeca {
   materialId: number
   quantidade: number
   unidade?: string
+  custoUnitarioNoConsumo?: number
 }
 
 export interface EventoPeca {

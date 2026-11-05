@@ -6,7 +6,7 @@ vi.mock('../../lib/perfisRepo', () => ({ getPerfilAtivo }))
 import { confirmarMovimentosEstoque } from './estoqueServidor'
 import { db } from '../../db/schema'
 import { criarForma } from './formasRepo'
-import { criarPeca, atualizarStatusPeca } from './pecasRepo'
+import { criarPeca, atualizarStatusPeca, editarConsumosPeca } from './pecasRepo'
 import { reporEstoqueMaterial } from './materiaisRepo'
 
 describe('confirmação de estoque no servidor', () => {
@@ -71,5 +71,19 @@ describe('salvamento de molde com confirmação no servidor', () => {
     await reporEstoqueMaterial(materialId, 5)
     expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(15)
     expect(rpc).toHaveBeenCalledTimes(3)
+  })
+
+  it('envia somente a diferença de estoque ao editar a peça', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    const materialId = (await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 }))!
+    rpc.mockResolvedValueOnce({ data: [{ materialId: String(materialId), saldo: 8 }], error: null })
+    const pecaId = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId, quantidade: 2 }] })
+    rpc.mockResolvedValueOnce({ data: [{ materialId: String(materialId), saldo: 7 }], error: null })
+    await editarConsumosPeca(pecaId, [{ materialId, quantidade: 3, unidade: 'kg' }], {})
+    expect(rpc).toHaveBeenLastCalledWith('movimentar_estoque_atomico', expect.objectContaining({ p_movimentos: [{ materialId, diferenca: -1 }] }))
+    rpc.mockResolvedValueOnce({ data: [{ materialId: String(materialId), saldo: 9 }], error: null })
+    await editarConsumosPeca(pecaId, [{ materialId, quantidade: 1, unidade: 'kg' }], {})
+    expect(rpc).toHaveBeenLastCalledWith('movimentar_estoque_atomico', expect.objectContaining({ p_movimentos: [{ materialId, diferenca: 2 }] }))
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(9)
   })
 })

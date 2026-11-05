@@ -3,12 +3,15 @@ import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 import { converterQuantidade, ehIncompativel } from '../../lib/unidades'
 import { exigirConexaoEstoque, exigirEstoque } from './estoque'
+import { calcularPrecificacao } from '../pricing/pricing'
+import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 
 export interface ConsumoComMaterial {
   materialId: number
   quantidade: number
   nomeMaterial: string
   unidade?: string
+  custoUnitarioNoConsumo?: number
 }
 
 export interface NovoConsumo {
@@ -94,7 +97,8 @@ async function criarPecaInterno(nova: NovaPeca): Promise<number> {
         pecaId,
         materialId: consumo.materialId,
         quantidade: quantidadeConvertida,
-        unidade: unidadeDigita,
+        unidade: material.unidade,
+        custoUnitarioNoConsumo: material.custoUnitario,
       })
       await db.materiais.update(consumo.materialId, {
         quantidadeEstoque: material.quantidadeEstoque - quantidadeConvertida,
@@ -148,12 +152,13 @@ export async function listarConsumosDaPeca(pecaId: number): Promise<ConsumoComMa
   return Promise.all(
     consumos.map(async (consumo) => {
       const material = await db.materiais.get(consumo.materialId)
-      const unidadeExibida = consumo.unidade || material?.unidade || ''
+      const unidadeExibida = material?.unidade || consumo.unidade || ''
       return {
         materialId: consumo.materialId,
         quantidade: consumo.quantidade,
         nomeMaterial: material?.nome ?? '—',
         unidade: unidadeExibida,
+        custoUnitarioNoConsumo: consumo.custoUnitarioNoConsumo,
       }
     }),
   )
@@ -319,6 +324,71 @@ export async function atualizarDadosProducaoPeca(pecaId: number, dados: Partial<
     criadoEm: new Date().toISOString(),
   })
 }
+
+async function editarConsumosPecaInterno(pecaId: number, novos: NovoConsumo[], dados: Partial<Peca>): Promise<void> {
+  const tarifas = await obterTarifasConfig()
+  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas], async () => {
+    const peca = await db.pecas.get(pecaId)
+    if (!peca) throw new Error('Peça não encontrada.')
+    const anteriores = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
+    const totaisAnteriores = new Map<number, number>()
+    for (const c of anteriores) totaisAnteriores.set(c.materialId, (totaisAnteriores.get(c.materialId) ?? 0) + c.quantidade)
+    const totaisNovos = new Map<number, number>()
+    for (const item of novos) {
+      const material = await db.materiais.get(item.materialId)
+      if (!material || !Number.isFinite(item.quantidade) || item.quantidade <= 0) throw new Error('Material ou quantidade inválidos.')
+      if (ehIncompativel(item.unidade || material.unidade, material.unidade)) throw new Error(`Unidade incompatível para ${material.nome}.`)
+      const qtd = converterQuantidade(item.quantidade, item.unidade || material.unidade, material.unidade).quantidadeConvertida
+      if (!Number.isFinite(qtd) || qtd <= 0) throw new Error('Quantidade inválida.')
+      totaisNovos.set(item.materialId, (totaisNovos.get(item.materialId) ?? 0) + qtd)
+    }
+    const ids = new Set([...totaisAnteriores.keys(), ...totaisNovos.keys()])
+    const linhas: { pecaId: number; materialId: number; quantidade: number; unidade: string; custoUnitarioNoConsumo: number }[] = []
+    let custoMaterial = 0
+    for (const materialId of ids) {
+      const material = await db.materiais.get(materialId)
+      if (!material) throw new Error(`Material ${materialId} não encontrado.`)
+      const novaQtd = totaisNovos.get(materialId) ?? 0
+      const diferenca = novaQtd - (totaisAnteriores.get(materialId) ?? 0)
+      if (peca.status !== 'cancelada' && diferenca !== 0) {
+        if (diferenca > 0) { exigirConexaoEstoque(); exigirEstoque(material, diferenca) }
+        await db.materiais.update(materialId, { quantidadeEstoque: material.quantidadeEstoque - diferenca })
+      }
+      let restante = novaQtd
+      for (const anterior of anteriores.filter(c => c.materialId === materialId)) {
+        const quantidade = Math.min(restante, anterior.quantidade)
+        if (quantidade <= 0) break
+        const custo = anterior.custoUnitarioNoConsumo ?? material.custoUnitario
+        linhas.push({ pecaId, materialId, quantidade, unidade: material.unidade, custoUnitarioNoConsumo: custo })
+        custoMaterial += quantidade * custo
+        restante -= quantidade
+      }
+      if (restante > 0) {
+        linhas.push({ pecaId, materialId, quantidade: restante, unidade: material.unidade, custoUnitarioNoConsumo: material.custoUnitario })
+        custoMaterial += restante * material.custoUnitario
+      }
+    }
+    const atualizada = { ...peca, ...dados }
+    const forma = await db.formas.get(atualizada.formaId)
+    if (!forma) throw new Error('Forma não encontrada.')
+    if (atualizada.formaId !== peca.formaId && forma.status !== undefined && forma.status !== 'pronta') throw new Error('A forma selecionada ainda não está pronta.')
+    if (atualizada.formaId !== peca.formaId && peca.status !== 'cancelada') {
+      const anterior = await db.formas.get(peca.formaId)
+      if (!anterior) throw new Error('Forma anterior não encontrada.')
+      await db.formas.update(peca.formaId, { usosRealizados: Math.max(0, (anterior.usosRealizados ?? 0) - 1) })
+      await db.formas.update(atualizada.formaId, { usosRealizados: (forma.usosRealizados ?? 0) + 1 })
+    }
+    const custoForma = forma?.vidaUtilUsos && forma.vidaUtilUsos > 0 ? (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos : 0
+    const custoPropaganda = atualizada.diasPropaganda && atualizada.diasPropaganda > 0 ? (atualizada.valorPropagandaTotal ?? 0) / atualizada.diasPropaganda : 0
+    const precoVenda = calcularPrecificacao({ custoMaterial, custoAcessorios: (atualizada.custoEpiInsumos ?? 0) + custoPropaganda + (atualizada.valorFrete ?? 0), horasProducao: atualizada.horasMaoDeObra ?? 0, valorHora: tarifas.valorHoraMaoDeObra || 25, rateioFixoPercent: 0, margemLucroPercent: atualizada.margemDesejada ?? 50, usosEnergia: atualizada.usosEnergia ?? [], tarifaKwh: tarifas.tarifaKwh || 0.85, litrosAgua: atualizada.litrosAgua ?? 0, custoForma, percentualTaxas: atualizada.percentualTaxas ?? 0 }).precoFinal
+    await db.consumosPeca.where('pecaId').equals(pecaId).delete()
+    if (linhas.length) await db.consumosPeca.bulkAdd(linhas)
+    await db.pecas.update(pecaId, { ...dados, precoVenda })
+    await db.eventosPeca.add({ pecaId, tipo: 'atualizacao_dados', descricao: 'Materiais e dados de produção atualizados', criadoEm: new Date().toISOString() })
+  })
+}
+
+export const editarConsumosPeca = (...args: Parameters<typeof editarConsumosPecaInterno>): ReturnType<typeof editarConsumosPecaInterno> => transacaoComEstoque(() => editarConsumosPecaInterno(...args))
 
 
 
