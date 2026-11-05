@@ -14,6 +14,16 @@
 
 ## Necessário para garantia entre dispositivos — ainda não implementado
 
+Em 04/11/2026 foi instalada no Supabase existente a migração aditiva
+`20261104220000_estoque_operacao_atomica.sql`. A função verifica propriedade do
+perfil, serializa movimentações por perfil, rejeita saldo insuficiente e evita
+repetição por identificador de operação. O teste SQL de baixa, saldo insuficiente,
+repetição e acesso de outra conta foi executado em transação revertida.
+
+**Ainda não está integrada ao aplicativo e não protege a sincronização antiga.**
+Ela não deve ser tratada como trava global até que todas as escritas de estoque
+e eventos antigos sejam integrados e haja recuperação de falhas intermediárias.
+
 1. Definir saldo autoritativo por perfil e material no servidor, com transação que valide o saldo e registre baixa, reposição, devolução e operação relacionada de forma indivisível; identificar pedidos de forma idempotente para retomada após falha ou repetição.
 2. Migrar saldos a partir do histórico efetivamente sincronizado, identificando e conciliando dispositivos com alterações pendentes. Não presumir que a tabela `materiais` vazia seja uma fonte de saldo.
 3. Integrar todas as escritas e a sincronização existentes à mesma regra, inclusive compras, ajustes, formas, produção, cancelamento, reativação, venda e clientes em versões anteriores. Evitar que snapshots antigos substituam saldos já debitados.
