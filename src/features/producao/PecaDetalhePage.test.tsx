@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { db } from '../../db/schema'
 import { criarForma } from './formasRepo'
 import { criarMaterial } from './materiaisRepo'
-import { criarPeca } from './pecasRepo'
+import { criarPeca, atualizarStatusPeca } from './pecasRepo'
 import { criarConta } from '../financeiro/contasRepo'
 import { listarTransacoesDaConta } from '../financeiro/transacoesRepo'
 import { setupAccount } from '../../lib/auth'
@@ -45,6 +45,19 @@ describe('PecaDetalhePage', () => {
     render(<ToastProvider><PecaDetalhePage /></ToastProvider>)
 
     await waitFor(() => expect(screen.getByText(/peça não encontrada/i)).toBeInTheDocument())
+  })
+
+  it('bloqueia reativação com estoque insuficiente e informa o total necessário', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 10, custoUnitario: 1 })
+    const pecaId = await criarPeca({ nome: 'Peça cancelada', formaId, consumos: [{ materialId, quantidade: 3 }, { materialId, quantidade: 3 }] })
+    await atualizarStatusPeca(pecaId, 'cancelada')
+    await db.materiais.update(materialId, { quantidadeEstoque: 5 })
+    pecaIdAtual = String(pecaId)
+    render(<ToastProvider><PecaDetalhePage /></ToastProvider>)
+    expect(await screen.findByText(/necessário: 6 ml/i)).toHaveTextContent('Disponível: 5 ml')
+    expect(screen.getByRole('option', { name: 'PLANEJADA' })).toBeDisabled()
+    expect(screen.getByRole('option', { name: 'VENDIDA' })).toBeDisabled()
   })
 
   it('vender peça pede valor e cria transação', async () => {

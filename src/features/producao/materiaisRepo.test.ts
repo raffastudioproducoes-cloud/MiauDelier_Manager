@@ -49,6 +49,13 @@ describe('repositório de materiais', () => {
     expect(materiais[0].quantidadeEstoque).toBe(150)
   })
 
+  it('rejeita saldo negativo e reposição negativa sem alterar o estoque', async () => {
+    const id = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 100, custoUnitario: 1 })
+    await expect(atualizarEstoqueMaterial(id, -1)).rejects.toThrow()
+    await expect(reporEstoqueMaterial(id, -200)).rejects.toThrow()
+    expect((await db.materiais.get(id))?.quantidadeEstoque).toBe(100)
+  })
+
   it('registra compra de material com reposição de estoque, recálculo de custo e saída no financeiro', async () => {
     const contaId = await criarConta({ nome: 'Caixa Atelier', saldoInicial: 500 })
     const matId = await criarMaterial({

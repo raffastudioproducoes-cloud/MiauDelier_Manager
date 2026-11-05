@@ -154,25 +154,14 @@ function validarMedidaPositivaSilicone(nome: string, valor: number): void {
   }
 }
 
-export function calcularVolumeSiliconeMolde(input: VolumeSiliconeMoldeInput): ResultadoVolumeSiliconeMolde {
-  const { caixaInternaCm: caixa, tampoMesaCm: tampo } = input
-  validarMedidaPositivaSilicone('Comprimento interno da caixa', caixa.comprimento)
-  validarMedidaPositivaSilicone('Largura interna da caixa', caixa.largura)
-  validarMedidaPositivaSilicone('Altura interna da caixa', caixa.altura)
+export function calcularVolumeModeloMadeira(tampo: VolumeSiliconeMoldeInput['tampoMesaCm'], furos: FuroVazadoInput[] = []) {
   validarMedidaPositivaSilicone('Comprimento do tampo', tampo.comprimento)
   validarMedidaPositivaSilicone('Largura do tampo', tampo.largura)
   validarMedidaPositivaSilicone('Espessura do tampo', tampo.espessura)
-  validarMedidaPositivaSilicone('Densidade do silicone', input.densidadeSiliconeGcm3)
-
-  if (caixa.comprimento < tampo.comprimento || caixa.largura < tampo.largura || caixa.altura < tampo.espessura) {
-    throw new Error('As dimensões internas da caixa devem acomodar o tampo da mesa.')
-  }
-
-  const volumeCaixaCm3 = caixa.comprimento * caixa.largura * caixa.altura
   const volumeTampoMadeiraCm3 = tampo.comprimento * tampo.largura * tampo.espessura
   let volumeFurosCm3 = 0
 
-  for (const furo of input.furosVazados ?? []) {
+  for (const furo of furos) {
     if (!Number.isSafeInteger(furo.quantidade) || furo.quantidade < 0) {
       throw new Error('A quantidade de furos deve ser um inteiro não negativo.')
     }
@@ -204,6 +193,21 @@ export function calcularVolumeSiliconeMolde(input: VolumeSiliconeMoldeInput): Re
     throw new Error('O volume dos furos não pode exceder o volume do tampo.')
   }
   const volumeMadeiraTotalCm3 = volumeTampoMadeiraCm3 - volumeFurosCm3
+  if (![volumeTampoMadeiraCm3, volumeFurosCm3, volumeMadeiraTotalCm3].every(Number.isFinite)) throw new Error('As dimensões informadas excedem o limite numérico suportado.')
+  return { volumeTampoMadeiraCm3, volumeFurosCm3, volumeMadeiraTotalCm3 }
+}
+
+export function calcularVolumeSiliconeMolde(input: VolumeSiliconeMoldeInput): ResultadoVolumeSiliconeMolde {
+  const { caixaInternaCm: caixa, tampoMesaCm: tampo } = input
+  validarMedidaPositivaSilicone('Comprimento interno da caixa', caixa.comprimento)
+  validarMedidaPositivaSilicone('Largura interna da caixa', caixa.largura)
+  validarMedidaPositivaSilicone('Altura interna da caixa', caixa.altura)
+  validarMedidaPositivaSilicone('Densidade do silicone', input.densidadeSiliconeGcm3)
+  const { volumeTampoMadeiraCm3, volumeFurosCm3, volumeMadeiraTotalCm3 } = calcularVolumeModeloMadeira(tampo, input.furosVazados)
+  if (caixa.comprimento < tampo.comprimento || caixa.largura < tampo.largura || caixa.altura < tampo.espessura) {
+    throw new Error('As dimensões internas da caixa devem acomodar o tampo da mesa.')
+  }
+  const volumeCaixaCm3 = caixa.comprimento * caixa.largura * caixa.altura
   const volumeLiquidoCm3 = volumeCaixaCm3 - volumeMadeiraTotalCm3
   const volumeMinimoLitros = volumeLiquidoCm3 * 1.08 / 1000
   const volumeMaximoLitros = volumeLiquidoCm3 * 1.12 / 1000

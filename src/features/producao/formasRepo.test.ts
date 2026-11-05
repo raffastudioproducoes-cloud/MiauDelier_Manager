@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '../../db/schema'
 import { criarForma, listarFormas, atualizarForma, excluirForma } from './formasRepo'
 import { listarAuditoria } from '../auditoria/auditoriaRepo'
@@ -40,6 +40,18 @@ describe('repositório de formas', () => {
     const materialId = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
     const id = await criarForma({ nome: 'Mesa', geometria: 'direto', dimensoesCm: {}, materialSiliconeId: materialId, quantidadeSiliconeUsada: 2, custoCaixaEstrutura: 25, custoFabricacao: 25, vidaUtilUsos: 100 })
     expect((await db.formas.get(id))?.custoFabricacao).toBe(225)
+  })
+
+  it('não registra baixa de silicone sem conexão e preserva os dados', async () => {
+    const materialId = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })
+    const conexao = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      await expect(criarForma({ nome: 'Mesa', geometria: 'direto', dimensoesCm: {}, materialSiliconeId: materialId, quantidadeSiliconeUsada: 2, vidaUtilUsos: 100 })).rejects.toThrow(/conecte-se/i)
+      expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(10)
+      expect(await db.formas.count()).toBe(0)
+    } finally {
+      conexao.mockRestore()
+    }
   })
 
   it('ajusta estoque e custo apenas pela diferença em edições sucessivas', async () => {

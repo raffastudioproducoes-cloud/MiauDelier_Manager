@@ -1,5 +1,6 @@
 import { db, type Forma } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
+import { exigirConexaoEstoque, exigirEstoque } from './estoque'
 
 export type NovaForma = Omit<Forma, 'id'>
 
@@ -13,14 +14,11 @@ export async function criarForma(nova: NovaForma): Promise<number> {
     const agoraMs = Date.now()
 
     if (nova.materialSiliconeId && nova.quantidadeSiliconeUsada && nova.quantidadeSiliconeUsada > 0) {
+      exigirConexaoEstoque()
       const materialSilicone = await db.materiais.get(nova.materialSiliconeId)
       if (!materialSilicone) throw new Error('Material de silicone não encontrado.')
       if (!Number.isFinite(materialSilicone.custoUnitario) || materialSilicone.custoUnitario < 0) throw new Error('Custo do silicone inválido.')
-      if (nova.quantidadeSiliconeUsada > materialSilicone.quantidadeEstoque) {
-        throw new Error(
-          `Estoque insuficiente de silicone "${materialSilicone.nome}": disponível ${materialSilicone.quantidadeEstoque}, solicitado ${nova.quantidadeSiliconeUsada}`,
-        )
-      }
+      exigirEstoque(materialSilicone, nova.quantidadeSiliconeUsada)
       await db.materiais.update(nova.materialSiliconeId, {
         quantidadeEstoque: materialSilicone.quantidadeEstoque - nova.quantidadeSiliconeUsada,
       })
@@ -100,7 +98,10 @@ export async function atualizarForma(formaId: number, dados: NovaForma, opcoes?:
       if (!material) throw new Error('Material de silicone não encontrado.')
       const mesma = dados.materialSiliconeId === anterior.materialSiliconeId
       const diferenca = qtdNova - (mesma && !regularizar ? qtdAnterior : 0)
-      if (diferenca > material.quantidadeEstoque) throw new Error(`Estoque insuficiente de silicone "${material.nome}".`)
+      if (diferenca > 0) {
+        exigirConexaoEstoque()
+        exigirEstoque(material, diferenca)
+      }
       if (!Number.isFinite(material.custoUnitario) || material.custoUnitario < 0) throw new Error('Custo do silicone inválido.')
       if (diferenca !== 0) await db.materiais.update(dados.materialSiliconeId, { quantidadeEstoque: material.quantidadeEstoque - diferenca })
       custoSilicone = diferenca >= 0 ? custoSilicone + diferenca * material.custoUnitario : custoSilicone * qtdNova / qtdAnterior

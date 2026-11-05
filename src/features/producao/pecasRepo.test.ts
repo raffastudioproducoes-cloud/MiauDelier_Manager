@@ -254,6 +254,35 @@ describe('repositório de peças', () => {
     expect(mat?.quantidadeEstoque).toBe(400)
   })
 
+  it('não reativa peça quando linhas do mesmo material somadas excedem o estoque', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 10, custoUnitario: 1 })
+    const pecaId = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId, quantidade: 3 }, { materialId, quantidade: 3 }] })
+    await atualizarStatusPeca(pecaId, 'cancelada')
+    await db.materiais.update(materialId, { quantidadeEstoque: 5 })
+    await expect(atualizarStatusPeca(pecaId, 'planejada')).rejects.toThrow(/estoque insuficiente/i)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(5)
+    expect((await db.pecas.get(pecaId))?.status).toBe('cancelada')
+  })
+
+  it('não vende peça cancelada se o material necessário não estiver disponível', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 10, custoUnitario: 1 })
+    const contaId = await criarConta({ nome: 'Caixa', saldoInicial: 0 })
+    const pecaId = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId, quantidade: 6 }] })
+    await atualizarStatusPeca(pecaId, 'cancelada')
+    await db.materiais.update(materialId, { quantidadeEstoque: 5 })
+    await expect(registrarVendaPeca(pecaId, 100, contaId, 'Venda')).rejects.toThrow(/estoque insuficiente/i)
+    expect((await db.pecas.get(pecaId))?.status).toBe('cancelada')
+    expect(await db.transacoes.count()).toBe(0)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(5)
+    await db.materiais.update(materialId, { quantidadeEstoque: 6 })
+    await registrarVendaPeca(pecaId, 100, contaId, 'Venda')
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(0)
+    expect((await db.pecas.get(pecaId))?.status).toBe('vendida')
+    expect(await db.transacoes.count()).toBe(1)
+  })
+
   it('converte unidades compatíveis ao registrar consumo (ex.: 0.2 L desconta 200 ml)', async () => {
     const formaId = await criarForma({ nome: 'Mesa', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 200 })
     const materialId = await criarMaterial({ nome: 'Resina Epóxi', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 1000, custoUnitario: 0.15 })

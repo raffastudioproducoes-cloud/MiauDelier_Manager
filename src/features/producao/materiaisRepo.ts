@@ -1,5 +1,6 @@
 import { db, type HistoricoPrecoMaterial, type Material, type TipoClassificacaoMaterial } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
+import { exigirConexaoEstoque } from './estoque'
 
 export interface NovoMaterial {
   nome: string
@@ -27,6 +28,7 @@ export interface RegistrarCompraParams {
 }
 
 export async function criarMaterial(novo: NovoMaterial): Promise<number> {
+  if (!Number.isFinite(novo.quantidadeEstoque) || novo.quantidadeEstoque < 0) throw new Error('O estoque não pode ser negativo.')
   const id = await db.materiais.add(novo)
   return id as number
 }
@@ -50,16 +52,29 @@ export async function limparHistoricoPrecosVencido(agora = new Date()): Promise<
 }
 
 export async function atualizarEstoqueMaterial(materialId: number, novaQuantidade: number): Promise<void> {
-  await db.materiais.update(materialId, { quantidadeEstoque: novaQuantidade })
+  if (!Number.isFinite(novaQuantidade) || novaQuantidade < 0) throw new Error('O estoque não pode ser negativo.')
+  await db.transaction('rw', db.materiais, async () => {
+    const material = await db.materiais.get(materialId)
+    if (!material) throw new Error('Material não encontrado')
+    if (novaQuantidade < material.quantidadeEstoque) exigirConexaoEstoque()
+    await db.materiais.update(materialId, { quantidadeEstoque: novaQuantidade })
+  })
 }
 
 export async function reporEstoqueMaterial(materialId: number, quantidadeAdicionada: number): Promise<void> {
-  const material = await db.materiais.get(materialId)
-  if (!material) throw new Error('Material não encontrado')
-  await db.materiais.update(materialId, { quantidadeEstoque: material.quantidadeEstoque + quantidadeAdicionada })
+  if (!Number.isFinite(quantidadeAdicionada) || quantidadeAdicionada < 0) throw new Error('A reposição não pode ser negativa.')
+  await db.transaction('rw', db.materiais, async () => {
+    const material = await db.materiais.get(materialId)
+    if (!material) throw new Error('Material não encontrado')
+    const novoSaldo = material.quantidadeEstoque + quantidadeAdicionada
+    if (!Number.isFinite(novoSaldo) || novoSaldo < 0) throw new Error('O estoque não pode ser negativo.')
+    await db.materiais.update(materialId, { quantidadeEstoque: novoSaldo })
+  })
 }
 
 export async function registrarCompraMaterial(params: RegistrarCompraParams): Promise<number> {
+  if (!Number.isFinite(params.quantidadeComprada) || params.quantidadeComprada <= 0) throw new Error('A quantidade comprada deve ser maior que zero.')
+  if (params.novoMaterial && (!Number.isFinite(params.novoMaterial.quantidadeEstoque) || params.novoMaterial.quantidadeEstoque < 0)) throw new Error('O estoque não pode ser negativo.')
   const data = params.dataCompra ?? new Date().toISOString()
   const valorCifrado =
     params.contaIdFinanceira && params.valorTotalPago > 0
@@ -89,6 +104,7 @@ export async function registrarCompraMaterial(params: RegistrarCompraParams): Pr
         nomeMaterial = mat.nome
         unidadeMaterial = mat.unidade
         const novaQtd = mat.quantidadeEstoque + params.quantidadeComprada
+        if (!Number.isFinite(novaQtd) || novaQtd < 0) throw new Error('O estoque não pode ser negativo.')
         const updates: Partial<Material> = { quantidadeEstoque: novaQtd }
         if (
           params.atualizarCustoUnitario &&

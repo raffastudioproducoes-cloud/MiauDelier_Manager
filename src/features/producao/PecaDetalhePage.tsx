@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { liveQuery } from 'dexie'
 import { getRouteApi } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Card } from '../../components/ui/Card'
@@ -24,13 +25,16 @@ import { listarContas } from '../financeiro/contasRepo'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 import { calcularPrecificacao } from '../pricing/pricing'
 import { formatarVolumeEMassaLegivel } from '../../lib/unidades'
+import { listarMateriais } from './materiaisRepo'
+import { ERRO_CONEXAO_ESTOQUE, mensagemEstoqueInsuficiente } from './estoque'
+import { useConexaoEstoque } from './useConexaoEstoque'
 import {
   calcularRestanteCura,
   calcularProgressoCura,
   formatarTempoRestanteCura,
   adicionarTempoCura,
 } from './curaRepo'
-import type { EventoPeca, StatusPeca } from '../../db/schema'
+import type { EventoPeca, Material, StatusPeca } from '../../db/schema'
 
 const routeApi = getRouteApi('/pecas/$pecaId')
 
@@ -41,8 +45,10 @@ const schemaValorVenda = z.coerce.number().min(0.01, 'Informe um valor de venda 
 export function PecaDetalhePage() {
   const { pecaId } = routeApi.useParams()
   const { mostrarToast } = useToast()
+  const conectado = useConexaoEstoque()
   const [peca, setPeca] = useState<PecaComForma | undefined>(undefined)
   const [consumos, setConsumos] = useState<ConsumoComMaterial[]>([])
+  const [materiais, setMateriais] = useState<Material[]>([])
   const [eventos, setEventos] = useState<EventoPeca[]>([])
   const [tarifaKwh, setTarifaKwh] = useState(0.85)
   const [valorHoraMaoDeObra, setValorHoraMaoDeObra] = useState(25)
@@ -71,6 +77,11 @@ export function PecaDetalhePage() {
   const id = Number(pecaId)
 
   useEffect(() => {
+    const observacao = liveQuery(() => listarMateriais()).subscribe({ next: setMateriais, error: (falha) => mostrarToast(falha instanceof Error ? falha.message : 'Erro ao acompanhar estoque.', 'erro') })
+    return () => observacao.unsubscribe()
+  }, [mostrarToast])
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setAgora(Date.now())
     }, 1000)
@@ -78,16 +89,18 @@ export function PecaDetalhePage() {
   }, [])
 
   async function recarregar() {
-    const [pecas, consumosCarregados, eventosCarregados, tarifasConfig] = await Promise.all([
+    const [pecas, consumosCarregados, eventosCarregados, tarifasConfig, materiaisCarregados] = await Promise.all([
       listarPecas(),
       listarConsumosDaPeca(id),
       listarEventosDaPeca(id),
       obterTarifasConfig(),
+      listarMateriais(),
     ])
     if (!montado.current) return
     const pecaEncontrada = pecas.find((p) => p.id === id)
     setPeca(pecaEncontrada)
     setConsumos(consumosCarregados)
+    setMateriais(materiaisCarregados)
     setEventos(eventosCarregados)
     setTarifaKwh(tarifasConfig.tarifaKwh || 0.85)
     setValorHoraMaoDeObra(tarifasConfig.valorHoraMaoDeObra || 25)
@@ -105,6 +118,20 @@ export function PecaDetalhePage() {
 
     setCarregado(true)
   }
+
+  const errosReativacao = useMemo(() => {
+    if (peca?.status !== 'cancelada') return []
+    const totais = new Map<number, number>()
+    for (const consumo of consumos) totais.set(consumo.materialId, (totais.get(consumo.materialId) ?? 0) + consumo.quantidade)
+    const erros = [...totais].flatMap(([materialId, quantidade]) => {
+      const material = materiais.find((item) => item.id === materialId)
+      if (!material) return [`Material ${materialId} não encontrado no estoque.`]
+      const erro = mensagemEstoqueInsuficiente(material, quantidade)
+      return erro ? [erro] : []
+    })
+    if (!conectado && totais.size > 0) erros.push(ERRO_CONEXAO_ESTOQUE)
+    return erros
+  }, [peca, consumos, materiais, conectado])
 
   useEffect(() => {
     montado.current = true
@@ -277,7 +304,7 @@ export function PecaDetalhePage() {
             className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
           >
             {OPCOES_STATUS.map((status) => (
-              <option key={status} value={status}>{status.toUpperCase()}</option>
+              <option key={status} value={status} disabled={peca.status === 'cancelada' && status !== 'cancelada' && errosReativacao.length > 0}>{status.toUpperCase()}</option>
             ))}
           </select>
         </div>
@@ -288,6 +315,7 @@ export function PecaDetalhePage() {
           <strong>Produção Cancelada:</strong> Os materiais consumidos foram devolvidos ao estoque e o uso do molde foi estornado.
         </div>
       )}
+      {errosReativacao.map((mensagem) => <p key={mensagem} role="alert" className="rounded-lg border border-error bg-error/10 p-3 text-sm font-medium text-error">{mensagem}</p>)}
 
       {/* DISCRIMINAÇÃO POR ETAPAS DE PRODUÇÃO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

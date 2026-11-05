@@ -1,6 +1,7 @@
 import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 import { converterQuantidade, ehIncompativel } from '../../lib/unidades'
+import { exigirConexaoEstoque, exigirEstoque } from './estoque'
 
 export interface ConsumoComMaterial {
   materialId: number
@@ -41,6 +42,7 @@ export interface PecaComForma extends Peca {
 }
 
 export async function criarPeca(nova: NovaPeca): Promise<number> {
+  if (nova.consumos.length > 0) exigirConexaoEstoque()
   return db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, async () => {
     const agora = new Date().toISOString()
     const totalExistente = await db.pecas.count()
@@ -85,15 +87,7 @@ export async function criarPeca(nova: NovaPeca): Promise<number> {
 
       const { quantidadeConvertida } = converterQuantidade(consumo.quantidade, unidadeDigita, material.unidade)
 
-      if (quantidadeConvertida > material.quantidadeEstoque) {
-        const descSolicitada =
-          unidadeDigita !== material.unidade
-            ? `${consumo.quantidade} ${unidadeDigita} (${quantidadeConvertida} ${material.unidade})`
-            : `${quantidadeConvertida} ${material.unidade}`
-        throw new Error(
-          `Estoque insuficiente de "${material.nome}": disponível ${material.quantidadeEstoque} ${material.unidade}, solicitado ${descSolicitada}`,
-        )
-      }
+      exigirEstoque(material, quantidadeConvertida)
 
       await db.consumosPeca.add({
         pecaId,
@@ -202,17 +196,11 @@ export async function atualizarStatusPeca(pecaId: number, novoStatus: StatusPeca
     // Se transicionando DE 'cancelada' PARA um status ativo: verifica estoque e debita novamente
     if (statusAnterior === 'cancelada' && novoStatus !== 'cancelada') {
       const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
+      if (consumos.length > 0) exigirConexaoEstoque()
       for (const consumo of consumos) {
         const material = await db.materiais.get(consumo.materialId)
         if (!material) throw new Error(`Material ${consumo.materialId} não encontrado`)
-        if (material.quantidadeEstoque < consumo.quantidade) {
-          throw new Error(
-            `Estoque insuficiente de "${material.nome}" para reativar a produção: disponível ${material.quantidadeEstoque}, necessário ${consumo.quantidade}`,
-          )
-        }
-      }
-      for (const consumo of consumos) {
-        const material = (await db.materiais.get(consumo.materialId))!
+        exigirEstoque(material, consumo.quantidade)
         await db.materiais.update(consumo.materialId, {
           quantidadeEstoque: material.quantidadeEstoque - consumo.quantidade,
         })
@@ -267,7 +255,10 @@ export async function registrarVendaPeca(
   const valorCriptografado = precoVenda.toString()
   const agora = new Date().toISOString()
 
-  await db.transaction('rw', db.pecas, db.eventosPeca, db.contas, db.transacoes, db.auditoria, async () => {
+  await db.transaction('rw', [db.pecas, db.eventosPeca, db.contas, db.transacoes, db.auditoria, db.consumosPeca, db.materiais, db.formas], async () => {
+    const peca = await db.pecas.get(pecaId)
+    if (!peca) throw new Error(`Peça ${pecaId} não encontrada`)
+    if (peca.status === 'cancelada') await atualizarStatusPeca(pecaId, 'planejada')
     await db.pecas.update(pecaId, { status: 'vendida', precoVenda })
     await db.eventosPeca.add({
       pecaId,

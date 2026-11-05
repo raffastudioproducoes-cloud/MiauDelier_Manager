@@ -46,7 +46,7 @@ describe('FormasPage', () => {
 
     await waitFor(() => expect(screen.getByText('Sabonete retangular')).toBeInTheDocument())
     const linhaRetangular = screen.getByText(
-      (_, el) => el?.tagName.toLowerCase() === 'p' && /Retangular/.test(el.textContent ?? '') && /100\.0 ml/.test(el.textContent ?? ''),
+      (_, el) => el?.tagName.toLowerCase() === 'p' && /Retangular/.test(el.textContent ?? '') && /10 × 5 × 2 cm/.test(el.textContent ?? ''),
     )
     expect(linhaRetangular).toBeInTheDocument()
 
@@ -92,6 +92,17 @@ describe('FormasPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /salvar/i }))
 
     await waitFor(() => expect(screen.getByText('Molde A Editado')).toBeInTheDocument())
+  })
+
+  it('preserva dados históricos de resina e pés ao editar um molde', async () => {
+    const id = await db.formas.add({ nome: 'Histórico', geometria: 'retangular', dimensoesCm: { comprimento: 10, largura: 8, profundidade: 2 }, volumeDiretoMl: 180, litrosResina: 0.18, massaResinaKg: 0.198, margemSegurancaPercentual: 12, pesMesa: { quantidade: 4, geometria: 'cilindrico', raioCm: 1, alturaCm: 3 }, dimensoesCaixaSiliconeCm: { comprimento: 20, largura: 15, altura: 10 }, densidadeSiliconeGcm3: 1.1, vidaUtilUsos: 90, usosRealizados: 7, status: 'pronta' })
+    render(<ToastProvider><FormasPage /></ToastProvider>)
+    await screen.findByText('Histórico')
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.change(screen.getByLabelText(/nome da forma/i), { target: { value: 'Histórico editado' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+    await screen.findByText('Histórico editado')
+    expect(await db.formas.get(id)).toMatchObject({ volumeDiretoMl: 180, litrosResina: 0.18, massaResinaKg: 0.198, margemSegurancaPercentual: 12, pesMesa: { quantidade: 4, geometria: 'cilindrico', raioCm: 1, alturaCm: 3 }, vidaUtilUsos: 90, usosRealizados: 7, status: 'pronta' })
   })
 
   it('persiste e restaura medidas e densidade do cálculo de silicone ao editar o molde', async () => {
@@ -146,16 +157,66 @@ describe('FormasPage', () => {
     fireEvent.change(screen.getByLabelText(/largura interna da caixa/i), { target: { value: '15' } })
     fireEvent.change(screen.getByLabelText(/altura interna da caixa/i), { target: { value: '10' } })
     fireEvent.change(await screen.findByLabelText(/silicone utilizado do estoque/i), { target: { value: String(id) } })
-    await waitFor(() => expect(screen.getByText(/quantidade calculada para o estoque/i)).toHaveTextContent('3.436,4 g'))
+    await waitFor(() => expect(screen.getByText(/quantidade calculada:/i)).toHaveTextContent('3,436 kg'))
     fireEvent.click(screen.getByRole('button', { name: /cadastrar forma/i }))
     await screen.findByText('Molde com estoque')
     expect((await db.materiais.get(id))?.quantidadeEstoque).toBeCloseTo(6563.6)
     fireEvent.click(screen.getByRole('button', { name: /editar/i }))
     fireEvent.change(screen.getByLabelText(/margem do silicone/i), { target: { value: '12' } })
-    fireEvent.change(screen.getByLabelText(/quantidade de silicone realmente usada/i), { target: { value: '3498.88' } })
+    fireEvent.change(screen.getByLabelText(/quantidade de silicone realmente usada/i), { target: { value: '3.49888' } })
     fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
     await waitFor(() => expect(screen.queryByRole('button', { name: /^salvar$/i })).not.toBeInTheDocument())
     expect((await db.materiais.get(id))?.quantidadeEstoque).toBeCloseTo(6501.12)
+  })
+
+  it('bloqueia quantidade em kg acima do estoque em gramas e remove cálculos de resina da tela', async () => {
+    const id = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'g', quantidadeEstoque: 10000, custoUnitario: 0.01 })
+    render(<ToastProvider><FormasPage /></ToastProvider>)
+    fireEvent.change(await screen.findByLabelText(/nome da forma/i), { target: { value: 'Molde' } })
+    fireEvent.change(screen.getByLabelText(/^geometria$/i), { target: { value: 'retangular' } })
+    fireEvent.change(screen.getByLabelText(/^comprimento \(cm\)$/i), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText(/^largura \(cm\)$/i), { target: { value: '8' } })
+    fireEvent.change(screen.getByLabelText(/profundidade \/ espessura/i), { target: { value: '2' } })
+    fireEvent.change(screen.getByLabelText(/comprimento interno da caixa/i), { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText(/largura interna da caixa/i), { target: { value: '15' } })
+    fireEvent.change(screen.getByLabelText(/altura interna da caixa/i), { target: { value: '10' } })
+    await screen.findByRole('option', { name: /^silicone \(/i })
+    fireEvent.change(screen.getByLabelText(/silicone utilizado do estoque/i), { target: { value: String(id) } })
+    fireEvent.change(screen.getByLabelText(/quantidade de silicone realmente usada \(kg\)/i), { target: { value: '11' } })
+    expect(screen.getByRole('alert')).toHaveTextContent('Necessário: 11 kg')
+    expect(screen.getByRole('alert')).toHaveTextContent('Disponível: 10 kg')
+    expect(screen.getByRole('button', { name: /cadastrar forma/i })).toBeDisabled()
+    expect(screen.queryByText(/cálculo técnico de resina/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/margem de segurança da resina/i)).not.toBeInTheDocument()
+  })
+
+  it('ao editar, verifica somente o acréscimo de silicone em relação ao já debitado', async () => {
+    const materialId = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'g', quantidadeEstoque: 1000, custoUnitario: 0.1 })
+    await db.formas.add({ nome: 'Molde editável', geometria: 'retangular', dimensoesCm: { comprimento: 10, largura: 8, profundidade: 2 }, volumeDiretoMl: 160, vidaUtilUsos: 100, materialSiliconeId: materialId, quantidadeSiliconeUsada: 2000, custoSiliconeFabricacao: 200, baixaSiliconeConfirmada: true, dimensoesCaixaSiliconeCm: { comprimento: 20, largura: 15, altura: 10 }, densidadeSiliconeGcm3: 1.1 })
+    render(<ToastProvider><FormasPage /></ToastProvider>)
+    await screen.findByText('Molde editável')
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    expect(screen.getByLabelText(/quantidade de silicone realmente usada \(kg\)/i)).toHaveValue(2)
+    fireEvent.change(screen.getByLabelText(/quantidade de silicone realmente usada/i), { target: { value: '3' } })
+    expect(screen.getByRole('button', { name: /^salvar$/i })).toBeEnabled()
+    fireEvent.change(screen.getByLabelText(/quantidade de silicone realmente usada/i), { target: { value: '4' } })
+    expect(screen.getByRole('alert')).toHaveTextContent('Necessário: 2 kg')
+    expect(screen.getByRole('alert')).toHaveTextContent('Disponível: 1 kg')
+    expect(screen.getByRole('button', { name: /^salvar$/i })).toBeDisabled()
+  })
+
+  it('ao alterar a densidade, preserva o volume já debitado de um material em litros', async () => {
+    const materialId = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'l', quantidadeEstoque: 8, custoUnitario: 100 })
+    const formaId = await db.formas.add({ nome: 'Molde em litros', geometria: 'retangular', dimensoesCm: { comprimento: 10, largura: 8, profundidade: 2 }, volumeDiretoMl: 160, vidaUtilUsos: 100, materialSiliconeId: materialId, quantidadeSiliconeUsada: 2, custoSiliconeFabricacao: 200, baixaSiliconeConfirmada: true, dimensoesCaixaSiliconeCm: { comprimento: 20, largura: 15, altura: 10 }, densidadeSiliconeGcm3: 1.1 })
+    render(<ToastProvider><FormasPage /></ToastProvider>)
+    await screen.findByText('Molde em litros')
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.change(screen.getByLabelText(/densidade do silicone/i), { target: { value: '1,2' } })
+    await waitFor(() => expect(screen.getByLabelText(/quantidade de silicone realmente usada/i)).toHaveValue(2.4))
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: /^salvar$/i })).not.toBeInTheDocument())
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
+    expect((await db.formas.get(formaId))?.quantidadeSiliconeUsada).toBe(2)
   })
 
   it('registra o silicone de uma forma antiga sem consumo ao salvar sua edição', async () => {
@@ -165,7 +226,7 @@ describe('FormasPage', () => {
     await screen.findByText('Mesa antiga')
     fireEvent.click(screen.getByRole('button', { name: /editar/i }))
     fireEvent.change(screen.getByLabelText(/silicone utilizado do estoque/i), { target: { value: String(materialId) } })
-    expect(screen.getByText(/quantidade calculada para o estoque/i)).toHaveTextContent('3,436 kg')
+    expect(screen.getByText(/quantidade calculada:/i)).toHaveTextContent('3,436 kg')
     fireEvent.change(screen.getByLabelText(/quantidade de silicone realmente usada/i), { target: { value: '2' } })
     await waitFor(() => expect(screen.getByText(/custo do silicone utilizado/i)).toHaveTextContent('R$ 200.00'))
     fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))

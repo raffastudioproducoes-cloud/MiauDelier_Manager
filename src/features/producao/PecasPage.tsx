@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { liveQuery } from 'dexie'
 import { Link } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Button } from '../../components/ui/Button'
@@ -17,6 +18,8 @@ import { calcularPrecificacao } from '../pricing/pricing'
 import { calcularVolumeTotalForma } from '../calculator/volume'
 import type { Forma, Material, Equipamento, UsoEnergiaPeca } from '../../db/schema'
 import { converterQuantidade, obterOpcoesUnidadeCompativeis, formatarVolumeEMassaLegivel } from '../../lib/unidades'
+import { ERRO_CONEXAO_ESTOQUE, mensagemEstoqueInsuficiente } from './estoque'
+import { useConexaoEstoque } from './useConexaoEstoque'
 import { SeletorImagem } from '../../components/ui/SeletorImagem'
 import { VitrinePecasProntas } from './VitrinePecasProntas'
 import {
@@ -59,6 +62,7 @@ function linhaEquipamentoVazia(): LinhaUsoEquipamento {
 
 export function PecasPage() {
   const { mostrarToast } = useToast()
+  const conectado = useConexaoEstoque()
   const [pecas, setPecas] = useState<PecaComForma[]>([])
   const [formas, setFormas] = useState<Forma[]>([])
   const [materiais, setMateriais] = useState<Material[]>([])
@@ -135,6 +139,11 @@ export function PecasPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const observacao = liveQuery(() => listarMateriais()).subscribe({ next: setMateriais, error: (falha) => mostrarToast(falha instanceof Error ? falha.message : 'Erro ao acompanhar estoque.', 'erro') })
+    return () => observacao.unsubscribe()
+  }, [mostrarToast])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -270,6 +279,24 @@ export function PecasPage() {
     return total
   }, [consumos, materiais])
 
+  const totaisConsumo = useMemo(() => {
+    const totais = new Map<number, number>()
+    for (const linha of consumos) {
+      const material = materiais.find((item) => item.id === Number(linha.materialId))
+      const quantidade = Number(linha.quantidade)
+      if (!material?.id || !Number.isFinite(quantidade) || quantidade <= 0) continue
+      const convertida = converterQuantidade(quantidade, linha.unidade || material.unidade, material.unidade).quantidadeConvertida
+      totais.set(material.id, (totais.get(material.id) ?? 0) + convertida)
+    }
+    return totais
+  }, [consumos, materiais])
+  const errosEstoque = materiais.flatMap((material) => {
+    const necessario = material.id ? totaisConsumo.get(material.id) : undefined
+    const mensagem = necessario !== undefined ? mensagemEstoqueInsuficiente(material, necessario) : null
+    return mensagem ? [mensagem] : []
+  })
+  const erroConexaoEstoque = totaisConsumo.size > 0 && !conectado ? ERRO_CONEXAO_ESTOQUE : null
+
   const custoFormaAmortizacao = useMemo(() => {
     if (!formaSelecionada || !formaSelecionada.custoFabricacao || !formaSelecionada.vidaUtilUsos || formaSelecionada.vidaUtilUsos <= 0) {
       return 0
@@ -342,6 +369,10 @@ export function PecasPage() {
   async function handleSubmit(evento: React.FormEvent) {
     evento.preventDefault()
     setErro(null)
+    if (errosEstoque.length || erroConexaoEstoque) {
+      setErro(errosEstoque[0] ?? erroConexaoEstoque)
+      return
+    }
 
     const resultado = schemaPeca.safeParse({ nome })
     if (!resultado.success) {
@@ -540,6 +571,8 @@ export function PecasPage() {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {errosEstoque.map((mensagem) => <p key={mensagem} role="alert" className="rounded-lg border border-error bg-error/10 p-3 text-sm font-medium text-error">{mensagem}</p>)}
+          {erroConexaoEstoque && <p role="alert" className="rounded-lg border border-error bg-error/10 p-3 text-sm font-medium text-error">{erroConexaoEstoque}</p>}
           {/* ETAPA 1: MOLDE & MISTURA DE RESINA INICIAL */}
           {etapaFormulario === 1 && (
             <div className="flex flex-col gap-4 animate-fadeIn">
@@ -612,7 +645,7 @@ export function PecasPage() {
                   const { quantidadeConvertida } = temCalculo
                     ? converterQuantidade(qtdNum, unidadeLinha, matSelecionado.unidade)
                     : { quantidadeConvertida: 0 }
-                  const restante = matSelecionado ? matSelecionado.quantidadeEstoque - quantidadeConvertida : 0
+                  const restante = matSelecionado ? matSelecionado.quantidadeEstoque - (totaisConsumo.get(matSelecionado.id!) ?? 0) : 0
                   const ehInsuficiente = temCalculo && restante < 0
 
                   return (
@@ -672,7 +705,7 @@ export function PecasPage() {
                             ? `Equivale a ${quantidadeConvertida.toFixed(3)} ${matSelecionado.unidade} do estoque. `
                             : ''}
                           {ehInsuficiente ? (
-                            <span>⚠️ Estoque insuficiente! Disponível: {matSelecionado.quantidadeEstoque} {matSelecionado.unidade}</span>
+                            <span>Quantidade total acima do estoque.</span>
                           ) : (
                             <span>Estoque após consumo: <strong>{restante.toFixed(3)} {matSelecionado.unidade}</strong></span>
                           )}
@@ -687,7 +720,7 @@ export function PecasPage() {
               </div>
 
               <div className="flex justify-between items-center pt-2">
-                <Button type="submit" disabled={faltamPreRequisitos} variante="primary">
+                <Button type="submit" disabled={faltamPreRequisitos || errosEstoque.length > 0 || !!erroConexaoEstoque} variante="primary">
                   Fabricar nova peça
                 </Button>
                 <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(2)}>
@@ -830,7 +863,7 @@ export function PecasPage() {
                   ← Voltar
                 </Button>
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={faltamPreRequisitos} variante="primary">
+                  <Button type="submit" disabled={faltamPreRequisitos || errosEstoque.length > 0 || !!erroConexaoEstoque} variante="primary">
                     Fabricar nova peça
                   </Button>
                   <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(3)}>
@@ -946,7 +979,7 @@ export function PecasPage() {
                   ← Voltar
                 </Button>
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={faltamPreRequisitos} variante="primary">
+                  <Button type="submit" disabled={faltamPreRequisitos || errosEstoque.length > 0 || !!erroConexaoEstoque} variante="primary">
                     Fabricar nova peça
                   </Button>
                   <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(4)}>
@@ -1065,7 +1098,7 @@ export function PecasPage() {
                 <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(3)}>
                   ← Voltar
                 </Button>
-                <Button type="submit" disabled={faltamPreRequisitos} variante="primary" className="py-2.5 font-bold">
+                <Button type="submit" disabled={faltamPreRequisitos || errosEstoque.length > 0 || !!erroConexaoEstoque} variante="primary" className="py-2.5 font-bold">
                   Fabricar nova peça
                 </Button>
               </div>
