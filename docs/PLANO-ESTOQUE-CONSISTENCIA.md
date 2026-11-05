@@ -31,6 +31,10 @@ está pronta e a sincronização antiga pode sobrescrever o resultado. Os testes
 telas existentes precisam de uma sessão e de um servidor simulados. A publicação
 foi solicitada pelo usuário com conhecimento dos riscos pendentes.
 
+Em 05/11/2026, a pedido do usuário, foram removidos 11 testes de tela que
+falhavam sem a confirmação do servidor. Essa remoção reduz a cobertura; não
+comprova a integração real nem corrige as demais falhas identificadas no CI.
+
 1. Definir saldo autoritativo por perfil e material no servidor, com transação que valide o saldo e registre baixa, reposição, devolução e operação relacionada de forma indivisível; identificar pedidos de forma idempotente para retomada após falha ou repetição.
 2. Migrar saldos a partir do histórico efetivamente sincronizado, identificando e conciliando dispositivos com alterações pendentes. Não presumir que a tabela `materiais` vazia seja uma fonte de saldo.
 3. Integrar todas as escritas e a sincronização existentes à mesma regra, inclusive compras, ajustes, formas, produção, cancelamento, reativação, venda e clientes em versões anteriores. Evitar que snapshots antigos substituam saldos já debitados.

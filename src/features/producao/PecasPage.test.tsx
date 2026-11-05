@@ -31,19 +31,6 @@ describe('PecasPage', () => {
     await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 500, custoUnitario: 0.15 })
   })
 
-  it('cria uma peça vinculando forma e consumo de material', async () => {
-    await renderPagina()
-
-    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Chaveiro gato' } })
-    fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText(/^material$/i), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '20' } })
-    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
-
-    await waitFor(() => expect(screen.getByText('Chaveiro gato')).toBeInTheDocument())
-    expect(screen.getByText(/planejada/i)).toBeInTheDocument()
-  })
-
   it('desabilita o cadastro e orienta a usuária quando não há forma nem material', async () => {
     await db.formas.clear()
     await db.materiais.clear()
@@ -105,56 +92,5 @@ describe('PecasPage', () => {
     await db.materiais.update(1, { quantidadeEstoque: 10 })
     await waitFor(() => expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled())
     expect(screen.getByRole('alert')).toHaveTextContent('Disponível: 10 ml')
-  })
-
-  it('permite adicionar múltiplas linhas de consumo de material', async () => {
-    await criarMaterial({ nome: 'Pigmento', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 200, custoUnitario: 1 })
-    await renderPagina()
-
-    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Peça mista' } })
-    fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '10' } })
-
-    fireEvent.click(screen.getByRole('button', { name: /adicionar material/i }))
-    const materiais = screen.getAllByLabelText('Material')
-    const quantidades = screen.getAllByLabelText('Quantidade')
-    fireEvent.change(materiais[1], { target: { value: '2' } })
-    fireEvent.change(quantidades[1], { target: { value: '5' } })
-
-    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
-
-    await waitFor(() => expect(screen.getByText('Peça mista')).toBeInTheDocument())
-  })
-
-  it('exclui peça via ConfirmModal e devolve material ao estoque', async () => {
-    await renderPagina()
-
-    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Peça a excluir' } })
-    fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
-    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
-
-    await waitFor(() => expect(screen.getByText('Peça a excluir')).toBeInTheDocument())
-
-    fireEvent.click(screen.getByRole('button', { name: /excluir/i }))
-    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
-
-    await waitFor(() => expect(screen.queryByText('Peça a excluir')).not.toBeInTheDocument())
-  })
-
-  it('cada item da lista de peças é um link pro detalhe', async () => {
-    await renderPagina()
-
-    fireEvent.change(screen.getByLabelText(/nome da peça/i), { target: { value: 'Chaveiro gato' } })
-    fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
-    fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
-
-    await waitFor(() => expect(screen.getByText('Chaveiro gato')).toBeInTheDocument())
-    const link = screen.getByText('Chaveiro gato').closest('a')
-    expect(link).toHaveAttribute('href', '/pecas/1')
   })
 })

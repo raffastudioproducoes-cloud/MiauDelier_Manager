@@ -59,21 +59,6 @@ describe('MateriaisPage', () => {
     expect((await db.transacoes.toArray())[0]).toMatchObject({ tipo: 'saida', valorCriptografado: '1030' })
   })
 
-  it('permite valor unitário ao repor um material existente', async () => {
-    const id = await db.materiais.add({ nome: 'Silicone', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 5, custoUnitario: 10 })
-    render(<ToastProvider><MateriaisPage /></ToastProvider>)
-    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
-    await screen.findByRole('option', { name: /silicone/i })
-    fireEvent.change(screen.getByLabelText(/material comprado/i), { target: { value: String(id) } })
-    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '10' } })
-    fireEvent.change(screen.getByLabelText(/tipo de valor/i), { target: { value: 'unitario' } })
-    fireEvent.change(screen.getByLabelText(/valor unitário \(r\$\)/i), { target: { value: '100' } })
-    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
-    await waitFor(async () => expect((await db.materiais.get(id))?.quantidadeEstoque).toBe(15))
-    expect((await db.materiais.get(id))?.custoUnitario).toBe(100)
-    expect((await db.historicoPrecosMateriais.toArray())[0]).toMatchObject({ valorProdutos: 1000, valorTotalPago: 1000 })
-  })
-
   it('rejeita quantidade em estoque negativa antes de chamar o repositório', async () => {
     render(<ToastProvider><MateriaisPage /></ToastProvider>)
 
@@ -89,26 +74,6 @@ describe('MateriaisPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/quantidade/i)
     const materiaisCriados = await db.materiais.toArray()
     expect(materiaisCriados).toHaveLength(0)
-  })
-
-  it('repõe estoque de um material', async () => {
-    render(<ToastProvider><MateriaisPage /></ToastProvider>)
-    
-    fireEvent.click(screen.getByRole('button', { name: /Registrar Nova Compra/i }))
-    fireEvent.click(await screen.findByLabelText(/\+ Cadastrar e comprar novo material/i))
-    fireEvent.change(screen.getByLabelText(/nome do produto/i), { target: { value: 'Resina B' } })
-    fireEvent.change(screen.getByLabelText(/quantidade comprada/i), { target: { value: '100' } })
-    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '10' } })
-    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
-    await waitFor(() => screen.getByText('Resina B'))
-
-    fireEvent.click(screen.getByRole('button', { name: /repor estoque/i }))
-    
-    fireEvent.change(await screen.findByLabelText(/quantidade comprada/i), { target: { value: '50' } })
-    fireEvent.change(screen.getByLabelText(/valor dos produtos/i), { target: { value: '5' } })
-    fireEvent.click(screen.getByRole('button', { name: /confirmar compra/i }))
-
-    await waitFor(() => expect(screen.getByText(/150 ml em estoque/i)).toBeInTheDocument())
   })
 
   it('cria um material em uma divisão customizada', async () => {
