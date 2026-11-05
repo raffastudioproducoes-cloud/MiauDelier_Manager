@@ -40,6 +40,8 @@ describe('PecasPage', () => {
     await waitFor(() =>
       expect(screen.getByText(/cadastre pelo menos um material e uma forma/i)).toBeInTheDocument(),
     )
+    expect(screen.queryByRole('button', { name: /fabricar nova peça/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled()
   })
 
@@ -50,6 +52,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getByLabelText(/^forma$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/^material$/i), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText(/quantidade/i), { target: { value: '5000' } })
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     fireEvent.click(screen.getByRole('button', { name: /fabricar nova peça/i }))
 
     await waitFor(() => expect(screen.getByText(/estoque insuficiente/i)).toBeInTheDocument())
@@ -65,6 +68,7 @@ describe('PecasPage', () => {
     fireEvent.change(screen.getAllByLabelText('Quantidade')[1], { target: { value: '300' } })
     expect(screen.getByRole('alert')).toHaveTextContent('Necessário: 600 ml')
     expect(screen.getByRole('alert')).toHaveTextContent('Disponível: 500 ml')
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled()
   })
 
@@ -75,6 +79,7 @@ describe('PecasPage', () => {
       fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
       fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
       expect(screen.getByRole('alert')).toHaveTextContent(/conecte-se/i)
+      fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
       expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled()
       conexao.mockReturnValue(true)
       fireEvent(window, new Event('online'))
@@ -88,6 +93,7 @@ describe('PecasPage', () => {
     await renderPagina()
     fireEvent.change(screen.getByLabelText('Material'), { target: { value: '1' } })
     fireEvent.change(screen.getByLabelText('Quantidade'), { target: { value: '20' } })
+    fireEvent.click(screen.getByRole('button', { name: /próxima etapa: cura/i }))
     expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeEnabled()
     await db.materiais.update(1, { quantidadeEstoque: 10 })
     await waitFor(() => expect(screen.getByRole('button', { name: /fabricar nova peça/i })).toBeDisabled())

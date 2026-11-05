@@ -719,10 +719,7 @@ export function PecasPage() {
                 </Button>
               </div>
 
-              <div className="flex justify-between items-center pt-2">
-                <Button type="submit" disabled={faltamPreRequisitos || errosEstoque.length > 0 || !!erroConexaoEstoque} variante="primary">
-                  Fabricar nova peça
-                </Button>
+              <div className="flex justify-end items-center pt-2">
                 <Button type="button" variante="ghost" onClick={() => setEtapaFormulario(2)}>
                   Próxima Etapa: Cura & Bolhas →
                 </Button>
