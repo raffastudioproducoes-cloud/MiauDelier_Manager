@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+vi.mock('./estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => fn() }))
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '../../db/schema'
 import { setupAccount } from '../../lib/auth'
 import {

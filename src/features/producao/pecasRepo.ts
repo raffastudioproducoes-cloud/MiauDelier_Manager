@@ -1,3 +1,4 @@
+import { transacaoComEstoque } from './estoqueServidor'
 import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 import { converterQuantidade, ehIncompativel } from '../../lib/unidades'
@@ -41,7 +42,7 @@ export interface PecaComForma extends Peca {
   nomeForma: string
 }
 
-export async function criarPeca(nova: NovaPeca): Promise<number> {
+async function criarPecaInterno(nova: NovaPeca): Promise<number> {
   if (nova.consumos.length > 0) exigirConexaoEstoque()
   return db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, async () => {
     const agora = new Date().toISOString()
@@ -158,7 +159,7 @@ export async function listarConsumosDaPeca(pecaId: number): Promise<ConsumoComMa
   )
 }
 
-export async function atualizarStatusPeca(pecaId: number, novoStatus: StatusPeca): Promise<void> {
+async function atualizarStatusPecaInterno(pecaId: number, novoStatus: StatusPeca): Promise<void> {
   await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas], async () => {
     const peca = await db.pecas.get(pecaId)
     if (!peca) throw new Error(`Peça ${pecaId} não encontrada`)
@@ -246,7 +247,7 @@ export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number
   })
 }
 
-export async function registrarVendaPeca(
+async function registrarVendaPecaInterno(
   pecaId: number,
   precoVenda: number,
   contaId: number,
@@ -277,7 +278,7 @@ export async function registrarVendaPeca(
   })
 }
 
-export async function excluirPeca(pecaId: number): Promise<void> {
+async function excluirPecaInterno(pecaId: number): Promise<void> {
   await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.auditoria], async () => {
     const peca = await db.pecas.get(pecaId)
     // Se a peça NÃO estava cancelada, devolve o material ao estoque e estorna o uso do molde
@@ -320,3 +321,11 @@ export async function atualizarDadosProducaoPeca(pecaId: number, dados: Partial<
 }
 
 
+
+export const criarPeca = (...args: Parameters<typeof criarPecaInterno>): ReturnType<typeof criarPecaInterno> => transacaoComEstoque(() => criarPecaInterno(...args))
+
+export const atualizarStatusPeca = (...args: Parameters<typeof atualizarStatusPecaInterno>): ReturnType<typeof atualizarStatusPecaInterno> => transacaoComEstoque(() => atualizarStatusPecaInterno(...args))
+
+export const registrarVendaPeca = (...args: Parameters<typeof registrarVendaPecaInterno>): ReturnType<typeof registrarVendaPecaInterno> => transacaoComEstoque(() => registrarVendaPecaInterno(...args))
+
+export const excluirPeca = (...args: Parameters<typeof excluirPecaInterno>): ReturnType<typeof excluirPecaInterno> => transacaoComEstoque(() => excluirPecaInterno(...args))

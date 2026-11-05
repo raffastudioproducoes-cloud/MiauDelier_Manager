@@ -1,10 +1,11 @@
+import { transacaoComEstoque } from './estoqueServidor'
 import { db, type Forma } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 import { exigirConexaoEstoque, exigirEstoque } from './estoque'
 
 export type NovaForma = Omit<Forma, 'id'>
 
-export async function criarForma(nova: NovaForma): Promise<number> {
+async function criarFormaInterno(nova: NovaForma): Promise<number> {
   return db.transaction('rw', db.formas, db.materiais, db.notificacoes, async () => {
     if (nova.materialSiliconeId && (!Number.isFinite(nova.quantidadeSiliconeUsada) || (nova.quantidadeSiliconeUsada ?? 0) <= 0)) throw new Error('Informe uma quantidade de silicone maior que zero.')
     if (nova.materialSiliconeId && (!Number.isSafeInteger(nova.vidaUtilUsos) || (nova.vidaUtilUsos ?? 0) <= 0)) throw new Error('Informe uma vida útil em usos maior que zero.')
@@ -73,7 +74,7 @@ export async function listarFormas(): Promise<Forma[]> {
   return db.formas.toArray()
 }
 
-export async function atualizarForma(formaId: number, dados: NovaForma, opcoes?: { registrarConsumoPendente?: boolean }): Promise<void> {
+async function atualizarFormaInterno(formaId: number, dados: NovaForma, opcoes?: { registrarConsumoPendente?: boolean }): Promise<void> {
   await db.transaction('rw', db.formas, db.materiais, async () => {
     const anterior = await db.formas.get(formaId)
     if (!anterior) throw new Error('Forma não encontrada')
@@ -117,3 +118,7 @@ export async function excluirForma(formaId: number): Promise<void> {
     await registrarAuditoria('forma', formaId, 'exclusao')
   })
 }
+
+export const criarForma = (...args: Parameters<typeof criarFormaInterno>): ReturnType<typeof criarFormaInterno> => transacaoComEstoque(() => criarFormaInterno(...args))
+
+export const atualizarForma = (...args: Parameters<typeof atualizarFormaInterno>): ReturnType<typeof atualizarFormaInterno> => transacaoComEstoque(() => atualizarFormaInterno(...args))

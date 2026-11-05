@@ -20,9 +20,16 @@ perfil, serializa movimentações por perfil, rejeita saldo insuficiente e evita
 repetição por identificador de operação. O teste SQL de baixa, saldo insuficiente,
 repetição e acesso de outra conta foi executado em transação revertida.
 
-**Ainda não está integrada ao aplicativo e não protege a sincronização antiga.**
+**A integração não protege a sincronização antiga.**
 Ela não deve ser tratada como trava global até que todas as escritas de estoque
 e eventos antigos sejam integrados e haja recuperação de falhas intermediárias.
+
+Implementação integrada: os repositórios de moldes, peças e materiais
+chamam a função antes de concluir a transação local. Os testes de repositório
+com servidor simulado passaram, mas a recuperação de resposta perdida ainda não
+está pronta e a sincronização antiga pode sobrescrever o resultado. Os testes de
+telas existentes precisam de uma sessão e de um servidor simulados. A publicação
+foi solicitada pelo usuário com conhecimento dos riscos pendentes.
 
 1. Definir saldo autoritativo por perfil e material no servidor, com transação que valide o saldo e registre baixa, reposição, devolução e operação relacionada de forma indivisível; identificar pedidos de forma idempotente para retomada após falha ou repetição.
 2. Migrar saldos a partir do histórico efetivamente sincronizado, identificando e conciliando dispositivos com alterações pendentes. Não presumir que a tabela `materiais` vazia seja uma fonte de saldo.

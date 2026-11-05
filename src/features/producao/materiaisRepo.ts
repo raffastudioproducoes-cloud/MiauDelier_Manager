@@ -1,3 +1,4 @@
+import { transacaoComEstoque } from './estoqueServidor'
 import { db, type HistoricoPrecoMaterial, type Material, type TipoClassificacaoMaterial } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 import { exigirConexaoEstoque } from './estoque'
@@ -51,7 +52,7 @@ export async function limparHistoricoPrecosVencido(agora = new Date()): Promise<
   return vencidos.length
 }
 
-export async function atualizarEstoqueMaterial(materialId: number, novaQuantidade: number): Promise<void> {
+async function atualizarEstoqueMaterialInterno(materialId: number, novaQuantidade: number): Promise<void> {
   if (!Number.isFinite(novaQuantidade) || novaQuantidade < 0) throw new Error('O estoque não pode ser negativo.')
   await db.transaction('rw', db.materiais, async () => {
     const material = await db.materiais.get(materialId)
@@ -61,7 +62,7 @@ export async function atualizarEstoqueMaterial(materialId: number, novaQuantidad
   })
 }
 
-export async function reporEstoqueMaterial(materialId: number, quantidadeAdicionada: number): Promise<void> {
+async function reporEstoqueMaterialInterno(materialId: number, quantidadeAdicionada: number): Promise<void> {
   if (!Number.isFinite(quantidadeAdicionada) || quantidadeAdicionada < 0) throw new Error('A reposição não pode ser negativa.')
   await db.transaction('rw', db.materiais, async () => {
     const material = await db.materiais.get(materialId)
@@ -72,7 +73,7 @@ export async function reporEstoqueMaterial(materialId: number, quantidadeAdicion
   })
 }
 
-export async function registrarCompraMaterial(params: RegistrarCompraParams): Promise<number> {
+async function registrarCompraMaterialInterno(params: RegistrarCompraParams): Promise<number> {
   if (!Number.isFinite(params.quantidadeComprada) || params.quantidadeComprada <= 0) throw new Error('A quantidade comprada deve ser maior que zero.')
   if (params.novoMaterial && (!Number.isFinite(params.novoMaterial.quantidadeEstoque) || params.novoMaterial.quantidadeEstoque < 0)) throw new Error('O estoque não pode ser negativo.')
   const data = params.dataCompra ?? new Date().toISOString()
@@ -158,3 +159,9 @@ export async function excluirMaterial(materialId: number): Promise<void> {
     await registrarAuditoria('material', materialId, 'exclusao')
   })
 }
+
+export const atualizarEstoqueMaterial = (...args: Parameters<typeof atualizarEstoqueMaterialInterno>): ReturnType<typeof atualizarEstoqueMaterialInterno> => transacaoComEstoque(() => atualizarEstoqueMaterialInterno(...args))
+
+export const reporEstoqueMaterial = (...args: Parameters<typeof reporEstoqueMaterialInterno>): ReturnType<typeof reporEstoqueMaterialInterno> => transacaoComEstoque(() => reporEstoqueMaterialInterno(...args))
+
+export const registrarCompraMaterial = (...args: Parameters<typeof registrarCompraMaterialInterno>): ReturnType<typeof registrarCompraMaterialInterno> => transacaoComEstoque(() => registrarCompraMaterialInterno(...args))

@@ -1,3 +1,4 @@
+vi.mock('./estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => fn() }))
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '../../db/schema'
 import { criarForma, listarFormas, atualizarForma, excluirForma } from './formasRepo'
