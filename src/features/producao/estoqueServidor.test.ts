@@ -32,6 +32,21 @@ describe('confirmação de estoque no servidor', () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'Estoque insuficiente' } })
     await expect(confirmarMovimentosEstoque('operação', [{ materialId: 3, diferenca: -20 }])).rejects.toThrow('Estoque insuficiente')
   })
+
+  it('repete com o mesmo identificador quando a resposta de rede é perdida', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'Failed to fetch' }, status: 0 })
+    rpc.mockResolvedValueOnce({ data: [{ materialId: '3', saldo: 8 }], error: null, status: 200 })
+    expect(await confirmarMovimentosEstoque('mesma-operação', [{ materialId: 3, diferenca: -2 }])).toEqual(new Map([[3, 8]]))
+    expect(rpc).toHaveBeenCalledTimes(2)
+    expect(rpc.mock.calls[0][1]).toEqual(rpc.mock.calls[1][1])
+  })
+
+  it('avisa que o resultado é incerto se as duas tentativas de rede falharem', async () => {
+    rpc.mockRejectedValue(new TypeError('fetch failed'))
+    await expect(confirmarMovimentosEstoque('mesma-operação', [{ materialId: 3, diferenca: -2 }])).rejects.toThrow(/confira o saldo e a peça/i)
+    expect(rpc).toHaveBeenCalledTimes(2)
+    expect(rpc.mock.calls[0][1]).toEqual(rpc.mock.calls[1][1])
+  })
 })
 
 describe('salvamento de molde com confirmação no servidor', () => {
@@ -61,8 +76,9 @@ describe('salvamento de molde com confirmação no servidor', () => {
 
   it('confirma consumo, devolução e reposição no servidor', async () => {
     const materialId = (await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 }))!
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
     rpc.mockResolvedValueOnce({ data: [{ materialId: String(materialId), saldo: 8 }], error: null })
-    const pecaId = await criarPeca({ nome: 'Peça', formaId: 0, consumos: [{ materialId, quantidade: 2 }] })
+    const pecaId = await criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 2 }] })
     expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
     rpc.mockResolvedValueOnce({ data: [{ materialId: String(materialId), saldo: 10 }], error: null })
     await atualizarStatusPeca(pecaId, 'cancelada')

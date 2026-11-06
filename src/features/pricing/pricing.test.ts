@@ -2,6 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { calcularPrecificacao } from './pricing'
 
 describe('motor de precificação', () => {
+  it('inclui o desgaste dos equipamentos separadamente da energia', () => {
+    const resultado = calcularPrecificacao({ custoMaterial: 10, custoAcessorios: 0, horasProducao: 0, valorHora: 0, rateioFixoPercent: 0, margemLucroPercent: 50, custoEnergia: 2, custoDesgasteEquipamentos: 4 })
+    expect(resultado.custoDesgasteEquipamentos).toBe(4)
+    expect(resultado.custoTotal).toBe(16)
+    expect(resultado.precoFinal).toBe(24)
+  })
   it('bate com o exemplo do guia de referência', () => {
     const resultado = calcularPrecificacao({
       custoMaterial: 25,

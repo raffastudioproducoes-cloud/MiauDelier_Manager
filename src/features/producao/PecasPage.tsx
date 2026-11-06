@@ -15,6 +15,7 @@ import { listarMateriais } from './materiaisRepo'
 import { listarEquipamentos } from './equipamentosRepo'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 import { calcularPrecificacao } from '../pricing/pricing'
+import { calcularDesgasteEquipamentos, obterTaxaDesgaste } from './desgasteEquipamentos'
 import { calcularVolumeTotalForma } from '../calculator/volume'
 import type { Forma, Material, Equipamento, UsoEnergiaPeca } from '../../db/schema'
 import { converterQuantidade, obterOpcoesUnidadeCompativeis, formatarVolumeEMassaLegivel } from '../../lib/unidades'
@@ -74,6 +75,8 @@ export function PecasPage() {
 
   const [nome, setNome] = useState('')
   const [formaId, setFormaId] = useState('')
+  const [formasAdicionais, setFormasAdicionais] = useState<Array<{ formaId: string; quantidade: string }>>([])
+  const [volumeAlterado, setVolumeAlterado] = useState(false)
   const [volumeResinaMl, setVolumeResinaMl] = useState('')
   const [consumos, setConsumos] = useState<LinhaConsumo[]>([linhaConsumoVazia()])
   const [episCura, setEpisCura] = useState<LinhaConsumo[]>([])
@@ -169,6 +172,8 @@ export function PecasPage() {
     setEtapaFormulario(1)
     setNome('')
     setFormaId('')
+    setFormasAdicionais([])
+    setVolumeAlterado(false)
     setVolumeResinaMl('')
     setConsumos([linhaConsumoVazia()])
     setEpisCura([])
@@ -194,18 +199,17 @@ export function PecasPage() {
 
   const volumeSugeridoMl = useMemo(() => {
     if (!formaSelecionada) return 0
-    return calcularVolumeTotalForma(formaSelecionada)
-  }, [formaSelecionada])
+    return calcularVolumeTotalForma(formaSelecionada) + formasAdicionais.reduce((total, linha) => {
+      const forma = formas.find(item => String(item.id) === linha.formaId)
+      const quantidade = Number(linha.quantidade)
+      return total + (forma && Number.isSafeInteger(quantidade) && quantidade > 0 ? calcularVolumeTotalForma(forma) * quantidade : 0)
+    }, 0)
+  }, [formaSelecionada, formasAdicionais, formas])
+
+  const volumeExibido = volumeAlterado ? volumeResinaMl : (volumeSugeridoMl > 0 ? String(Math.round(volumeSugeridoMl)) : '')
 
   function handleSelecionarForma(idFormaStr: string) {
     setFormaId(idFormaStr)
-    const f = formas.find((item) => String(item.id) === idFormaStr)
-    if (f) {
-      const vol = calcularVolumeTotalForma(f)
-      if (vol > 0) {
-        setVolumeResinaMl(String(Math.round(vol)))
-      }
-    }
   }
 
   function atualizarLinhaConsumo(indice: number, campo: keyof LinhaConsumo, valor: string) {
@@ -261,6 +265,7 @@ export function PecasPage() {
             nomeEquipamento: eq.nome,
             potenciaWatts: eq.potenciaWatts,
             minutosUso: Math.round(minUso),
+            custoDesgastePorHora: obterTaxaDesgaste(eq),
           })
         }
       }
@@ -300,11 +305,9 @@ export function PecasPage() {
   const erroConexaoEstoque = totaisConsumo.size > 0 && !conectado ? ERRO_CONEXAO_ESTOQUE : null
 
   const custoFormaAmortizacao = useMemo(() => {
-    if (!formaSelecionada || !formaSelecionada.custoFabricacao || !formaSelecionada.vidaUtilUsos || formaSelecionada.vidaUtilUsos <= 0) {
-      return 0
-    }
-    return formaSelecionada.custoFabricacao / formaSelecionada.vidaUtilUsos
-  }, [formaSelecionada])
+    const custo = (forma?: Forma) => forma?.vidaUtilUsos && forma.vidaUtilUsos > 0 ? (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos : 0
+    return custo(formaSelecionada) + formasAdicionais.reduce((total, linha) => total + custo(formas.find(f => String(f.id) === linha.formaId)) * (Number(linha.quantidade) || 0), 0)
+  }, [formaSelecionada, formasAdicionais, formas])
 
   const custoPropagandaDia = useMemo(() => {
     const val = Number(valorPropagandaTotal) || 0
@@ -315,6 +318,7 @@ export function PecasPage() {
     return 0
   }, [valorPropagandaTotal, diasPropaganda])
 
+  const desgasteEquipamentos = useMemo(() => calcularDesgasteEquipamentos(usosEnergiaConsolidados, equipamentos), [usosEnergiaConsolidados, equipamentos])
   const precificacaoRes = useMemo(() => {
     const custoAcc = custoPropagandaDia + (Number(valorFrete) || 0)
     try { return calcularPrecificacao({
@@ -328,6 +332,7 @@ export function PecasPage() {
       tarifaKwh,
       litrosAgua: Number(litrosAgua) || 0,
       custoForma: custoFormaAmortizacao,
+      custoDesgasteEquipamentos: desgasteEquipamentos.custo,
       percentualTaxas: Number(percentualTaxas) || 0,
     }) } catch { return null }
   }, [
@@ -341,6 +346,7 @@ export function PecasPage() {
     tarifaKwh,
     litrosAgua,
     custoFormaAmortizacao,
+    desgasteEquipamentos,
     percentualTaxas,
   ])
 
@@ -386,6 +392,11 @@ export function PecasPage() {
       setEtapaFormulario(1)
       return
     }
+    if (formasAdicionais.some(linha => !linha.formaId || !Number.isSafeInteger(Number(linha.quantidade)) || Number(linha.quantidade) <= 0)) {
+      setErro('Selecione uma forma e informe uma quantidade inteira maior que zero para cada forma adicional.')
+      setEtapaFormulario(1)
+      return
+    }
 
     const linhasValidas = [...consumos, ...episCura, ...episAcabamento].filter((linha) => linha.materialId && Number(linha.quantidade) > 0)
     if (!consumos.some((linha) => linha.materialId && Number(linha.quantidade) > 0)) {
@@ -406,7 +417,8 @@ export function PecasPage() {
       await criarPeca({
         nome: resultado.data.nome,
         formaId: Number(formaId),
-        volumeResinaMl: Number(volumeResinaMl) || undefined,
+        formasAdicionais: formasAdicionais.map(linha => ({ formaId: Number(linha.formaId), quantidade: Number(linha.quantidade) })),
+        volumeResinaMl: Number(volumeExibido) || undefined,
         consumos: linhasValidas.map((linha) => ({
           materialId: Number(linha.materialId),
           quantidade: Number(linha.quantidade),
@@ -454,15 +466,7 @@ export function PecasPage() {
     return formas.filter((f) => f.status === undefined || f.status === 'pronta')
   }, [formas])
 
-  const materiaisConsumiveisPeca = useMemo(() => {
-    return materiais.filter((m) => {
-      const nomeUpper = m.nome.toUpperCase()
-      if (nomeUpper.includes('SILICONE') || nomeUpper.includes('BORRACHA DE SILICONE')) {
-        return false
-      }
-      return true
-    })
-  }, [materiais])
+  const materiaisConsumiveisPeca = materiais
 
   const faltamPreRequisitos = formasProntas.length === 0 || materiaisConsumiveisPeca.length === 0
 
@@ -605,6 +609,22 @@ export function PecasPage() {
                 </select>
               </div>
 
+              {formasAdicionais.map((linha, indice) => (
+                <div key={indice} className="flex flex-wrap gap-2 items-end">
+                  <div className="flex flex-col gap-1 flex-1 min-w-48">
+                    <label htmlFor={`forma-adicional-${indice}`} className="text-sm font-medium">Forma adicional {indice + 1}</label>
+                    <select id={`forma-adicional-${indice}`} value={linha.formaId} onChange={e => setFormasAdicionais(atuais => atuais.map((item, i) => i === indice ? { ...item, formaId: e.target.value } : item))} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm">
+                      <option value="">Selecione o molde...</option>
+                      {formasProntas.map(forma => <option key={forma.id} value={String(forma.id)}>{forma.nome}</option>)}
+                    </select>
+                  </div>
+                  <label className="flex flex-col gap-1 text-sm">Quantidade de usos<input aria-label={`Quantidade da forma adicional ${indice + 1}`} className="w-28 rounded-lg border border-outline-variant bg-surface px-3 py-2" type="number" min="1" step="1" value={linha.quantidade} onChange={e => setFormasAdicionais(atuais => atuais.map((item, i) => i === indice ? { ...item, quantidade: e.target.value } : item))} /></label>
+                  <Button type="button" variante="ghost" onClick={() => setFormasAdicionais(atuais => atuais.filter((_, i) => i !== indice))}>Remover forma</Button>
+                </div>
+              ))}
+              <Button type="button" variante="ghost" onClick={() => setFormasAdicionais(atuais => [...atuais, { formaId: '', quantidade: '1' }])}>+ Adicionar outra forma</Button>
+              {formasAdicionais.length > 0 && formaSelecionada?.pesMesa && formaSelecionada.pesMesa.quantidade > 0 && <p className="text-sm text-amber-400">A forma principal já inclui pés no cálculo. Confira para não somar os mesmos pés duas vezes.</p>}
+
               {formaSelecionada && (() => {
                 const infoFormatada = formatarVolumeEMassaLegivel(volumeSugeridoMl)
                 return (
@@ -618,8 +638,12 @@ export function PecasPage() {
                       </span>
                     </div>
                     <p className="text-xs text-on-surface-variant">
-                      Molde &quot;{formaSelecionada.nome}&quot;: requer em média <strong>{infoFormatada.resumoExtenso}</strong>.
+                      Total das formas selecionadas: <strong>{infoFormatada.resumoExtenso}</strong>. A quantidade real e os materiais consumidos podem ser ajustados.
                     </p>
+                    {[{ formaId, quantidade: '1' }, ...formasAdicionais].map((linha, indice) => {
+                      const forma = formas.find(item => String(item.id) === linha.formaId)
+                      return forma ? <p key={indice} className="text-xs text-on-surface-variant">{forma.nome}: {linha.quantidade} × {formatarVolumeEMassaLegivel(calcularVolumeTotalForma(forma)).volumeLegivel}</p> : null
+                    })}
                   </div>
                 )
               })()}
@@ -629,13 +653,14 @@ export function PecasPage() {
                 rotulo="Volume Real de Resina Utilizado (ml)"
                 type="number"
                 step="1"
-                value={volumeResinaMl}
-                onChange={(e) => setVolumeResinaMl(e.target.value)}
+                value={volumeExibido}
+                onChange={(e) => { setVolumeAlterado(true); setVolumeResinaMl(e.target.value) }}
                 placeholder="Ex: 500 (digite a quantidade usada)"
               />
 
               <div className="border-t border-outline-variant/30 pt-3">
                 <p className="text-sm font-semibold text-on-surface mb-2">Materiais Consumidos no Preparo (Resina, Endurecedor, Dyes, Glitter, Flores)</p>
+                <p className="text-xs text-amber-400 mb-2">O volume de resina não gera baixa automática. Registre abaixo a resina, o endurecedor e os demais materiais nas quantidades utilizadas.</p>
                 {consumos.map((linha, indice) => {
                   const matSelecionado = materiaisConsumiveisPeca.find((m) => m.id === Number(linha.materialId))
                   const opcoesUnidade = matSelecionado ? obterOpcoesUnidadeCompativeis(matSelecionado.unidade) : ['un']
@@ -1138,6 +1163,10 @@ export function PecasPage() {
                     <strong className="text-on-surface font-mono">R$ {precificacaoRes.custoEnergia.toFixed(2)}</strong>
                   </div>
                   <div>
+                    <span className="text-on-surface-variant block">Desgaste dos equipamentos:</span>
+                    <strong className="text-on-surface font-mono">R$ {precificacaoRes.custoDesgasteEquipamentos.toFixed(2)}</strong>
+                  </div>
+                  <div>
                     <span className="text-on-surface-variant block">Mão de Obra ({horasMaoDeObra || 0}h):</span>
                     <strong className="text-on-surface font-mono">R$ {precificacaoRes.custoMaoDeObra.toFixed(2)}</strong>
                   </div>
@@ -1158,6 +1187,7 @@ export function PecasPage() {
                     <strong className="text-on-surface font-mono">R$ {precificacaoRes.custoTotal.toFixed(2)}</strong>
                   </div>
                 </div>
+                {desgasteEquipamentos.semDados.length > 0 && <p role="alert" className="text-xs text-amber-400">Custo de desgaste incompleto: cadastre valor de compra e vida útil para {desgasteEquipamentos.semDados.join(', ')}.</p>}
               </div> : <p role="alert" className="text-sm text-error">Confira os valores de precificação; a taxa deve ser menor que 100%.</p>}
 
               {erro && <p role="alert" className="text-sm text-error">{erro}</p>}
@@ -1300,7 +1330,7 @@ export function PecasPage() {
                       <div className="flex items-center gap-2 shrink-0">
                         <Link to="/pecas/$pecaId" params={{ pecaId: String(peca.id) }} hash="editar">
                           <Button variante="ghost" className="text-xs">
-                            Detalhes & Etapas →
+                            Editar →
                           </Button>
                         </Link>
                         <Button variante="ghost" className="text-xs text-error hover:bg-error/10" onClick={() => setPecaExcluindoId(peca.id ?? null)}>

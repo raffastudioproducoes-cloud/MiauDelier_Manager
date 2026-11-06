@@ -11,6 +11,7 @@ import {
   excluirEquipamento,
 } from './equipamentosRepo'
 import type { Equipamento } from '../../db/schema'
+import { obterTaxaDesgaste } from './desgasteEquipamentos'
 
 export function EquipamentosPage() {
   const { mostrarToast } = useToast()
@@ -43,6 +44,7 @@ export function EquipamentosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!nome.trim()) {
@@ -52,6 +54,11 @@ export function EquipamentosPage() {
     const watts = Number(potenciaWatts)
     if (isNaN(watts) || watts <= 0) {
       mostrarToast('Informe uma potência em Watts válida (maior que 0)', 'erro')
+      return
+    }
+    if ((valorCompra && (!Number.isFinite(Number(valorCompra)) || Number(valorCompra) < 0)) ||
+        (vidaUtilHoras && (!Number.isFinite(Number(vidaUtilHoras)) || Number(vidaUtilHoras) <= 0))) {
+      mostrarToast('Informe um valor de compra não negativo e vida útil maior que zero.', 'erro')
       return
     }
 
@@ -176,6 +183,7 @@ export function EquipamentosPage() {
             {equipamentos.map((eq) => {
               const tarifa = Number(custoKwh) || 0.85
               const custoHora = (eq.potenciaWatts / 1000) * tarifa
+              const custoDesgasteHora = obterTaxaDesgaste(eq)
               return (
                 <Card key={eq.id} className="glow-hover flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
                   <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
@@ -199,8 +207,9 @@ export function EquipamentosPage() {
                           <span>Aquisição: <strong>R$ {eq.valorCompra.toFixed(2)}</strong></span>
                         )}
                         {eq.vidaUtilHoras !== undefined && eq.vidaUtilHoras > 0 && (
-                          <span>Vida Útil: <strong>{eq.vidaUtilHoras}h</strong></span>
+                          <span>Vida útil estimada: <strong>{eq.vidaUtilHoras}h</strong></span>
                         )}
+                        {custoDesgasteHora !== undefined && <span>Desgaste: <strong>R$ {custoDesgasteHora.toFixed(2)}/h</strong></span>}
                         <span className="text-primary font-medium">
                           ⚡ R$ {custoHora.toFixed(2)}/h
                         </span>
@@ -218,6 +227,7 @@ export function EquipamentosPage() {
           </div>
         )}
       </section>
+
 
       <ConfirmModal
         aberto={equipamentoExcluindoId !== null}

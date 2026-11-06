@@ -4,6 +4,7 @@ import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 import { converterQuantidade, ehIncompativel } from '../../lib/unidades'
 import { exigirConexaoEstoque, exigirEstoque } from './estoque'
 import { calcularPrecificacao } from '../pricing/pricing'
+import { calcularDesgasteEquipamentos } from './desgasteEquipamentos'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 
 export interface ConsumoComMaterial {
@@ -23,6 +24,7 @@ export interface NovoConsumo {
 export interface NovaPeca {
   nome: string
   formaId: number
+  formasAdicionais?: Peca['formasAdicionais']
   consumos: NovoConsumo[]
   imagemUrl?: string
   volumeResinaMl?: number
@@ -45,17 +47,59 @@ export interface PecaComForma extends Peca {
   nomeForma: string
 }
 
+function formasDaPeca(peca: Pick<Peca, 'formaId' | 'formasAdicionais'>): Map<number, number> {
+  const totais = new Map<number, number>()
+  for (const item of [{ formaId: peca.formaId, quantidade: 1 }, ...(peca.formasAdicionais ?? [])]) {
+    if (!Number.isSafeInteger(item.formaId) || item.formaId <= 0 || !Number.isSafeInteger(item.quantidade) || item.quantidade <= 0) {
+      throw new Error('Selecione formas e quantidades válidas.')
+    }
+    totais.set(item.formaId, (totais.get(item.formaId) ?? 0) + item.quantidade)
+  }
+  return totais
+}
+
+async function ajustarUsosFormas(anteriores: Map<number, number>, novas: Map<number, number>, validarProntas = false): Promise<number> {
+  let custo = 0
+  for (const id of new Set([...anteriores.keys(), ...novas.keys()])) {
+    const forma = await db.formas.get(id)
+    const quantidade = novas.get(id) ?? 0
+    // Uma forma removida anteriormente não pode impedir o estorno dos materiais.
+    if (!forma && quantidade === 0) continue
+    if (!forma) throw new Error('Forma não encontrada.')
+    const diferenca = quantidade - (anteriores.get(id) ?? 0)
+    if (validarProntas && diferenca > 0 && forma.status !== undefined && forma.status !== 'pronta') throw new Error('A forma selecionada ainda não está pronta.')
+    if (diferenca !== 0) await db.formas.update(id, { usosRealizados: Math.max(0, (forma.usosRealizados ?? 0) + diferenca) })
+    if (forma.vidaUtilUsos && forma.vidaUtilUsos > 0) custo += quantidade * (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos
+  }
+  return custo
+}
+
+async function custoFormas(formas: Map<number, number>): Promise<number> {
+  let custo = 0
+  for (const [id, quantidade] of formas) {
+    const forma = await db.formas.get(id)
+    if (!forma) throw new Error('Forma não encontrada.')
+    if (forma.vidaUtilUsos && forma.vidaUtilUsos > 0) custo += quantidade * (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos
+  }
+  return custo
+}
+
 async function criarPecaInterno(nova: NovaPeca): Promise<number> {
   if (nova.consumos.length > 0) exigirConexaoEstoque()
   return db.transaction('rw', db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, async () => {
     const agora = new Date().toISOString()
-    const totalExistente = await db.pecas.count()
-    const numeroSerie = `#${String(totalExistente + 1).padStart(4, '0')}`
+    // A contagem de peças pode diminuir após exclusão e repetir números de série.
+    // UUID permanece estável no backup/sincronização e não exige um contador compartilhado.
+    const identificadorUnico = crypto.randomUUID()
+    // Base 36 é uma representação reversível do UUID, mais curta que seus 36 caracteres.
+    const numeroSerie = `#P-${BigInt(`0x${identificadorUnico.replace(/-/g, '')}`).toString(36).toUpperCase().padStart(25, '0')}`
 
     const pecaId = (await db.pecas.add({
+      identificadorUnico,
       numeroSerie,
       nome: nova.nome,
       formaId: nova.formaId,
+      formasAdicionais: nova.formasAdicionais ?? [],
       status: 'planejada',
       criadaEm: agora,
       imagemUrl: nova.imagemUrl,
@@ -105,26 +149,13 @@ async function criarPecaInterno(nova: NovaPeca): Promise<number> {
       })
     }
 
-    let detalheMolde = ''
-    if (nova.formaId) {
-      const forma = await db.formas.get(nova.formaId)
-      if (forma && forma.id !== undefined) {
-        const novosUsos = (forma.usosRealizados ?? 0) + 1
-        await db.formas.update(forma.id, { usosRealizados: novosUsos })
-        if (forma.custoFabricacao && forma.vidaUtilUsos && forma.vidaUtilUsos > 0) {
-          const custoUso = (forma.custoFabricacao / forma.vidaUtilUsos).toFixed(2)
-          detalheMolde = ` (uso #${novosUsos} do molde "${forma.nome}", amortização: R$ ${custoUso})`
-        } else {
-          detalheMolde = ` (uso #${novosUsos} do molde "${forma.nome}")`
-        }
-      }
-    }
+    const custoFormasRegistrado = await ajustarUsosFormas(new Map(), formasDaPeca(nova), true)
 
 
     await db.eventosPeca.add({
       pecaId,
       tipo: 'criacao',
-      descricao: `Peça criada e consumo de material registrado${detalheMolde}`,
+      descricao: `Peça criada e consumo de material e uso das formas registrados (amortização: R$ ${custoFormasRegistrado.toFixed(2)})`,
       criadoEm: agora,
     })
 
@@ -178,18 +209,12 @@ async function atualizarStatusPecaInterno(pecaId: number, novoStatus: StatusPeca
       const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
       for (const consumo of consumos) {
         const material = await db.materiais.get(consumo.materialId)
-        if (material) {
-          await db.materiais.update(consumo.materialId, {
-            quantidadeEstoque: material.quantidadeEstoque + consumo.quantidade,
-          })
-        }
+        if (!material) throw new Error(`Material ${consumo.materialId} não encontrado. Não foi possível devolver o estoque; restaure o material antes de cancelar.`)
+        await db.materiais.update(consumo.materialId, {
+          quantidadeEstoque: material.quantidadeEstoque + consumo.quantidade,
+        })
       }
-      if (peca.formaId) {
-        const forma = await db.formas.get(peca.formaId)
-        if (forma && forma.id !== undefined && (forma.usosRealizados ?? 0) > 0) {
-          await db.formas.update(forma.id, { usosRealizados: (forma.usosRealizados ?? 1) - 1 })
-        }
-      }
+      await ajustarUsosFormas(formasDaPeca(peca), new Map())
       await db.pecas.update(pecaId, { status: 'cancelada' })
       await db.eventosPeca.add({
         pecaId,
@@ -212,12 +237,7 @@ async function atualizarStatusPecaInterno(pecaId: number, novoStatus: StatusPeca
           quantidadeEstoque: material.quantidadeEstoque - consumo.quantidade,
         })
       }
-      if (peca.formaId) {
-        const forma = await db.formas.get(peca.formaId)
-        if (forma && forma.id !== undefined) {
-          await db.formas.update(forma.id, { usosRealizados: (forma.usosRealizados ?? 0) + 1 })
-        }
-      }
+      await ajustarUsosFormas(new Map(), formasDaPeca(peca), true)
       await db.pecas.update(pecaId, { status: novoStatus })
       await db.eventosPeca.add({
         pecaId,
@@ -294,18 +314,12 @@ async function excluirPecaInterno(pecaId: number): Promise<void> {
       const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
       for (const consumo of consumos) {
         const material = await db.materiais.get(consumo.materialId)
-        if (material) {
-          await db.materiais.update(consumo.materialId, {
-            quantidadeEstoque: material.quantidadeEstoque + consumo.quantidade,
-          })
-        }
+        if (!material) throw new Error(`Material ${consumo.materialId} não encontrado. Não foi possível devolver o estoque; restaure o material antes de excluir.`)
+        await db.materiais.update(consumo.materialId, {
+          quantidadeEstoque: material.quantidadeEstoque + consumo.quantidade,
+        })
       }
-      if (peca.formaId) {
-        const forma = await db.formas.get(peca.formaId)
-        if (forma && forma.id !== undefined && (forma.usosRealizados ?? 0) > 0) {
-          await db.formas.update(forma.id, { usosRealizados: (forma.usosRealizados ?? 1) - 1 })
-        }
-      }
+      await ajustarUsosFormas(formasDaPeca(peca), new Map())
     }
     await db.consumosPeca.where('pecaId').equals(pecaId).delete()
     await db.eventosPeca.where('pecaId').equals(pecaId).delete()
@@ -330,7 +344,7 @@ export async function atualizarDadosProducaoPeca(pecaId: number, dados: Partial<
 
 async function editarConsumosPecaInterno(pecaId: number, novos: NovoConsumo[], dados: Partial<Peca>): Promise<void> {
   const tarifas = await obterTarifasConfig()
-  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas], async () => {
+  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.equipamentos], async () => {
     const peca = await db.pecas.get(pecaId)
     if (!peca) throw new Error('Peça não encontrada.')
     const anteriores = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
@@ -372,18 +386,14 @@ async function editarConsumosPecaInterno(pecaId: number, novos: NovoConsumo[], d
       }
     }
     const atualizada = { ...peca, ...dados }
-    const forma = await db.formas.get(atualizada.formaId)
-    if (!forma) throw new Error('Forma não encontrada.')
-    if (atualizada.formaId !== peca.formaId && forma.status !== undefined && forma.status !== 'pronta') throw new Error('A forma selecionada ainda não está pronta.')
-    if (atualizada.formaId !== peca.formaId && peca.status !== 'cancelada') {
-      const anterior = await db.formas.get(peca.formaId)
-      if (!anterior) throw new Error('Forma anterior não encontrada.')
-      await db.formas.update(peca.formaId, { usosRealizados: Math.max(0, (anterior.usosRealizados ?? 0) - 1) })
-      await db.formas.update(atualizada.formaId, { usosRealizados: (forma.usosRealizados ?? 0) + 1 })
-    }
-    const custoForma = forma?.vidaUtilUsos && forma.vidaUtilUsos > 0 ? (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos : 0
+    const formasAtuais = formasDaPeca(peca)
+    const formasNovas = formasDaPeca(atualizada)
+    const custoForma = peca.status === 'cancelada'
+      ? await custoFormas(formasNovas)
+      : await ajustarUsosFormas(formasAtuais, formasNovas, true)
     const custoPropaganda = atualizada.diasPropaganda && atualizada.diasPropaganda > 0 ? (atualizada.valorPropagandaTotal ?? 0) / atualizada.diasPropaganda : 0
-    const precoVenda = calcularPrecificacao({ custoMaterial, custoAcessorios: (atualizada.custoEpiInsumos ?? 0) + custoPropaganda + (atualizada.valorFrete ?? 0), horasProducao: atualizada.horasMaoDeObra ?? 0, valorHora: tarifas.valorHoraMaoDeObra || 25, rateioFixoPercent: 0, margemLucroPercent: atualizada.margemDesejada ?? 50, usosEnergia: atualizada.usosEnergia ?? [], tarifaKwh: tarifas.tarifaKwh || 0.85, litrosAgua: atualizada.litrosAgua ?? 0, custoForma, percentualTaxas: atualizada.percentualTaxas ?? 0 }).precoFinal
+    const custoDesgasteEquipamentos = calcularDesgasteEquipamentos(atualizada.usosEnergia ?? [], await db.equipamentos.toArray()).custo
+    const precoVenda = calcularPrecificacao({ custoMaterial, custoAcessorios: (atualizada.custoEpiInsumos ?? 0) + custoPropaganda + (atualizada.valorFrete ?? 0), horasProducao: atualizada.horasMaoDeObra ?? 0, valorHora: tarifas.valorHoraMaoDeObra || 25, rateioFixoPercent: 0, margemLucroPercent: atualizada.margemDesejada ?? 50, usosEnergia: atualizada.usosEnergia ?? [], tarifaKwh: tarifas.tarifaKwh || 0.85, litrosAgua: atualizada.litrosAgua ?? 0, custoForma, custoDesgasteEquipamentos, percentualTaxas: atualizada.percentualTaxas ?? 0 }).precoFinal
     await db.consumosPeca.where('pecaId').equals(pecaId).delete()
     if (linhas.length) await db.consumosPeca.bulkAdd(linhas)
     await db.pecas.update(pecaId, { ...dados, precoVenda })

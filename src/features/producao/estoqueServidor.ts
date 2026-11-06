@@ -32,11 +32,33 @@ export async function confirmarMovimentosEstoque(operacaoId: string, movimentos:
   }
   const perfil = await getPerfilAtivo()
   if (!perfil.supabaseId) throw new Error('Sincronize o perfil antes de movimentar o estoque.')
-  const { data, error } = await supabase.rpc('movimentar_estoque_atomico', {
+  // O servidor guarda o resultado por operação. Se a resposta se perder,
+  // repetir com o MESMO identificador consulta o resultado sem aplicar a
+  // movimentação novamente. Não gerar um novo UUID nesta tentativa.
+  const argumentos = {
     p_perfil_id: perfil.supabaseId,
     p_operacao_id: operacaoId,
     p_movimentos: movimentos,
-  })
+  }
+  let resposta
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    try {
+      const atual = await supabase.rpc('movimentar_estoque_atomico', argumentos)
+      const falhaTransporte = atual.status === 0 || atual.status >= 500
+      if (atual.error && falhaTransporte) {
+        if (tentativa === 0) continue
+        throw new Error('Não foi possível confirmar se o estoque foi movimentado. Confira o saldo e a peça antes de tentar novamente.')
+      }
+      resposta = atual
+      break
+    } catch (falha) {
+      if (!(falha instanceof TypeError)) throw falha
+      if (tentativa === 0) continue
+      throw new Error('Não foi possível confirmar se o estoque foi movimentado. Confira o saldo e a peça antes de tentar novamente.', { cause: falha })
+    }
+  }
+  if (!resposta) throw new Error('Não foi possível confirmar a movimentação de estoque.')
+  const { data, error } = resposta
   if (error) throw new Error(error.message || 'Não foi possível confirmar o estoque no servidor.')
   if (!Array.isArray(data) || data.length !== movimentos.length) throw new Error('Resposta inválida do servidor de estoque.')
   const saldos = new Map<number, number>()

@@ -118,13 +118,17 @@ export interface UsoEnergiaPeca {
   nomeEquipamento: string
   potenciaWatts: number
   minutosUso: number
+  custoDesgastePorHora?: number
 }
 
 export interface Peca {
   id?: number
+  /** Identificador portátil de novas peças; o id numérico legado continua nos vínculos locais. */
+  identificadorUnico?: string
   numeroSerie?: string
   nome: string
   formaId: number
+  formasAdicionais?: Array<{ formaId: number; quantidade: number }>
   status: StatusPeca
   criadaEm: string
   precoVenda?: number

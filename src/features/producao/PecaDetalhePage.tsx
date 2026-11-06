@@ -24,6 +24,8 @@ import { SeletorImagem } from '../../components/ui/SeletorImagem'
 import { listarContas } from '../financeiro/contasRepo'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 import { calcularPrecificacao } from '../pricing/pricing'
+import { calcularDesgasteEquipamentos, obterTaxaDesgaste } from './desgasteEquipamentos'
+import { calcularVolumeTotalForma } from '../calculator/volume'
 import { formatarVolumeEMassaLegivel, obterOpcoesUnidadeCompativeis } from '../../lib/unidades'
 import { listarMateriais } from './materiaisRepo'
 import { listarFormas } from './formasRepo'
@@ -66,7 +68,8 @@ export function PecaDetalhePage() {
   const [editVolume, setEditVolume] = useState('')
   const [editCura, setEditCura] = useState('')
   const [editForma, setEditForma] = useState('')
-  const [editEquipamentos, setEditEquipamentos] = useState<{ equipamentoId: string; minutos: string }[]>([])
+  const [editFormasAdicionais, setEditFormasAdicionais] = useState<Array<{ formaId: string; quantidade: string }>>([])
+  const [editEquipamentos, setEditEquipamentos] = useState<{ equipamentoId: string; minutos: string; custoDesgastePorHora?: number }[]>([])
   const [editConsumos, setEditConsumos] = useState<{ materialId: string; quantidade: string; unidade: string }[]>([])
   const [editHorasMaoDeObra, setEditHorasMaoDeObra] = useState('')
   const [editValorPropagandaTotal, setEditValorPropagandaTotal] = useState('')
@@ -123,7 +126,8 @@ export function PecaDetalhePage() {
     if (pecaEncontrada) {
       setEditNome(pecaEncontrada.nome)
       setEditForma(String(pecaEncontrada.formaId))
-      setEditEquipamentos((pecaEncontrada.usosEnergia ?? []).map(uso => ({ equipamentoId: String(uso.equipamentoId), minutos: String(uso.minutosUso) })))
+      setEditFormasAdicionais((pecaEncontrada.formasAdicionais ?? []).map(forma => ({ formaId: String(forma.formaId), quantidade: String(forma.quantidade) })))
+      setEditEquipamentos((pecaEncontrada.usosEnergia ?? []).map(uso => ({ equipamentoId: String(uso.equipamentoId), minutos: String(uso.minutosUso), custoDesgastePorHora: uso.custoDesgastePorHora })))
       setEditVolume(pecaEncontrada.volumeResinaMl !== undefined ? String(pecaEncontrada.volumeResinaMl) : '')
       setEditCura(pecaEncontrada.curaMinutos !== undefined ? String(pecaEncontrada.curaMinutos) : '')
       setEditConsumos(consumosCarregados.map(c => ({ materialId: String(c.materialId), quantidade: String(c.quantidade), unidade: c.unidade ?? '' })))
@@ -186,8 +190,10 @@ export function PecaDetalhePage() {
   const precificacaoRes = useMemo(() => {
     if (!peca) return null
     const custoAcc = (peca.custoEpiInsumos || 0) + custoPropagandaDia + (peca.valorFrete || 0)
-    const forma = formas.find(item => item.id === peca.formaId)
-    const custoForma = forma?.vidaUtilUsos && forma.vidaUtilUsos > 0 ? (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos : 0
+    const custoForma = [{ formaId: peca.formaId, quantidade: 1 }, ...(peca.formasAdicionais ?? [])].reduce((total, item) => {
+      const forma = formas.find(f => f.id === item.formaId)
+      return total + (forma?.vidaUtilUsos && forma.vidaUtilUsos > 0 ? item.quantidade * (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos : 0)
+    }, 0)
     try { return calcularPrecificacao({
       custoMaterial: custoMateriaisTotal,
       custoAcessorios: custoAcc,
@@ -199,9 +205,10 @@ export function PecaDetalhePage() {
       tarifaKwh,
       litrosAgua: peca.litrosAgua || 0,
       custoForma,
+      custoDesgasteEquipamentos: calcularDesgasteEquipamentos(peca.usosEnergia ?? [], equipamentos).custo,
       percentualTaxas: peca.percentualTaxas || 0,
     }) } catch { return null }
-  }, [peca, custoMateriaisTotal, custoPropagandaDia, valorHoraMaoDeObra, tarifaKwh, formas])
+  }, [peca, custoMateriaisTotal, custoPropagandaDia, valorHoraMaoDeObra, tarifaKwh, formas, equipamentos])
 
   async function handleMudarStatus(novoStatus: StatusPeca) {
     if (novoStatus === 'vendida') {
@@ -267,15 +274,18 @@ export function PecaDetalhePage() {
       if ([editVolume, editCura, editHorasMaoDeObra, editValorPropagandaTotal, editDiasPropaganda, editValorFrete, editPercentualTaxas, editMargemDesejada, editLitrosAgua, editCustoEpiInsumos].some(v => v.trim() !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0))) throw new Error('Informe valores numéricos não negativos.')
       if (editConsumos.some(c => !c.materialId || !Number.isFinite(Number(c.quantidade)) || Number(c.quantidade) <= 0)) throw new Error('Informe um material e uma quantidade válida para cada linha.')
       if (!editForma) throw new Error('Selecione uma forma.')
+      if (editFormasAdicionais.some(item => !item.formaId || !Number.isSafeInteger(Number(item.quantidade)) || Number(item.quantidade) <= 0)) throw new Error('Informe formas e quantidades válidas.')
       const usosEnergia = editEquipamentos.map(linha => {
         const eq = equipamentos.find(item => item.id === Number(linha.equipamentoId))
         const minutos = Number(linha.minutos)
         if (!eq || !Number.isFinite(minutos) || minutos <= 0) throw new Error('Informe equipamento e tempo válidos.')
-        return { equipamentoId: eq.id!, nomeEquipamento: eq.nome, potenciaWatts: eq.potenciaWatts, minutosUso: minutos }
+        const custoDesgastePorHora = linha.custoDesgastePorHora ?? obterTaxaDesgaste(eq)
+        return { equipamentoId: eq.id!, nomeEquipamento: eq.nome, potenciaWatts: eq.potenciaWatts, minutosUso: minutos, custoDesgastePorHora }
       })
       await editarConsumosPeca(id, editConsumos.map(c => ({ materialId: Number(c.materialId), quantidade: Number(c.quantidade), unidade: c.unidade })), {
         nome: editNome.trim(),
         formaId: Number(editForma),
+        formasAdicionais: editFormasAdicionais.map(item => ({ formaId: Number(item.formaId), quantidade: Number(item.quantidade) })),
         usosEnergia,
         volumeResinaMl: Number(editVolume) || undefined,
         curaMinutos: Number(editCura) || undefined,
@@ -541,7 +551,25 @@ export function PecaDetalhePage() {
           <h3 className="text-sm font-semibold text-on-surface">Etapas 1 e 2: molde, materiais e cura</h3>
           <TextField id="edit-nome-peca" rotulo="Nome da peça" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
           <div className="flex flex-col gap-1"><label htmlFor="edit-forma-peca" className="text-xs font-medium text-on-surface">Forma</label><select id="edit-forma-peca" value={editForma} onChange={e => setEditForma(e.target.value)} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface">{formas.filter(f => f.id === peca.formaId || f.status === undefined || f.status === 'pronta').map(f => <option key={f.id} value={String(f.id)}>{f.nome}</option>)}</select></div>
+          {editFormasAdicionais.map((linha, indice) => <div key={indice} className="flex flex-wrap gap-2 items-end">
+            <label className="flex flex-col flex-1 gap-1 text-xs">Forma adicional {indice + 1}
+              <select value={linha.formaId} onChange={e => setEditFormasAdicionais(atuais => atuais.map((item, i) => i === indice ? { ...item, formaId: e.target.value } : item))} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm">
+                <option value="">Selecione o molde...</option>
+                {formas.filter(f => f.status === undefined || f.status === 'pronta' || (peca.formasAdicionais ?? []).some(item => item.formaId === f.id)).map(f => <option key={f.id} value={String(f.id)}>{f.nome}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs">Quantidade de usos<input aria-label={`Quantidade da forma adicional ${indice + 1}`} type="number" min="1" step="1" value={linha.quantidade} onChange={e => setEditFormasAdicionais(atuais => atuais.map((item, i) => i === indice ? { ...item, quantidade: e.target.value } : item))} className="w-28 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm" /></label>
+            <Button type="button" variante="ghost" onClick={() => setEditFormasAdicionais(atuais => atuais.filter((_, i) => i !== indice))}>Remover forma</Button>
+          </div>)}
+          <Button type="button" variante="ghost" onClick={() => setEditFormasAdicionais(atuais => [...atuais, { formaId: '', quantidade: '1' }])}>+ Adicionar outra forma</Button>
+          <p className="text-xs text-on-surface-variant">Volume sugerido pelas formas: {formatarVolumeEMassaLegivel([{ formaId: editForma, quantidade: '1' }, ...editFormasAdicionais].reduce((total, item) => {
+            const forma = formas.find(f => String(f.id) === item.formaId)
+            const quantidade = Number(item.quantidade)
+            return total + (forma && Number.isSafeInteger(quantidade) && quantidade > 0 ? calcularVolumeTotalForma(forma) * quantidade : 0)
+          }, 0)).resumoExtenso}. O volume real permanece editável.</p>
+          {editFormasAdicionais.length > 0 && (() => { const principal = formas.find(f => String(f.id) === editForma); return principal?.pesMesa && principal.pesMesa.quantidade > 0 ? <p className="text-xs text-amber-400">A forma principal já inclui pés no cálculo. Confira para não somar os mesmos pés duas vezes.</p> : null })()}
           <TextField id="edit-volume-peca" rotulo="Volume real de resina (ml)" type="number" min="0" value={editVolume} onChange={(e) => setEditVolume(e.target.value)} />
+          <p className="text-xs text-amber-400">O volume de resina não gera baixa automática. Registre a resina, o endurecedor e os demais insumos na lista de materiais.</p>
           <TextField id="edit-cura-peca" rotulo="Tempo de cura (minutos)" type="number" min="0" value={editCura} onChange={(e) => setEditCura(e.target.value)} />
           <h3 className="text-sm font-semibold text-on-surface">Materiais e EPIs consumidos</h3>
           {editConsumos.map((linha, indice) => {
@@ -563,7 +591,7 @@ export function PecaDetalhePage() {
           <Button type="button" variante="ghost" onClick={() => setEditConsumos(atuais => [...atuais, { materialId: '', quantidade: '', unidade: '' }])}>+ Adicionar material ou EPI</Button>
           <h3 className="text-sm font-semibold text-on-surface">Etapas 2 e 3: equipamentos utilizados</h3>
           {editEquipamentos.map((linha, indice) => <div key={indice} className="flex flex-wrap items-end gap-2 rounded-xl border border-outline-variant/60 p-3">
-            <div className="flex flex-1 min-w-[160px] flex-col gap-1"><label htmlFor={`edit-equipamento-${indice}`} className="text-xs font-medium text-on-surface">Equipamento</label><select id={`edit-equipamento-${indice}`} value={linha.equipamentoId} onChange={e => setEditEquipamentos(atuais => atuais.map((item, i) => i === indice ? { ...item, equipamentoId: e.target.value } : item))} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"><option value="">Selecione...</option>{equipamentos.map(eq => <option key={eq.id} value={String(eq.id)}>{eq.nome} ({eq.potenciaWatts} W)</option>)}</select></div>
+            <div className="flex flex-1 min-w-[160px] flex-col gap-1"><label htmlFor={`edit-equipamento-${indice}`} className="text-xs font-medium text-on-surface">Equipamento</label><select id={`edit-equipamento-${indice}`} value={linha.equipamentoId} onChange={e => setEditEquipamentos(atuais => atuais.map((item, i) => i === indice ? { ...item, equipamentoId: e.target.value, custoDesgastePorHora: undefined } : item))} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"><option value="">Selecione...</option>{equipamentos.map(eq => <option key={eq.id} value={String(eq.id)}>{eq.nome} ({eq.potenciaWatts} W)</option>)}</select></div>
             <div className="w-32"><TextField id={`edit-minutos-${indice}`} rotulo="Tempo (minutos)" type="number" min="0" value={linha.minutos} onChange={e => setEditEquipamentos(atuais => atuais.map((item, i) => i === indice ? { ...item, minutos: e.target.value } : item))} /></div>
             <Button type="button" variante="ghost" aria-label={`Remover equipamento ${indice + 1}`} onClick={() => setEditEquipamentos(atuais => atuais.filter((_, i) => i !== indice))}>×</Button>
           </div>)}

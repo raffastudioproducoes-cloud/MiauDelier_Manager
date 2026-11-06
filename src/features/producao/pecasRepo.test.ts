@@ -27,6 +27,42 @@ describe('repositório de peças', () => {
     await setupAccount('senha-do-ateliê')
   })
 
+  it('devolve materiais ao excluir peça mesmo se um molde tiver sido excluído', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 2 })
+    const id = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId, quantidade: 2 }] })
+    await db.formas.delete(formaId)
+    await excluirPeca(id)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(10)
+    expect(await db.pecas.get(id)).toBeUndefined()
+  })
+
+  it('preserva peça e todos os saldos se material necessário ao estorno estiver ausente', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    const a = await criarMaterial({ nome: 'A', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 2 })
+    const b = await criarMaterial({ nome: 'B', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 2 })
+    const id = await criarPeca({ nome: 'Mesa', formaId, consumos: [{ materialId: a, quantidade: 2 }, { materialId: b, quantidade: 3 }] })
+    await db.materiais.delete(b)
+    await expect(atualizarStatusPeca(id, 'cancelada')).rejects.toThrow(/não encontrado/i)
+    await expect(excluirPeca(id)).rejects.toThrow(/não encontrado/i)
+    expect((await db.materiais.get(a))?.quantidadeEstoque).toBe(8)
+    expect((await db.pecas.get(id))?.status).toBe('planejada')
+    expect(await db.consumosPeca.where('pecaId').equals(id).count()).toBe(2)
+  })
+
+  it('gera identificadores portáteis distintos e não reutiliza série após exclusão', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    const primeiro = await criarPeca({ nome: 'Primeira', formaId, consumos: [] })
+    const registroPrimeiro = await db.pecas.get(primeiro)
+    expect(registroPrimeiro?.identificadorUnico).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
+    expect(registroPrimeiro?.numeroSerie).toMatch(/^#P-[0-9A-Z]{25}$/)
+    await excluirPeca(primeiro)
+    const segundo = await criarPeca({ nome: 'Segunda', formaId, consumos: [] })
+    const registroSegundo = await db.pecas.get(segundo)
+    expect(registroSegundo?.identificadorUnico).not.toBe(registroPrimeiro?.identificadorUnico)
+    expect(registroSegundo?.numeroSerie).not.toBe(registroPrimeiro?.numeroSerie)
+  })
+
   it('ajusta estoque pela diferença e conserva o custo antigo da quantidade existente', async () => {
     const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
     const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 100 })

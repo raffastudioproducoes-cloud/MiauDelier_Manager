@@ -19,6 +19,7 @@ export interface PrecificacaoInput {
   litrosAgua?: number
   tarifaAguaPorLitro?: number
   custoForma?: number
+  custoDesgasteEquipamentos?: number
   percentualDesperdicio?: number
   percentualTaxas?: number
   taxaFixa?: number
@@ -32,6 +33,7 @@ export interface PrecificacaoResultado {
   custoEnergia: number
   custoAgua: number
   custoForma: number
+  custoDesgasteEquipamentos: number
   custoDireto: number
   custoMaoDeObra: number
   subtotal: number
@@ -56,12 +58,14 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
 
   const custoEmbalagem = input.custoEmbalagem ?? 0
   const custoForma = input.custoForma ?? 0
+  const custoDesgasteEquipamentos = input.custoDesgasteEquipamentos ?? 0
   const percentualDesperdicio = input.percentualDesperdicio ?? 0
   const percentualTaxas = input.percentualTaxas ?? 0
   const taxaFixa = input.taxaFixa ?? 0
 
   validarNaoNegativoFinito('custoEmbalagem', custoEmbalagem)
   validarNaoNegativoFinito('custoForma', custoForma)
+  validarNaoNegativoFinito('custoDesgasteEquipamentos', custoDesgasteEquipamentos)
   validarNaoNegativoFinito('percentualDesperdicio', percentualDesperdicio)
   validarNaoNegativoFinito('percentualTaxas', percentualTaxas)
   if (percentualTaxas >= 100) throw new Error('A taxa da plataforma deve ser menor que 100%.')
@@ -98,7 +102,7 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
   }
 
   const custoDesperdicio = input.custoMaterial * (percentualDesperdicio / 100)
-  const custoDireto = input.custoMaterial + input.custoAcessorios + custoEmbalagem + custoDesperdicio + custoEnergia + custoAgua + custoForma
+  const custoDireto = input.custoMaterial + input.custoAcessorios + custoEmbalagem + custoDesperdicio + custoEnergia + custoAgua + custoForma + custoDesgasteEquipamentos
   const custoMaoDeObra = input.horasProducao * input.valorHora
   const subtotal = custoDireto + custoMaoDeObra
   const custoFixo = subtotal * (input.rateioFixoPercent / 100)
@@ -116,6 +120,7 @@ export function calcularPrecificacao(input: PrecificacaoInput): PrecificacaoResu
     custoEnergia,
     custoAgua,
     custoForma,
+    custoDesgasteEquipamentos,
     custoDireto,
     custoMaoDeObra,
     subtotal,
