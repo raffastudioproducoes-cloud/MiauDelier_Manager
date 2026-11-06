@@ -89,6 +89,47 @@ describe('syncService download ordering', () => {
 
   })
 
+  it('sincroniza registro de vida útil com identificador composto sem duplicar', async () => {
+    const registro = { id: 'peca-uuid:forma:42', tipo: 'forma', recursoId: 42, pecaRef: 'peca-uuid', quantidade: 2, unidade: 'uso', confirmadoEm: '2026-11-06' }
+    remoteEvents.push({ id: 'evento-vida', perfil_id: 1, tabela: 'registrosVidaUtil', registro_id: registro.id, acao: 'insert', dados_criptografados: JSON.stringify(registro), timestamp: 1000 })
+    const { syncWithSupabase } = await import('./syncService')
+    await syncWithSupabase()
+    expect(await db.registrosVidaUtil.get(registro.id)).toMatchObject(registro)
+    await syncWithSupabase()
+    expect(await db.registrosVidaUtil.count()).toBe(1)
+  })
+
+  it('interrompe a sincronização sem substituir peça de identidade diferente nem avançar cursor', async () => {
+    await db.pecas.add({ id: 42, identificadorUnico: 'identidade-local', nome: 'Peça local', formaId: 1, status: 'planejada', criadaEm: '2026-11-06' })
+    await db.materiais.add({ id: 2, nome: 'Material local', categoriaId: 1, unidade: 'g', quantidadeEstoque: 10, custoUnitario: 1 })
+    await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: '1000' })
+    remoteEvents.push({ id: 'alteracao-material', perfil_id: 1, tabela: 'materiais', registro_id: '2', acao: 'update', dados_criptografados: JSON.stringify({ id: 2, nome: 'Material remoto', categoriaId: 1, unidade: 'g', quantidadeEstoque: 5, custoUnitario: 1 }), timestamp: 1500 })
+    remoteEvents.push({ id: 'evento-remoto', perfil_id: 1, tabela: 'pecas', registro_id: '42', acao: 'insert', dados_criptografados: JSON.stringify({ id: 42, identificadorUnico: 'identidade-remota', nome: 'Outra peça', formaId: 1, status: 'planejada', criadaEm: '2026-11-06' }), timestamp: 2000 })
+    const { syncWithSupabase } = await import('./syncService')
+    await expect(syncWithSupabase()).rejects.toThrow(/conflito de identidade/i)
+    expect(await db.pecas.get(42)).toMatchObject({ nome: 'Peça local', identificadorUnico: 'identidade-local' })
+    expect(await db.materiais.get(2)).toMatchObject({ nome: 'Material local', quantidadeEstoque: 10 })
+    expect((await db.syncMetadata.where('chave').equals('lastSyncTimestamp').first())?.valor).toBe('1000')
+  })
+
+  it('protege uma peça identificada de exclusão remota sem identidade correspondente', async () => {
+    await db.pecas.add({ id: 42, identificadorUnico: 'identidade-local', nome: 'Peça local', formaId: 1, status: 'planejada', criadaEm: '2026-11-06' })
+    await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: '1000' })
+    remoteEvents.push({ id: 'exclusao-remota', perfil_id: 1, tabela: 'pecas', registro_id: '42', acao: 'delete', dados_criptografados: '', timestamp: 2000 })
+    const { syncWithSupabase } = await import('./syncService')
+    await expect(syncWithSupabase()).rejects.toThrow(/conflito de identidade/i)
+    expect(await db.pecas.get(42)).toMatchObject({ nome: 'Peça local' })
+  })
+
+  it('aplica exclusão remota com a mesma identidade', async () => {
+    await db.pecas.add({ id: 42, identificadorUnico: 'identidade-local', nome: 'Peça local', formaId: 1, status: 'planejada', criadaEm: '2026-11-06' })
+    await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: '1000' })
+    remoteEvents.push({ id: 'exclusao-remota', perfil_id: 1, tabela: 'pecas', registro_id: '42', acao: 'delete', dados_criptografados: JSON.stringify({ identificadorUnico: 'identidade-local' }), timestamp: 2000 })
+    const { syncWithSupabase } = await import('./syncService')
+    await syncWithSupabase()
+    expect(await db.pecas.get(42)).toBeUndefined()
+  })
+
   it('baixa eventos remotos empatados no timestamp do ultimo sync local', async () => {
     remoteEvents.push({
       id: '00000000-0000-4000-8000-000000000002',

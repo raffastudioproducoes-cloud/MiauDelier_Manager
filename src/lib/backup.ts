@@ -26,6 +26,8 @@ const TABELAS = [
   'contas',
   'configuracoes',
   'auditoria',
+  'equipamentos',
+  'registrosVidaUtil',
 ] as const
 
 type Envelope = { app: string; versao: string; dados: Record<string, unknown[]>; checksum: string }
@@ -115,6 +117,9 @@ export async function importarBackup(json: string, targetDb?: MiauDelierDB): Pro
 
     await dbAlvo.transaction('rw', TABELAS.map((nome) => dbAlvo.table(nome)), async () => {
       for (const nomeTabela of TABELAS) {
+        // Backups mais antigos não incluem essas tabelas; preservar os dados
+        // atuais é mais seguro do que interpretá-los como listas vazias.
+        if ((nomeTabela === 'equipamentos' || nomeTabela === 'registrosVidaUtil') && !Object.prototype.hasOwnProperty.call(parsed.dados, nomeTabela)) continue
         await dbAlvo.table(nomeTabela).clear()
         const linhas = parsed.dados[nomeTabela] ?? []
         if (linhas.length > 0) await dbAlvo.table(nomeTabela).bulkAdd(linhas)
@@ -148,6 +153,7 @@ export async function zerarDadosManterPerfil(): Promise<void> {
     'mensagensIA',
     'notificacoes',
     'equipamentos',
+    'registrosVidaUtil',
     'taxas',
     'logs',
   ] as const

@@ -43,6 +43,7 @@ describe('MiauDelierDB schema', () => {
         'pedidos',
         'perfisAtelie',
         'rascunhosFormulario',
+        'registrosVidaUtil',
         'syncMetadata',
         'syncQueue',
         'taxas',

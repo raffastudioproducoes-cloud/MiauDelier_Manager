@@ -1,4 +1,4 @@
-import Dexie from 'dexie'
+import Dexie, { type Transaction } from 'dexie'
 import { db, type SyncEvent } from '../db/schema'
 import { supabase } from './supabase'
 import { syncPerfisFromSupabase } from './perfisRepo'
@@ -22,10 +22,37 @@ let hasPendingLocalChanges = false
 /** Flag para evitar sync concorrente */
 let isSyncing = false
 
-function addSyncQueueEvent(event: SyncEvent) {
-  Dexie.ignoreTransaction(() => db.syncQueue.add(event)).catch(err => {
-    console.error('[DEBUG FATAL] ERRO ao adicionar na fila de upload (syncQueue):', event.tabela, err)
-  })
+// Transações existentes frequentemente não incluem syncQueue no seu escopo.
+// Só enfileiramos após o commit da transação raiz, para que operações abortadas
+// não produzam eventos fantasmas. Isso não elimina a janela entre commit e fila.
+const eventosPorTransacao = new WeakMap<Transaction, Map<string, SyncEvent>>()
+let ultimoTimestampLocal = 0
+
+function addSyncQueueEvent(transacao: Transaction, event: SyncEvent) {
+  let raiz = transacao
+  while (raiz.parent) raiz = raiz.parent
+  let eventos = eventosPorTransacao.get(raiz)
+  if (!eventos) {
+    eventos = new Map()
+    eventosPorTransacao.set(raiz, eventos)
+    const confirmados = eventos
+    raiz.on('complete', () => {
+      const lote = [...confirmados.values()].sort((a, b) => a.timestamp - b.timestamp)
+      if (!lote.length) return
+      Dexie.ignoreTransaction(() => db.syncQueue.bulkAdd(lote)).then(() => {
+        hasPendingLocalChanges = true
+        resetInactivityTimer()
+      }).catch(err => {
+        console.error('[DEBUG FATAL] ERRO ao adicionar eventos confirmados na fila de sincronização:', err)
+      })
+    })
+  }
+  ultimoTimestampLocal = Math.max(Date.now(), ultimoTimestampLocal + 1)
+  event.timestamp = ultimoTimestampLocal
+  const chave = `${event.tabela}:${event.registroId}`
+  const anterior = eventos.get(chave)
+  if (anterior?.acao === 'insert' && event.acao === 'update') event.acao = 'insert'
+  eventos.set(chave, event)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -46,6 +73,7 @@ const TABLES_TO_SYNC = [
   'contas',
   'auditoria',
   'equipamentos',
+  'registrosVidaUtil',
   'taxas',
 ]
 
@@ -84,12 +112,10 @@ export function registerDexieHooks() {
   TABLES_TO_SYNC.forEach((tableName) => {
     const table = db.table(tableName)
 
-    table.hook('creating', function (_primKey, obj) {
+    table.hook('creating', function (_primKey, obj, transacao) {
       if (isApplyingRemote) return
       this.onsuccess = function (realPrimKey) {
-        hasPendingLocalChanges = true
-        resetInactivityTimer()
-        addSyncQueueEvent({
+        addSyncQueueEvent(transacao, {
           id: crypto.randomUUID(),
           tabela: tableName,
           registroId: String(realPrimKey),
@@ -101,42 +127,32 @@ export function registerDexieHooks() {
       }
     })
 
-    table.hook('updating', function (_modifications, primKey) {
+    table.hook('updating', function (_modifications, primKey, _obj, transacao) {
       if (isApplyingRemote) return
       this.onsuccess = function (updatedObj) {
-        hasPendingLocalChanges = true
-        resetInactivityTimer()
         if (!updatedObj) return
-
-        Dexie.ignoreTransaction(async () => {
-          const currentObj = await table.get(primKey)
-          if (!currentObj) return
-          await db.syncQueue.add({
+        addSyncQueueEvent(transacao, {
             id: crypto.randomUUID(),
             tabela: tableName,
             registroId: String(primKey),
             acao: 'update',
-            dadosString: JSON.stringify(currentObj),
+            dadosString: JSON.stringify(updatedObj),
             timestamp: Date.now(),
             sincronizado: false,
-          })
-        }).catch(err => {
-          console.error('[DEBUG FATAL] ERRO ao adicionar na fila de upload (syncQueue):', tableName, err)
         })
       }
     })
 
-    table.hook('deleting', function (primKey) {
+    table.hook('deleting', function (primKey, obj, transacao) {
       if (isApplyingRemote) return
       this.onsuccess = function () {
-        hasPendingLocalChanges = true
-        resetInactivityTimer()
-        addSyncQueueEvent({
+        addSyncQueueEvent(transacao, {
           id: crypto.randomUUID(),
           tabela: tableName,
           registroId: String(primKey),
           acao: 'delete',
-          dadosString: '{}',
+          dadosString: tableName === 'pecas' && obj?.identificadorUnico
+            ? JSON.stringify({ identificadorUnico: obj.identificadorUnico }) : '{}',
           timestamp: Date.now(),
           sincronizado: false,
         })
@@ -245,7 +261,7 @@ async function uploadPendingEvents(): Promise<void> {
 }
 
 async function uploadWithPerfilId(perfil_id: number): Promise<void> {
-  const pending = await db.syncQueue.toArray()
+  const pending = (await db.syncQueue.toArray()).sort((a, b) => a.timestamp - b.timestamp || String(a.id).localeCompare(String(b.id)))
 
   if (pending.length === 0) {
     hasPendingLocalChanges = false
@@ -343,7 +359,7 @@ async function downloadRemoteEvents(perfil_id: number): Promise<void> {
         })
 
       const preparedEvents = await Promise.all(sortedEvents.map(async (event) => {
-        if (event.acao === 'delete' || event.tabela === 'configuracoes' || !event.dados_criptografados) {
+        if ((event.acao === 'delete' && event.tabela !== 'pecas') || event.tabela === 'configuracoes' || !event.dados_criptografados) {
           return { event, obj: null }
         }
 
@@ -368,6 +384,18 @@ async function downloadRemoteEvents(perfil_id: number): Promise<void> {
 
             const table = db.table(event.tabela)
             const id = isNaN(Number(event.registro_id)) ? event.registro_id : Number(event.registro_id)
+
+            // Não sobrescreve nem exclui uma peça diferente que porventura
+            // recebeu o mesmo ID numérico em outro dispositivo. Em históricos
+            // legados sem UUID não há evidência para distinguir colisões.
+            if (event.tabela === 'pecas') {
+              const atual = await db.pecas.get(id as number)
+              const remoto = obj && typeof obj === 'object' && 'identificadorUnico' in obj
+                ? obj.identificadorUnico : undefined
+              if (atual && (atual.identificadorUnico || remoto) && atual.identificadorUnico !== remoto) {
+                throw new Error(`Conflito de identidade na peça ${id}. Sincronização interrompida para preservar os dados.`)
+              }
+            }
 
             if (event.acao === 'delete') {
               await table.delete(id)

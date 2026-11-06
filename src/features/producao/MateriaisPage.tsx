@@ -14,6 +14,9 @@ import {
 } from './materiaisRepo'
 import { listarContas, type ContaDecifrada } from '../financeiro/contasRepo'
 import type { CategoriaMaterial, Material, TipoClassificacaoMaterial } from '../../db/schema'
+import { liveQuery } from 'dexie'
+import { obterVidaFerramentas } from './vidaUtilRepo'
+import { classificarMaterial } from './classificacaoMaterial'
 
 // ─── Divisões padrão do sistema (fixas, sempre presentes) ──────────────────
 const DIVISOES_PADRAO = [
@@ -35,14 +38,7 @@ function obterClassificacaoMaterial(
   material: Material,
   categorias: CategoriaMaterial[],
 ): TipoClassificacaoMaterial {
-  if (material.tipoClassificacao) return material.tipoClassificacao
-  const catPai = categorias.find((c) => c.id === material.categoriaId)
-  if (catPai?.tipoClassificacao) return catPai.tipoClassificacao
-  const nomeCat = (catPai?.nome ?? '').toLowerCase()
-  if (nomeCat.includes('epi')) return 'epi'
-  if (nomeCat.includes('ferramenta') || nomeCat.includes('equipamento')) return 'ferramenta'
-  if (nomeCat.includes('administrativo') || nomeCat.includes('embalagen')) return 'administrativo'
-  return 'consumivel'
+  return classificarMaterial(material, categorias)
 }
 
 const GRUPOS_UNIDADES = [
@@ -104,6 +100,7 @@ export function MateriaisPage() {
   const [filtroAtivo, setFiltroAtivo] = useState<FiltroId>('todos')
   const [categorias, setCategorias] = useState<CategoriaMaterial[]>([])
   const [materiais, setMateriais] = useState<Material[]>([])
+  const [vidaFerramentas, setVidaFerramentas] = useState<Map<number, { usos: number; vidaUtilUsos: number }>>(new Map())
   const [contas, setContas] = useState<ContaDecifrada[]>([])
 
   const [materialExcluindoId, setMaterialExcluindoId] = useState<number | null>(null)
@@ -127,6 +124,11 @@ export function MateriaisPage() {
   const [erroCompra, setErroCompra] = useState<string | null>(null)
 
   const montado = useRef(true)
+
+  useEffect(() => {
+    const observacao = liveQuery(obterVidaFerramentas).subscribe({ next: setVidaFerramentas, error: () => mostrarToast('Não foi possível carregar a vida útil das ferramentas.', 'erro') })
+    return () => observacao.unsubscribe()
+  }, [mostrarToast])
 
   async function recarregar() {
     const categoriasCarregadas = await listarCategoriasMaterial()
@@ -506,6 +508,7 @@ export function MateriaisPage() {
                                     <p className="text-xs text-on-surface-variant mt-0.5">
                                       {material.quantidadeEstoque} {material.unidade} em estoque · Custo: {formatarMoeda(material.custoUnitario)}/{material.unidade}{material.valorFrete !== undefined && material.valorFrete > 0 ? ` (Frete: ${formatarMoeda(material.valorFrete)})` : ''}
                                     </p>
+                                    {material.id !== undefined && vidaFerramentas.has(material.id) && (() => { const vida = vidaFerramentas.get(material.id!)!; return <p className="text-xs text-on-surface-variant">Usos confirmados: {vida.usos} · Restante máximo estimado: {Math.max(0, vida.vidaUtilUsos - vida.usos)} de {vida.vidaUtilUsos} usos. Usos anteriores podem não estar incluídos.</p> })()}
                                   </div>
 
                                   <div className="flex flex-wrap items-center gap-2">

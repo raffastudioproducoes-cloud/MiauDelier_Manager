@@ -101,6 +101,55 @@ describe('syncService Dexie hooks', () => {
     expect(JSON.parse(forma!.dadosString)).toMatchObject({ id: formaId, baixaSiliconeConfirmada: true })
     expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
   })
+
+  it('não enfileira criação, alteração ou exclusão de transação revertida', async () => {
+    const existente = await db.materiais.add({ nome: 'Original', categoriaId: 1, unidade: 'un', quantidadeEstoque: 5, custoUnitario: 1 })
+    await waitForSyncQueueLength(1)
+    await db.syncQueue.clear()
+    await expect(db.transaction('rw', db.materiais, async () => {
+      await db.materiais.add({ nome: 'Revertido', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 })
+      await db.materiais.update(existente, { quantidadeEstoque: 2 })
+      await db.materiais.delete(existente)
+      throw new Error('reverter')
+    })).rejects.toThrow('reverter')
+    await new Promise(resolve => setTimeout(resolve, 30))
+    expect(await db.syncQueue.toArray()).toEqual([])
+    expect((await db.materiais.get(existente))?.quantidadeEstoque).toBe(5)
+  })
+
+  it('enfileira apenas o estado final quando um registro muda várias vezes na mesma transação', async () => {
+    const id = await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 10, custoUnitario: 1 })
+    await waitForSyncQueueLength(1)
+    await db.syncQueue.clear()
+    await db.transaction('rw', db.materiais, async () => {
+      await db.materiais.update(id, { quantidadeEstoque: 8 })
+      await db.materiais.update(id, { quantidadeEstoque: 7 })
+    })
+    const eventos = await waitForSyncQueueLength(1)
+    expect(eventos).toHaveLength(1)
+    expect(JSON.parse(eventos[0].dadosString)).toMatchObject({ id, quantidadeEstoque: 7 })
+  })
+
+  it('enfileira uma exclusão apenas após o commit e conserva a identidade da peça', async () => {
+    const id = await db.pecas.add({ nome: 'Peça', formaId: 1, status: 'planejada', criadaEm: '2026-11-06', identificadorUnico: 'uuid-da-peca' })
+    await waitForSyncQueueLength(1)
+    await db.syncQueue.clear()
+    await db.transaction('rw', db.pecas, async () => { await db.pecas.delete(id) })
+    const eventos = await waitForSyncQueueLength(1)
+    expect(eventos[0]).toMatchObject({ tabela: 'pecas', acao: 'delete', registroId: String(id) })
+    expect(JSON.parse(eventos[0].dadosString)).toEqual({ identificadorUnico: 'uuid-da-peca' })
+  })
+
+  it('aguarda a transação raiz antes de enfileirar uma transação aninhada', async () => {
+    await expect(db.transaction('rw', db.materiais, async () => {
+      await db.transaction('rw', db.materiais, async () => {
+        await db.materiais.add({ nome: 'Aninhado', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 })
+      })
+      throw new Error('reverter transação raiz')
+    })).rejects.toThrow('reverter transação raiz')
+    await new Promise(resolve => setTimeout(resolve, 30))
+    expect(await db.syncQueue.toArray()).toEqual([])
+  })
 })
 
 describe('normalizeRemoteSyncObject', () => {

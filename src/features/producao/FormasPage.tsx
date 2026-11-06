@@ -14,6 +14,7 @@ import { listarMateriais } from './materiaisRepo'
 import { SeletorImagem } from '../../components/ui/SeletorImagem'
 import { ERRO_CONEXAO_ESTOQUE, mensagemEstoqueInsuficiente, siliconeKgParaEstoque, siliconeEstoqueParaKg } from './estoque'
 import { useConexaoEstoque } from './useConexaoEstoque'
+import { obterUsosConfirmados } from './vidaUtilRepo'
 import type { Forma, FormaGeometria, Material, FuroVazadoForma } from '../../db/schema'
 
 const schemaForma = z.object({
@@ -98,6 +99,11 @@ export function FormasPage() {
   const { mostrarToast } = useToast()
   const conectado = useConexaoEstoque()
   const [formas, setFormas] = useState<Forma[]>([])
+  const [usosConfirmados, setUsosConfirmados] = useState<Map<number, number>>(new Map())
+  useEffect(() => {
+    const observacao = liveQuery(() => obterUsosConfirmados('forma')).subscribe({ next: setUsosConfirmados, error: () => mostrarToast('Não foi possível carregar os usos confirmados.', 'erro') })
+    return () => observacao.unsubscribe()
+  }, [mostrarToast])
   const [materiais, setMateriais] = useState<Material[]>([])
   const [nome, setNome] = useState('')
   const [geometria, setGeometria] = useState<FormaGeometria>('cilindrico')
@@ -814,6 +820,7 @@ export function FormasPage() {
                 ? (forma.custoFabricacao / forma.vidaUtilUsos).toFixed(2)
                 : null
               const usos = forma.usosRealizados ?? 0
+              const confirmados = usosConfirmados.get(forma.id ?? 0) ?? 0
               const limite = forma.vidaUtilUsos ?? 50
               const restantes = Math.max(0, limite - usos)
               const ehCurando = forma.status === 'curando'
@@ -845,6 +852,7 @@ export function FormasPage() {
 
                   {/* Card de Conteúdo à Direita */}
                   <Card className="flex-1 w-full glow-hover flex flex-col gap-2">
+                    <p className="text-xs text-on-surface-variant">Usos confirmados: {confirmados} · Restante máximo estimado: {Math.max(0, limite - confirmados)}*. *Conta apenas usos confirmados registrados; o histórico anterior pode estar incompleto.</p>
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30 pb-2">
                       <div className="flex items-center gap-2">
                         <span className="sm:hidden text-xs font-semibold uppercase text-on-surface">
@@ -884,7 +892,7 @@ export function FormasPage() {
                           {forma.custoFabricacao !== undefined && (
                             <p className="mt-1 text-xs text-on-surface-variant">
                               Fabricação: R$ {forma.custoFabricacao.toFixed(2)}
-                              {forma.materialCaixaEstrutura ? ` (Estrutura: ${forma.materialCaixaEstrutura}${forma.custoCaixaEstrutura !== undefined ? ` - R$ ${forma.custoCaixaEstrutura.toFixed(2)}` : ''})` : ''} · Usos: <strong>{usos} / {limite}</strong> ({restantes} restantes)
+                              {forma.materialCaixaEstrutura ? ` (Estrutura: ${forma.materialCaixaEstrutura}${forma.custoCaixaEstrutura !== undefined ? ` - R$ ${forma.custoCaixaEstrutura.toFixed(2)}` : ''})` : ''} · Usos planejados: <strong>{usos} / {limite}</strong> ({restantes} restantes no planejamento)
                             </p>
                           )}
                         </div>

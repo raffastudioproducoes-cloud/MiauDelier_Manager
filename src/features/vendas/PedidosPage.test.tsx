@@ -21,6 +21,7 @@ vi.mock('@tanstack/react-router', () => ({
 const { PedidosPage } = await import('./PedidosPage')
 
 describe('PedidosPage', () => {
+  let pecaId: number
   beforeEach(async () => {
     await db.delete()
     await db.open()
@@ -28,26 +29,26 @@ describe('PedidosPage', () => {
     await criarCliente({ nome: 'Joana Silva' })
     const formaId = await criarForma({ nome: 'Chaveiro', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 20 })
     const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 500, custoUnitario: 0.15 })
-    await criarPeca({ nome: 'Chaveiro gato', formaId, consumos: [{ materialId, quantidade: 20 }] })
+    pecaId = await criarPeca({ nome: 'Chaveiro gato', formaId, consumos: [{ materialId, quantidade: 20 }] })
   })
 
   it('edita apenas as peças do pedido', async () => {
-    await db.pecas.add({ nome: 'Mesa', formaId: 1, status: 'pronta', criadaEm: new Date().toISOString(), precoVenda: 100 })
-    await criarPedido({ clienteId: 1, pecaIds: [1] })
+    const mesaId = await db.pecas.add({ nome: 'Mesa', formaId: 1, status: 'pronta', criadaEm: new Date().toISOString(), precoVenda: 100 })
+    const pedidoId = await criarPedido({ clienteId: 1, pecaIds: [pecaId] })
     render(<ToastProvider><PedidosPage /></ToastProvider>)
     fireEvent.click(await screen.findByRole('button', { name: /editar pedido/i }))
     const dialog = within(screen.getByRole('dialog'))
     fireEvent.click(dialog.getByLabelText(/chaveiro gato/i))
     fireEvent.click(dialog.getByLabelText(/mesa/i))
     fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
-    await waitFor(async () => expect((await db.pedidos.get(1))?.pecaIds).toEqual([2]))
-    expect((await db.pedidos.get(1))?.clienteId).toBe(1)
+    await waitFor(async () => expect((await db.pedidos.get(pedidoId))?.pecaIds).toEqual([mesaId]))
+    expect((await db.pedidos.get(pedidoId))?.clienteId).toBe(1)
   })
 
   it('solicita carteira e conclui a venda pelo total do pedido', async () => {
-    await atualizarPrecoVendaPeca(1, 100)
+    await atualizarPrecoVendaPeca(pecaId, 100)
     await db.contas.add({ nome: 'Caixa', saldoCriptografado: '0' })
-    await criarPedido({ clienteId: 1, pecaIds: [1] })
+    await criarPedido({ clienteId: 1, pecaIds: [pecaId] })
     render(<ToastProvider><PedidosPage /></ToastProvider>)
     fireEvent.click(await screen.findByRole('button', { name: /concluir venda/i }))
     fireEvent.change(screen.getByLabelText('Carteira'), { target: { value: '1' } })
@@ -77,7 +78,7 @@ describe('PedidosPage', () => {
   })
 
   it('não mostra peça já vinculada a outro pedido no checklist e exibe o valor total', async () => {
-    await atualizarPrecoVendaPeca(1, 50)
+    await atualizarPrecoVendaPeca(pecaId, 50)
     render(<ToastProvider><PedidosPage /></ToastProvider>)
 
     fireEvent.change(await screen.findByLabelText(/^cliente$/i), { target: { value: '1' } })

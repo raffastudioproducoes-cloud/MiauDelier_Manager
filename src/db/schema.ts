@@ -121,11 +121,26 @@ export interface UsoEnergiaPeca {
   custoDesgastePorHora?: number
 }
 
+/** Uso confirmado explicitamente; não é removido quando uma peça é excluída. */
+export interface RegistroVidaUtil {
+  id: string
+  tipo: 'forma' | 'equipamento' | 'ferramenta'
+  recursoId: number
+  pecaRef: string
+  quantidade: number
+  unidade: 'uso' | 'minuto'
+  vidaUtilUsosReferencia?: number
+  custoDesgaste?: number
+  confirmadoEm: string
+}
+
 export interface Peca {
   id?: number
   /** Identificador portátil de novas peças; o id numérico legado continua nos vínculos locais. */
   identificadorUnico?: string
   numeroSerie?: string
+  usoConfirmadoEm?: string
+  custoDesgasteFerramentas?: number
   nome: string
   formaId: number
   formasAdicionais?: Array<{ formaId: number; quantidade: number }>
@@ -347,6 +362,7 @@ export class MiauDelierDB extends Dexie {
   syncMetadata!: EntityTable<SyncMetadata, 'id'>
   perfisAtelie!: EntityTable<PerfilAtelieDB, 'id'>
   rascunhosFormulario!: EntityTable<RascunhoFormulario, 'id'>
+  registrosVidaUtil!: EntityTable<RegistroVidaUtil, 'id'>
 
   constructor(dbName?: string) {
     super(dbName || getDbNameForPerfil())
@@ -424,6 +440,9 @@ export class MiauDelierDB extends Dexie {
     })
     this.version(9).stores({
       rascunhosFormulario: '&id, usuarioId, perfilId, rota, atualizadoEm',
+    })
+    this.version(10).stores({
+      registrosVidaUtil: '&id, tipo, recursoId, pecaRef, confirmadoEm',
     })
   }
 }

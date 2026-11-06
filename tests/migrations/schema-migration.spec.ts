@@ -331,6 +331,7 @@ describe('schema migration — banco populado v1 → migração aditiva v2+', ()
         'pedidos',
         'perfisAtelie',
         'rascunhosFormulario',
+        'registrosVidaUtil',
         'syncMetadata',
         'syncQueue',
         'taxas',

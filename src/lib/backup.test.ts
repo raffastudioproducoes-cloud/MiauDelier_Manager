@@ -39,6 +39,30 @@ describe('backup JSON', () => {
     expect(materiais[0].nome).toBe('Resina Cristal')
   })
 
+  it('inclui equipamentos e registros de vida útil e os restaura', async () => {
+    await setupAccount('senha-do-backup-2026')
+    await db.equipamentos.add({ nome: 'Politriz', potenciaWatts: 500, vidaUtilHoras: 100, criadoEm: '2026-11-06' })
+    await db.registrosVidaUtil.add({ id: 'peca:equipamento:1', tipo: 'equipamento', recursoId: 1, pecaRef: 'peca', quantidade: 60, unidade: 'minuto', confirmadoEm: '2026-11-06' })
+    const json = await exportarBackup()
+    await db.equipamentos.clear()
+    await db.registrosVidaUtil.clear()
+    await importarBackup(json)
+    expect(await db.equipamentos.count()).toBe(1)
+    expect((await db.registrosVidaUtil.get('peca:equipamento:1'))?.quantidade).toBe(60)
+  })
+
+  it('preserva equipamentos e registros ao restaurar backup antigo sem essas tabelas', async () => {
+    await setupAccount('senha-do-backup-2026')
+    const parsed = JSON.parse(await exportarBackup())
+    delete parsed.dados.equipamentos
+    delete parsed.dados.registrosVidaUtil
+    await db.equipamentos.add({ nome: 'Politriz', potenciaWatts: 500, criadoEm: '2026-11-06' })
+    await db.registrosVidaUtil.add({ id: 'peca:equipamento:1', tipo: 'equipamento', recursoId: 1, pecaRef: 'peca', quantidade: 60, unidade: 'minuto', confirmadoEm: '2026-11-06' })
+    await importarBackup(await exportarBackupFalso(parsed.dados))
+    expect(await db.equipamentos.count()).toBe(1)
+    expect(await db.registrosVidaUtil.count()).toBe(1)
+  })
+
   it('restaura os dados em dispositivo novo sem depender de senha local', async () => {
     await setupAccount('senha-do-rafa-2026')
     await semearMaterial()

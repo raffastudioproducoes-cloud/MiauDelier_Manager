@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const { rpc, getPerfilAtivo } = vi.hoisted(() => ({ rpc: vi.fn(), getPerfilAtivo: vi.fn() }))
 vi.mock('../../lib/supabase', () => ({ supabase: { rpc } }))
 vi.mock('../../lib/perfisRepo', () => ({ getPerfilAtivo }))
-import { confirmarMovimentosEstoque } from './estoqueServidor'
+import { confirmarMovimentosEstoque, recuperarPendenciaEstoque } from './estoqueServidor'
 import { db } from '../../db/schema'
 import { criarForma } from './formasRepo'
 import { criarPeca, atualizarStatusPeca, editarConsumosPeca } from './pecasRepo'
@@ -53,8 +53,53 @@ describe('salvamento de molde com confirmação no servidor', () => {
   beforeEach(async () => {
     vi.resetAllMocks()
     getPerfilAtivo.mockResolvedValue({ supabaseId: 12 })
+    localStorage.clear()
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: { request: async (_name: string, callback: () => Promise<unknown>) => callback() } })
     await db.delete()
     await db.open()
+  })
+
+  it('recusa baixa se o navegador não oferece trava entre abas', async () => {
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined })
+    const materialId = (await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 10 }))!
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    await expect(criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 2 }] })).rejects.toThrow(/bloqueio seguro entre abas/i)
+    expect(rpc).not.toHaveBeenCalled()
+    expect(await db.pecas.count()).toBe(0)
+  })
+
+  it('reconcilia uma resposta perdida antes de permitir outra baixa', async () => {
+    const materialId = (await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 10 }))!
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    rpc.mockRejectedValue(new TypeError('rede indisponível'))
+    await expect(criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 2 }] })).rejects.toThrow(/confira o saldo e a peça/i)
+    const pendente = JSON.parse(localStorage.getItem(`miaudelier_estoque_pendente:${db.name}`)!)
+    expect(await db.pecas.count()).toBe(0)
+    rpc.mockReset()
+    rpc.mockResolvedValueOnce({ data: { estado: 'estornada', saldos: [{ materialId, saldo: 10 }] }, error: null })
+    rpc.mockResolvedValueOnce({ data: [{ materialId, saldo: 8 }], error: null })
+    await criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 2 }] })
+    expect(rpc.mock.calls[0]).toEqual(['recuperar_movimentacao_estoque', expect.objectContaining({ p_operacao_id: pendente.operacaoId, p_reversao_id: pendente.reversaoId })])
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
+    expect(localStorage.getItem(`miaudelier_estoque_pendente:${db.name}`)).toBeNull()
+  })
+
+  it('não estorna remotamente uma operação cuja transação local foi confirmada', async () => {
+    const pendente = { operacaoId: 'op-concluida', reversaoId: 'reversao', perfilId: 12, movimentos: [{ materialId: 1, diferenca: -2 }] }
+    localStorage.setItem(`miaudelier_estoque_pendente:${db.name}`, JSON.stringify(pendente))
+    await db.syncMetadata.add({ chave: 'estoque_confirmado:op-concluida', valor: 'confirmado' })
+    await recuperarPendenciaEstoque()
+    expect(rpc).not.toHaveBeenCalled()
+    expect(localStorage.getItem(`miaudelier_estoque_pendente:${db.name}`)).toBeNull()
+  })
+
+  it('mantém a operação pendente quando o saldo posterior impede o estorno', async () => {
+    const chave = `miaudelier_estoque_pendente:${db.name}`
+    const pendente = { operacaoId: 'entrada', reversaoId: 'reversao', perfilId: 12, movimentos: [{ materialId: 1, diferenca: 10 }] }
+    localStorage.setItem(chave, JSON.stringify(pendente))
+    rpc.mockResolvedValue({ data: null, error: { message: 'Estoque insuficiente para material 1' } })
+    await expect(recuperarPendenciaEstoque()).rejects.toThrow(/precisa de conciliação/i)
+    expect(JSON.parse(localStorage.getItem(chave)!)).toEqual(pendente)
   })
 
   it('debita a quantidade usada e grava o saldo confirmado', async () => {

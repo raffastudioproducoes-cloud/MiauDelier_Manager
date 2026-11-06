@@ -25,9 +25,12 @@ import { listarContas } from '../financeiro/contasRepo'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
 import { calcularPrecificacao } from '../pricing/pricing'
 import { calcularDesgasteEquipamentos, obterTaxaDesgaste } from './desgasteEquipamentos'
+import { confirmarUsoRealPeca } from './vidaUtilRepo'
 import { calcularVolumeTotalForma } from '../calculator/volume'
 import { formatarVolumeEMassaLegivel, obterOpcoesUnidadeCompativeis } from '../../lib/unidades'
 import { listarMateriais } from './materiaisRepo'
+import { listarCategoriasMaterial } from './categoriasMaterialRepo'
+import { classificarMaterial } from './classificacaoMaterial'
 import { listarFormas } from './formasRepo'
 import { listarEquipamentos } from './equipamentosRepo'
 import { ERRO_CONEXAO_ESTOQUE, mensagemEstoqueInsuficiente } from './estoque'
@@ -38,7 +41,7 @@ import {
   formatarTempoRestanteCura,
   adicionarTempoCura,
 } from './curaRepo'
-import type { Equipamento, EventoPeca, Forma, Material, StatusPeca } from '../../db/schema'
+import type { CategoriaMaterial, Equipamento, EventoPeca, Forma, Material, StatusPeca } from '../../db/schema'
 
 const routeApi = getRouteApi('/pecas/$pecaId')
 
@@ -53,6 +56,8 @@ export function PecaDetalhePage() {
   const [peca, setPeca] = useState<PecaComForma | undefined>(undefined)
   const [consumos, setConsumos] = useState<ConsumoComMaterial[]>([])
   const [materiais, setMateriais] = useState<Material[]>([])
+  const [categorias, setCategorias] = useState<CategoriaMaterial[]>([])
+  const [ferramentasUso, setFerramentasUso] = useState<Array<{ materialId: string; quantidade: string; vidaUtilUsos: string }>>([])
   const [formas, setFormas] = useState<Forma[]>([])
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([])
   const [eventos, setEventos] = useState<EventoPeca[]>([])
@@ -60,6 +65,7 @@ export function PecaDetalhePage() {
   const [valorHoraMaoDeObra, setValorHoraMaoDeObra] = useState(25)
   const [carregado, setCarregado] = useState(false)
   const [vendaAberta, setVendaAberta] = useState(false)
+  const [confirmarUsoAberto, setConfirmarUsoAberto] = useState(false)
   const [valorVenda, setValorVenda] = useState('')
   const [erroValorVenda, setErroValorVenda] = useState<string | null>(null)
 
@@ -103,7 +109,7 @@ export function PecaDetalhePage() {
   }, [])
 
   async function recarregar() {
-    const [pecas, consumosCarregados, eventosCarregados, tarifasConfig, materiaisCarregados, formasCarregadas, equipamentosCarregados] = await Promise.all([
+    const [pecas, consumosCarregados, eventosCarregados, tarifasConfig, materiaisCarregados, formasCarregadas, equipamentosCarregados, categoriasCarregadas] = await Promise.all([
       listarPecas(),
       listarConsumosDaPeca(id),
       listarEventosDaPeca(id),
@@ -111,12 +117,14 @@ export function PecaDetalhePage() {
       listarMateriais(),
       listarFormas(),
       listarEquipamentos(),
+      listarCategoriasMaterial(),
     ])
     if (!montado.current) return
     const pecaEncontrada = pecas.find((p) => p.id === id)
     setPeca(pecaEncontrada)
     setConsumos(consumosCarregados)
     setMateriais(materiaisCarregados)
+    setCategorias(categoriasCarregadas)
     setFormas(formasCarregadas)
     setEquipamentos(equipamentosCarregados)
     setEventos(eventosCarregados)
@@ -189,7 +197,7 @@ export function PecaDetalhePage() {
 
   const precificacaoRes = useMemo(() => {
     if (!peca) return null
-    const custoAcc = (peca.custoEpiInsumos || 0) + custoPropagandaDia + (peca.valorFrete || 0)
+    const custoAcc = (peca.custoEpiInsumos || 0) + custoPropagandaDia + (peca.valorFrete || 0) + (peca.custoDesgasteFerramentas || 0)
     const custoForma = [{ formaId: peca.formaId, quantidade: 1 }, ...(peca.formasAdicionais ?? [])].reduce((total, item) => {
       const forma = formas.find(f => f.id === item.formaId)
       return total + (forma?.vidaUtilUsos && forma.vidaUtilUsos > 0 ? item.quantidade * (forma.custoFabricacao ?? 0) / forma.vidaUtilUsos : 0)
@@ -368,6 +376,29 @@ export function PecaDetalhePage() {
         </div>
       )}
       {errosReativacao.map((mensagem) => <p key={mensagem} role="alert" className="rounded-lg border border-error bg-error/10 p-3 text-sm font-medium text-error">{mensagem}</p>)}
+
+      <Card className="flex flex-col gap-2">
+        <h2 className="font-semibold text-sm">Vida útil dos moldes e equipamentos</h2>
+        <p className="text-sm text-on-surface-variant">{peca.usoConfirmadoEm ? 'Uso real confirmado. O registro permanece mesmo que a peça seja cancelada ou excluída.' : 'Os tempos e quantidades cadastrados são estimativas. Confirme somente depois de usar os moldes e equipamentos informados.'}</p>
+        {!peca.usoConfirmadoEm && peca.status !== 'cancelada' && <Button variante="ghost" type="button" onClick={() => setConfirmarUsoAberto(true)}>Confirmar uso real</Button>}
+      </Card>
+      <ConfirmModal aberto={confirmarUsoAberto} titulo="Confirmar uso real?" descricao="Confirme somente se os moldes e tempos de equipamento registrados nesta peça já foram utilizados. Essa confirmação não é desfeita ao excluir ou cancelar a peça." onCancelar={() => setConfirmarUsoAberto(false)} onConfirmar={async () => {
+        try { await confirmarUsoRealPeca(id, ferramentasUso.map(f => ({ materialId: Number(f.materialId), quantidade: Number(f.quantidade), vidaUtilUsos: Number(f.vidaUtilUsos) }))); setConfirmarUsoAberto(false); await recarregar(); mostrarToast('Uso confirmado e registrado.') }
+        catch (falha) { mostrarToast(falha instanceof Error ? falha.message : 'Não foi possível confirmar o uso.', 'erro') }
+      }}>
+        <div className="flex flex-col gap-1 text-sm">
+          {[{ formaId: peca.formaId, quantidade: 1 }, ...(peca.formasAdicionais ?? [])].map((item, indice) => <span key={`forma-${indice}`}>Molde: {formas.find(f => f.id === item.formaId)?.nome ?? 'Não encontrado'} — {item.quantidade} uso(s)</span>)}
+          {(peca.usosEnergia ?? []).map((item, indice) => <span key={`equipamento-${indice}`}>Equipamento: {item.nomeEquipamento} — {item.minutosUso} min</span>)}
+          <p>Ferramentas reutilizáveis do estoque (opcional): selecione apenas ferramentas cadastradas individualmente com uma unidade. O uso não retira a ferramenta do estoque.</p>
+          {ferramentasUso.map((ferramenta, indice) => <div className="flex flex-wrap gap-2" key={indice}>
+            <label>Ferramenta<select aria-label={`Ferramenta ${indice + 1}`} value={ferramenta.materialId} onChange={e => setFerramentasUso(atuais => atuais.map((item, i) => i === indice ? { ...item, materialId: e.target.value } : item))}><option value="">Selecione</option>{materiais.filter(m => classificarMaterial(m, categorias) === 'ferramenta').map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></label>
+            <label>Usos<input aria-label={`Usos da ferramenta ${indice + 1}`} type="number" min="1" step="1" value={ferramenta.quantidade} onChange={e => setFerramentasUso(atuais => atuais.map((item, i) => i === indice ? { ...item, quantidade: e.target.value } : item))} /></label>
+            <label>Vida útil em usos<input aria-label={`Vida útil da ferramenta ${indice + 1}`} type="number" min="1" step="1" value={ferramenta.vidaUtilUsos} onChange={e => setFerramentasUso(atuais => atuais.map((item, i) => i === indice ? { ...item, vidaUtilUsos: e.target.value } : item))} /></label>
+            <Button type="button" variante="ghost" onClick={() => setFerramentasUso(atuais => atuais.filter((_, i) => i !== indice))}>Remover</Button>
+          </div>)}
+          <Button type="button" variante="ghost" onClick={() => setFerramentasUso(atuais => [...atuais, { materialId: '', quantidade: '1', vidaUtilUsos: '' }])}>Adicionar ferramenta reutilizável</Button>
+        </div>
+      </ConfirmModal>
 
       {/* DISCRIMINAÇÃO POR ETAPAS DE PRODUÇÃO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

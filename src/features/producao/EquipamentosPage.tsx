@@ -12,10 +12,13 @@ import {
 } from './equipamentosRepo'
 import type { Equipamento } from '../../db/schema'
 import { obterTaxaDesgaste } from './desgasteEquipamentos'
+import { obterUsosConfirmados } from './vidaUtilRepo'
+import { liveQuery } from 'dexie'
 
 export function EquipamentosPage() {
   const { mostrarToast } = useToast()
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([])
+  const [usosConfirmados, setUsosConfirmados] = useState<Map<number, number>>(new Map())
   const [nome, setNome] = useState('')
   const [potenciaWatts, setPotenciaWatts] = useState('')
   const [valorCompra, setValorCompra] = useState('')
@@ -24,6 +27,11 @@ export function EquipamentosPage() {
   const [custoKwh, setCustoKwh] = useState('0.85')
   const [equipamentoExcluindoId, setEquipamentoExcluindoId] = useState<number | null>(null)
   const montado = useRef(true)
+
+  useEffect(() => {
+    const observacao = liveQuery(() => obterUsosConfirmados('equipamento')).subscribe({ next: setUsosConfirmados, error: () => mostrarToast('Não foi possível carregar os usos confirmados.', 'erro') })
+    return () => observacao.unsubscribe()
+  }, [mostrarToast])
 
   async function recarregar() {
     const lista = await listarEquipamentos()
@@ -209,11 +217,14 @@ export function EquipamentosPage() {
                         {eq.vidaUtilHoras !== undefined && eq.vidaUtilHoras > 0 && (
                           <span>Vida útil estimada: <strong>{eq.vidaUtilHoras}h</strong></span>
                         )}
+                        <span>Uso confirmado registrado: <strong>{((usosConfirmados.get(eq.id ?? 0) ?? 0) / 60).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}h</strong></span>
+                        {eq.vidaUtilHoras !== undefined && eq.vidaUtilHoras > 0 && <span>Restante máximo estimado*: <strong>{Math.max(0, eq.vidaUtilHoras - (usosConfirmados.get(eq.id ?? 0) ?? 0) / 60).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}h</strong></span>}
                         {custoDesgasteHora !== undefined && <span>Desgaste: <strong>R$ {custoDesgasteHora.toFixed(2)}/h</strong></span>}
                         <span className="text-primary font-medium">
                           ⚡ R$ {custoHora.toFixed(2)}/h
                         </span>
                       </div>
+                      <p className="text-xs text-on-surface-variant">* Considera apenas usos confirmados registrados no sistema; usos anteriores podem não estar incluídos.</p>
                     </div>
                   </div>
                   <div className="flex items-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-outline-variant/30 justify-end">

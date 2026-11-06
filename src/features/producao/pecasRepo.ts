@@ -6,6 +6,7 @@ import { exigirConexaoEstoque, exigirEstoque } from './estoque'
 import { calcularPrecificacao } from '../pricing/pricing'
 import { calcularDesgasteEquipamentos } from './desgasteEquipamentos'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
+import { obterIdNumericoPecaDisponivel } from './identidadePeca'
 
 export interface ConsumoComMaterial {
   materialId: number
@@ -91,10 +92,12 @@ async function criarPecaInterno(nova: NovaPeca): Promise<number> {
     // A contagem de peças pode diminuir após exclusão e repetir números de série.
     // UUID permanece estável no backup/sincronização e não exige um contador compartilhado.
     const identificadorUnico = crypto.randomUUID()
+    const idNumerico = await obterIdNumericoPecaDisponivel(id => db.pecas.get(id))
     // Base 36 é uma representação reversível do UUID, mais curta que seus 36 caracteres.
     const numeroSerie = `#P-${BigInt(`0x${identificadorUnico.replace(/-/g, '')}`).toString(36).toUpperCase().padStart(25, '0')}`
 
     const pecaId = (await db.pecas.add({
+      id: idNumerico,
       identificadorUnico,
       numeroSerie,
       nome: nova.nome,
@@ -344,9 +347,14 @@ export async function atualizarDadosProducaoPeca(pecaId: number, dados: Partial<
 
 async function editarConsumosPecaInterno(pecaId: number, novos: NovoConsumo[], dados: Partial<Peca>): Promise<void> {
   const tarifas = await obterTarifasConfig()
-  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.equipamentos], async () => {
+  await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.equipamentos, db.registrosVidaUtil], async () => {
     const peca = await db.pecas.get(pecaId)
     if (!peca) throw new Error('Peça não encontrada.')
+    if (peca.usoConfirmadoEm) {
+      const pecaRef = peca.identificadorUnico ?? `legado-${pecaId}`
+      const ferramentas = await db.registrosVidaUtil.where('pecaRef').equals(pecaRef).filter(item => item.tipo === 'ferramenta').toArray()
+      if (novos.some(item => ferramentas.some(f => f.recursoId === item.materialId))) throw new Error('Uma ferramenta reutilizável já confirmada não pode ser adicionada como material consumido.')
+    }
     const anteriores = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
     const totaisAnteriores = new Map<number, number>()
     for (const c of anteriores) totaisAnteriores.set(c.materialId, (totaisAnteriores.get(c.materialId) ?? 0) + c.quantidade)
@@ -386,6 +394,17 @@ async function editarConsumosPecaInterno(pecaId: number, novos: NovoConsumo[], d
       }
     }
     const atualizada = { ...peca, ...dados }
+    if (peca.usoConfirmadoEm) {
+      const normalizarFormas = (p: Pick<Peca, 'formaId' | 'formasAdicionais'>) => JSON.stringify([...formasDaPeca(p)].sort(([a], [b]) => a - b))
+      const normalizarEquipamentos = (p: Peca) => {
+        const totais = new Map<number, number>()
+        for (const uso of p.usosEnergia ?? []) totais.set(uso.equipamentoId, (totais.get(uso.equipamentoId) ?? 0) + uso.minutosUso)
+        return JSON.stringify([...totais].sort(([a], [b]) => a - b))
+      }
+      if (normalizarFormas(peca) !== normalizarFormas(atualizada) || normalizarEquipamentos(peca) !== normalizarEquipamentos(atualizada)) {
+        throw new Error('Os moldes e tempos já tiveram uso real confirmado e não podem ser alterados nesta peça.')
+      }
+    }
     const formasAtuais = formasDaPeca(peca)
     const formasNovas = formasDaPeca(atualizada)
     const custoForma = peca.status === 'cancelada'
@@ -393,10 +412,12 @@ async function editarConsumosPecaInterno(pecaId: number, novos: NovoConsumo[], d
       : await ajustarUsosFormas(formasAtuais, formasNovas, true)
     const custoPropaganda = atualizada.diasPropaganda && atualizada.diasPropaganda > 0 ? (atualizada.valorPropagandaTotal ?? 0) / atualizada.diasPropaganda : 0
     const custoDesgasteEquipamentos = calcularDesgasteEquipamentos(atualizada.usosEnergia ?? [], await db.equipamentos.toArray()).custo
-    const precoVenda = calcularPrecificacao({ custoMaterial, custoAcessorios: (atualizada.custoEpiInsumos ?? 0) + custoPropaganda + (atualizada.valorFrete ?? 0), horasProducao: atualizada.horasMaoDeObra ?? 0, valorHora: tarifas.valorHoraMaoDeObra || 25, rateioFixoPercent: 0, margemLucroPercent: atualizada.margemDesejada ?? 50, usosEnergia: atualizada.usosEnergia ?? [], tarifaKwh: tarifas.tarifaKwh || 0.85, litrosAgua: atualizada.litrosAgua ?? 0, custoForma, custoDesgasteEquipamentos, percentualTaxas: atualizada.percentualTaxas ?? 0 }).precoFinal
+    const precoVenda = calcularPrecificacao({ custoMaterial, custoAcessorios: (atualizada.custoEpiInsumos ?? 0) + custoPropaganda + (atualizada.valorFrete ?? 0) + (atualizada.custoDesgasteFerramentas ?? 0), horasProducao: atualizada.horasMaoDeObra ?? 0, valorHora: tarifas.valorHoraMaoDeObra || 25, rateioFixoPercent: 0, margemLucroPercent: atualizada.margemDesejada ?? 50, usosEnergia: atualizada.usosEnergia ?? [], tarifaKwh: tarifas.tarifaKwh || 0.85, litrosAgua: atualizada.litrosAgua ?? 0, custoForma, custoDesgasteEquipamentos, percentualTaxas: atualizada.percentualTaxas ?? 0 }).precoFinal
     await db.consumosPeca.where('pecaId').equals(pecaId).delete()
     if (linhas.length) await db.consumosPeca.bulkAdd(linhas)
-    await db.pecas.update(pecaId, { ...dados, precoVenda })
+    // O valor da venda já registrada é histórico; recalcular custos de uma
+    // peça vendida não pode alterar o preço usado na operação financeira.
+    await db.pecas.update(pecaId, { ...dados, precoVenda: peca.status === 'vendida' ? peca.precoVenda : precoVenda })
     await db.eventosPeca.add({ pecaId, tipo: 'atualizacao_dados', descricao: 'Materiais e dados de produção atualizados', criadoEm: new Date().toISOString() })
   })
 }

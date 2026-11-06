@@ -8,9 +8,66 @@ export interface MovimentoEstoque {
   diferenca: number
 }
 
+interface OperacaoPendente {
+  operacaoId: string
+  reversaoId: string
+  perfilId: number
+  movimentos: MovimentoEstoque[]
+}
+
+function chavePendencia(): string { return `miaudelier_estoque_pendente:${db.name}` }
+function chaveMarcador(id: string): string { return `estoque_confirmado:${id}` }
+
+/** Reconciliacao é sempre feita sob a trava de perfil do servidor. */
+export async function recuperarPendenciaEstoque(): Promise<void> {
+  const texto = localStorage.getItem(chavePendencia())
+  if (!texto) return
+  let pendente: OperacaoPendente
+  try { pendente = JSON.parse(texto) as OperacaoPendente } catch { throw new Error('Registro de estoque pendente inválido. Não repita a operação antes de reconciliar o estoque.') }
+  if (!pendente.operacaoId || !pendente.reversaoId || !Number.isSafeInteger(pendente.perfilId) || !Array.isArray(pendente.movimentos)) throw new Error('Registro de estoque pendente inválido. Não repita a operação antes de reconciliar o estoque.')
+  const perfil = await getPerfilAtivo()
+  if (perfil.supabaseId !== pendente.perfilId) throw new Error('Há uma operação de estoque pendente em outro perfil. Retorne a esse perfil para reconciliá-la.')
+  const marcador = await db.syncMetadata.where('chave').equals(chaveMarcador(pendente.operacaoId)).first()
+  if (!marcador) {
+    const { data, error } = await supabase.rpc('recuperar_movimentacao_estoque', {
+      p_perfil_id: pendente.perfilId,
+      p_operacao_id: pendente.operacaoId,
+      p_reversao_id: pendente.reversaoId,
+      p_movimentos: pendente.movimentos,
+    })
+    if (error?.message && /estoque insuficiente/i.test(error.message)) {
+      throw new Error('Não foi possível desfazer uma movimentação pendente porque parte do estoque já foi utilizada. A operação continua bloqueada e precisa de conciliação antes de novas alterações.')
+    }
+    if (error || !data || !['estornada', 'nao_encontrada'].includes(data.estado) || !Array.isArray(data.saldos)) {
+      throw new Error('Não foi possível reconciliar a movimentação pendente. Mantenha este dispositivo conectado e tente novamente antes de alterar o estoque.')
+    }
+    const idsEsperados = new Set(pendente.movimentos.map(item => item.materialId))
+    const idsRecebidos = new Set((data.saldos as Array<{ materialId: string | number }>).map(item => Number(item.materialId)))
+    if ((data.estado === 'nao_encontrada' && data.saldos.length !== 0) ||
+        (data.estado === 'estornada' && (data.saldos.length !== idsEsperados.size || idsRecebidos.size !== idsEsperados.size || [...idsEsperados].some(id => !idsRecebidos.has(id))))) {
+      throw new Error('Resposta inválida ao reconciliar o estoque. A operação permanece pendente.')
+    }
+    await db.transaction('rw', db.materiais, async () => {
+      for (const item of data.saldos as Array<{ materialId: string | number; saldo: string | number }>) {
+        const id = Number(item.materialId)
+        const saldo = Number(item.saldo)
+        if (!Number.isSafeInteger(id) || !Number.isFinite(saldo) || saldo < 0 || !await db.materiais.get(id)) throw new Error('Não foi possível conciliar o material da operação pendente.')
+        await db.materiais.update(id, { quantidadeEstoque: saldo })
+      }
+    })
+  }
+  localStorage.removeItem(chavePendencia())
+  if (marcador?.id !== undefined) await db.syncMetadata.delete(marcador.id)
+}
+
 export async function transacaoComEstoque<T>(executar: () => Promise<T>): Promise<T> {
   if (Dexie.currentTransaction) return executar()
-  return db.transaction('rw', db.tables, async () => {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined
+  if (!locks && localStorage.getItem(chavePendencia())) throw new Error('O navegador não oferece bloqueio seguro entre abas. Não é possível reconciliar o estoque neste navegador.')
+  const processar = async () => {
+  await recuperarPendenciaEstoque()
+  let operacaoId: string | undefined
+  const resultadoFinal = await db.transaction('rw', db.tables, async () => {
     const anteriores = new Map((await db.materiais.toArray()).map(m => [m.id, m.quantidadeEstoque]))
     const resultado = await executar()
     const movimentos = (await db.materiais.toArray()).flatMap(m => {
@@ -19,11 +76,28 @@ export async function transacaoComEstoque<T>(executar: () => Promise<T>): Promis
       return [{ materialId: m.id, diferenca: m.quantidadeEstoque - anterior }]
     })
     if (movimentos.length > 0) {
-      const saldos = await Dexie.waitFor(confirmarMovimentosEstoque(crypto.randomUUID(), movimentos))
+      if (!locks) throw new Error('O navegador não oferece bloqueio seguro entre abas. Não é possível movimentar o estoque neste navegador.')
+      const perfil = await Dexie.waitFor(getPerfilAtivo())
+      if (!perfil.supabaseId) throw new Error('Sincronize o perfil antes de movimentar o estoque.')
+      operacaoId = crypto.randomUUID()
+      const pendente: OperacaoPendente = { operacaoId, reversaoId: crypto.randomUUID(), perfilId: perfil.supabaseId, movimentos }
+      // Persistido antes da chamada; o marcador só é gravado se toda a transação local confirmar.
+      localStorage.setItem(chavePendencia(), JSON.stringify(pendente))
+      const saldos = await Dexie.waitFor(confirmarMovimentosEstoque(operacaoId, movimentos))
       for (const [id, saldo] of saldos) await db.materiais.update(id, { quantidadeEstoque: saldo })
+      await db.syncMetadata.add({ chave: chaveMarcador(operacaoId), valor: 'confirmado' })
     }
     return resultado
   })
+  // Se a limpeza falhar, a operação local já foi confirmada; o marcador impede
+  // qualquer compensação indevida na próxima tentativa de limpeza.
+  if (operacaoId) {
+    try { await recuperarPendenciaEstoque() } catch { /* O journal será limpo ao próximo uso. */ }
+  }
+  return resultadoFinal
+  }
+  // Web Locks serializa abas do mesmo navegador. A trava de perfil no banco protege dispositivos distintos.
+  return locks ? locks.request(`miaudelier-estoque:${db.name}`, processar) : processar()
 }
 
 export async function confirmarMovimentosEstoque(operacaoId: string, movimentos: MovimentoEstoque[]): Promise<Map<number, number>> {
