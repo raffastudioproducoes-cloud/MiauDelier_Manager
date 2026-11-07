@@ -13,6 +13,7 @@ type RemoteEvent = {
 }
 
 const remoteEvents: RemoteEvent[] = []
+let antesDoRange: (() => Promise<void>) | undefined
 
 vi.mock('./perfisRepo', () => ({
   getPerfilAtivo: vi.fn(async () => ({ id: 'padrao', supabaseId: 1 })),
@@ -65,6 +66,7 @@ vi.mock('./supabase', () => ({
           return { data: latest ? { timestamp: latest.timestamp, id: latest.id } : null, error: null }
         }),
         range: vi.fn(async (from: number, to: number) => {
+          if (antesDoRange) await antesDoRange()
           const rows = remoteEvents
             .filter((event) => state.perfilId === null || event.perfil_id === state.perfilId)
             .filter((event) => state.minTimestamp === null || event.timestamp > state.minTimestamp)
@@ -83,6 +85,7 @@ vi.mock('./supabase', () => ({
 describe('syncService download ordering', () => {
   beforeEach(async () => {
     remoteEvents.length = 0
+    antesDoRange = undefined
     await db.delete()
     await db.open()
     syncPerfisFromSupabaseMock.mockResolvedValue(undefined)
@@ -190,5 +193,28 @@ describe('syncService download ordering', () => {
       nome: 'Evento remoto posterior',
       quantidadeEstoque: 5,
     })
+  })
+
+  it('enfileira escrita local durante espera de download remoto sem gerar eco dos dados remotos', async () => {
+    const { syncWithSupabase, registerDexieHooks } = await import('./syncService')
+    const { criarMaterial } = await import('../features/producao/materiaisRepo')
+    registerDexieHooks()
+    await db.syncMetadata.add({ chave: 'lastSyncTimestamp', valor: '1000' })
+    remoteEvents.push({ id: 'evento-remoto', perfil_id: 1, tabela: 'materiais', registro_id: '44', acao: 'insert', dados_criptografados: JSON.stringify({ id: 44, nome: 'Remoto', categoriaId: 1, unidade: 'g', quantidadeEstoque: 1, custoUnitario: 1 }), timestamp: 2000 })
+    let iniciar!: () => void
+    let liberar!: () => void
+    const iniciado = new Promise<void>(resolve => { iniciar = resolve })
+    const espera = new Promise<void>(resolve => { liberar = resolve })
+    antesDoRange = async () => { iniciar(); await espera }
+    const sync = syncWithSupabase()
+    await iniciado
+    const id = await criarMaterial({ nome: 'Local', categoriaId: 1, unidade: 'g', quantidadeEstoque: 3, custoUnitario: 1 })
+    expect((await db.syncQueue.toArray()).map(evento => evento.registroId)).toContain(String(id))
+    liberar()
+    await sync
+    const eventos = await db.syncQueue.toArray()
+    expect(eventos).toHaveLength(1)
+    expect(eventos[0]).toMatchObject({ tabela: 'materiais', registroId: String(id) })
+    expect((await db.materiais.get(44))?.nome).toBe('Remoto')
   })
 })

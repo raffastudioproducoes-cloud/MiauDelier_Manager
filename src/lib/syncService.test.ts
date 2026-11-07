@@ -5,7 +5,7 @@ import { normalizeRemoteSyncObject, prepareLocalCacheForUser, registerDexieHooks
 import { atualizarMaterial, criarMaterial } from '../features/producao/materiaisRepo'
 import { criarForma, atualizarForma } from '../features/producao/formasRepo'
 
-vi.mock('../features/producao/estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => fn() }))
+vi.mock('../features/producao/estoqueServidor', () => ({ transacaoComEstoque: <T,>(fn: () => Promise<T>) => db.transaction('rw', db.tables, fn) }))
 
 let hooksRegistered = false
 
@@ -103,10 +103,10 @@ describe('syncService Dexie hooks', () => {
   })
 
   it('não enfileira criação, alteração ou exclusão de transação revertida', async () => {
-    const existente = await db.materiais.add({ nome: 'Original', categoriaId: 1, unidade: 'un', quantidadeEstoque: 5, custoUnitario: 1 })
+    const existente = await criarMaterial({ nome: 'Original', categoriaId: 1, unidade: 'un', quantidadeEstoque: 5, custoUnitario: 1 })
     await waitForSyncQueueLength(1)
     await db.syncQueue.clear()
-    await expect(db.transaction('rw', db.materiais, async () => {
+    await expect(db.transaction('rw', db.materiais, db.syncQueue, async () => {
       await db.materiais.add({ nome: 'Revertido', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 })
       await db.materiais.update(existente, { quantidadeEstoque: 2 })
       await db.materiais.delete(existente)
@@ -117,11 +117,27 @@ describe('syncService Dexie hooks', () => {
     expect((await db.materiais.get(existente))?.quantidadeEstoque).toBe(5)
   })
 
+  it('inclui evento na mesma transação antes do commit e reverte evento e dado juntos', async () => {
+    await expect(db.transaction('rw', db.materiais, db.syncQueue, async () => {
+      await db.materiais.add({ nome: 'Atômica', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 })
+      expect(await db.syncQueue.count()).toBe(1)
+      throw new Error('reverter ambos')
+    })).rejects.toThrow('reverter ambos')
+    expect(await db.materiais.count()).toBe(0)
+    expect(await db.syncQueue.count()).toBe(0)
+  })
+
+  it('recusa uma escrita que não inclua a fila na transação', async () => {
+    await expect(db.transaction('rw', db.materiais, () => db.materiais.add({ nome: 'Sem fila', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 }))).rejects.toThrow()
+    expect(await db.materiais.count()).toBe(0)
+    expect(await db.syncQueue.count()).toBe(0)
+  })
+
   it('enfileira apenas o estado final quando um registro muda várias vezes na mesma transação', async () => {
-    const id = await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 10, custoUnitario: 1 })
+    const id = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'ml', quantidadeEstoque: 10, custoUnitario: 1 })
     await waitForSyncQueueLength(1)
     await db.syncQueue.clear()
-    await db.transaction('rw', db.materiais, async () => {
+    await db.transaction('rw', db.materiais, db.syncQueue, async () => {
       await db.materiais.update(id, { quantidadeEstoque: 8 })
       await db.materiais.update(id, { quantidadeEstoque: 7 })
     })
@@ -131,17 +147,17 @@ describe('syncService Dexie hooks', () => {
   })
 
   it('enfileira uma exclusão apenas após o commit e conserva a identidade da peça', async () => {
-    const id = await db.pecas.add({ nome: 'Peça', formaId: 1, status: 'planejada', criadaEm: '2026-11-06', identificadorUnico: 'uuid-da-peca' })
+    const id = await db.transaction('rw', db.pecas, db.syncQueue, () => db.pecas.add({ nome: 'Peça', formaId: 1, status: 'planejada', criadaEm: '2026-11-06', identificadorUnico: 'uuid-da-peca' }))
     await waitForSyncQueueLength(1)
     await db.syncQueue.clear()
-    await db.transaction('rw', db.pecas, async () => { await db.pecas.delete(id) })
+    await db.transaction('rw', db.pecas, db.syncQueue, async () => { await db.pecas.delete(id) })
     const eventos = await waitForSyncQueueLength(1)
     expect(eventos[0]).toMatchObject({ tabela: 'pecas', acao: 'delete', registroId: String(id) })
     expect(JSON.parse(eventos[0].dadosString)).toEqual({ identificadorUnico: 'uuid-da-peca' })
   })
 
   it('aguarda a transação raiz antes de enfileirar uma transação aninhada', async () => {
-    await expect(db.transaction('rw', db.materiais, async () => {
+    await expect(db.transaction('rw', db.materiais, db.syncQueue, async () => {
       await db.transaction('rw', db.materiais, async () => {
         await db.materiais.add({ nome: 'Aninhado', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 })
       })
@@ -170,7 +186,7 @@ describe('normalizeRemoteSyncObject', () => {
 
 describe('prepareLocalCacheForUser', () => {
   it('limpa dados de outro usuario sem enfileirar deletes', async () => {
-    await db.materiais.add({ nome: 'Dado residual', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 })
+    await criarMaterial({ nome: 'Dado residual', categoriaId: 1, unidade: 'un', quantidadeEstoque: 1, custoUnitario: 1 })
     await db.syncQueue.clear()
 
     await prepareLocalCacheForUser('novo-usuario')

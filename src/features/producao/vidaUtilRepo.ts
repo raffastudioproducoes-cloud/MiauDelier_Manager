@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db, type RegistroVidaUtil } from '../../db/schema'
 import { calcularPrecificacao } from '../pricing/pricing'
 import { obterTarifasConfig } from '../pricing/tarifasConfigRepo'
@@ -6,6 +7,7 @@ import { classificarMaterial } from './classificacaoMaterial'
 
 /** Confirma que os usos informados na peça aconteceram; não depende do status. */
 export async function confirmarUsoRealPeca(pecaId: number, ferramentas: Array<{ materialId: number; quantidade: number; vidaUtilUsos: number }> = []): Promise<void> {
+  return transacaoSincronizada(async () => {
   const tarifas = ferramentas.length ? await obterTarifasConfig() : null
   await db.transaction('rw', [db.pecas, db.formas, db.equipamentos, db.materiais, db.categoriasMaterial, db.consumosPeca, db.registrosVidaUtil], async () => {
     const peca = await db.pecas.get(pecaId)
@@ -74,6 +76,8 @@ export async function confirmarUsoRealPeca(pecaId: number, ferramentas: Array<{ 
       precoVenda = calcularPrecificacao({ custoMaterial, custoAcessorios: (peca.custoEpiInsumos ?? 0) + propaganda + (peca.valorFrete ?? 0) + custoDesgasteFerramentas, horasProducao: peca.horasMaoDeObra ?? 0, valorHora: tarifas.valorHoraMaoDeObra || 25, rateioFixoPercent: 0, margemLucroPercent: peca.margemDesejada ?? 50, usosEnergia: peca.usosEnergia ?? [], tarifaKwh: tarifas.tarifaKwh || 0.85, litrosAgua: peca.litrosAgua ?? 0, custoForma, custoDesgasteEquipamentos: calcularDesgasteEquipamentos(peca.usosEnergia ?? [], await db.equipamentos.toArray()).custo, percentualTaxas: peca.percentualTaxas ?? 0 }).precoFinal
     }
     await db.pecas.update(pecaId, { usoConfirmadoEm: confirmadoEm, custoDesgasteFerramentas, precoVenda })
+  })
+
   })
 }
 

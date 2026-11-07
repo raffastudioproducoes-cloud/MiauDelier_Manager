@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { transacaoComEstoque } from './estoqueServidor'
 import { db, type Forma } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
@@ -56,6 +57,7 @@ async function criarFormaInterno(nova: NovaForma): Promise<number> {
 }
 
 export async function finalizarCuraForma(formaId: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.formas, db.notificacoes, async () => {
     const forma = await db.formas.get(formaId)
     if (!forma) throw new Error('Forma não encontrada')
@@ -67,6 +69,8 @@ export async function finalizarCuraForma(formaId: number): Promise<void> {
       lida: false,
       criadoEm: new Date().toISOString(),
     })
+  })
+
   })
 }
 
@@ -113,9 +117,12 @@ async function atualizarFormaInterno(formaId: number, dados: NovaForma, opcoes?:
 }
 
 export async function excluirForma(formaId: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.formas, db.auditoria, async () => {
     await db.formas.delete(formaId)
     await registrarAuditoria('forma', formaId, 'exclusao')
+  })
+
   })
 }
 

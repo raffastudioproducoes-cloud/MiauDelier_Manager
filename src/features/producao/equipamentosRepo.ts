@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db, type Equipamento, type UsoEnergiaPeca } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
@@ -10,6 +11,7 @@ export interface NovoEquipamento {
 }
 
 export async function criarEquipamento(novo: NovoEquipamento): Promise<number> {
+  return transacaoSincronizada(async () => {
   const agora = new Date().toISOString()
   const id = await db.equipamentos.add({
     nome: novo.nome,
@@ -20,6 +22,8 @@ export async function criarEquipamento(novo: NovoEquipamento): Promise<number> {
     criadoEm: agora,
   })
   return id as number
+
+  })
 }
 
 export async function listarEquipamentos(): Promise<Equipamento[]> {
@@ -27,6 +31,7 @@ export async function listarEquipamentos(): Promise<Equipamento[]> {
 }
 
 export async function atualizarEquipamento(id: number, dados: NovoEquipamento): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.equipamentos.update(id, {
     nome: dados.nome,
     potenciaWatts: dados.potenciaWatts,
@@ -34,12 +39,17 @@ export async function atualizarEquipamento(id: number, dados: NovoEquipamento): 
     descricao: dados.descricao,
     vidaUtilHoras: dados.vidaUtilHoras,
   })
+
+  })
 }
 
 export async function excluirEquipamento(id: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.equipamentos, db.auditoria, async () => {
     await db.equipamentos.delete(id)
     await registrarAuditoria('equipamento', id, 'exclusao')
+  })
+
   })
 }
 

@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
@@ -13,8 +14,11 @@ export interface ContaDecifrada {
 }
 
 export async function criarConta(nova: NovaConta): Promise<number> {
+  return transacaoSincronizada(async () => {
   const id = await db.contas.add({ nome: nova.nome, saldoCriptografado: nova.saldoInicial.toString() })
   return id as number
+
+  })
 }
 
 export async function listarContas(): Promise<ContaDecifrada[]> {
@@ -36,10 +40,14 @@ export async function listarContas(): Promise<ContaDecifrada[]> {
 }
 
 export async function atualizarNomeConta(contaId: number, nome: string): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.contas.update(contaId, { nome })
+
+  })
 }
 
 export async function excluirConta(contaId: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   const quantidadeTransacoes = await db.transacoes.where('contaId').equals(contaId).count()
   if (quantidadeTransacoes > 0) {
     throw new Error('Não é possível excluir uma conta que já tem transações registradas.')
@@ -47,5 +55,7 @@ export async function excluirConta(contaId: number): Promise<void> {
   await db.transaction('rw', db.contas, db.auditoria, async () => {
     await db.contas.delete(contaId)
     await registrarAuditoria('conta', contaId, 'exclusao')
+  })
+
   })
 }

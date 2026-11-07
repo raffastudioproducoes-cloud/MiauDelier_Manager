@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { transacaoComEstoque } from './estoqueServidor'
 import { db, type Peca, type EventoPeca, type StatusPeca } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
@@ -263,6 +264,7 @@ async function atualizarStatusPecaInterno(pecaId: number, novoStatus: StatusPeca
 }
 
 export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.pecas, db.auditoria, async () => {
     const pecaAnterior = await db.pecas.get(pecaId)
     await db.pecas.update(pecaId, { precoVenda })
@@ -273,6 +275,8 @@ export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number
       pecaAnterior?.precoVenda !== undefined ? pecaAnterior.precoVenda.toString() : undefined,
       precoVenda.toString(),
     )
+  })
+
   })
 }
 
@@ -332,16 +336,22 @@ async function excluirPecaInterno(pecaId: number): Promise<void> {
 }
 
 export async function atualizarImagemPeca(pecaId: number, imagemUrl?: string): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.pecas.update(pecaId, { imagemUrl })
+
+  })
 }
 
 export async function atualizarDadosProducaoPeca(pecaId: number, dados: Partial<Peca>): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.pecas.update(pecaId, dados)
   await db.eventosPeca.add({
     pecaId,
     tipo: 'atualizacao_dados',
     descricao: 'Etapas e dados técnicos de produção/precificação da peça atualizados',
     criadoEm: new Date().toISOString(),
+  })
+
   })
 }
 

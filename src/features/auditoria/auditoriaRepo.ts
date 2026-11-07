@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db, type RegistroAuditoria } from '../../db/schema'
 
 export async function registrarAuditoria(
@@ -7,7 +8,10 @@ export async function registrarAuditoria(
   valorAnterior?: string,
   valorNovo?: string,
 ): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.auditoria.add({ entidade, entidadeId, acao, quem: 'usuário', quando: new Date().toISOString(), valorAnterior, valorNovo })
+
+  })
 }
 
 export async function listarAuditoria(): Promise<RegistroAuditoria[]> {

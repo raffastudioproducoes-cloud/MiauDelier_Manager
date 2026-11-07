@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { transacaoComEstoque } from './estoqueServidor'
 import { db, type HistoricoPrecoMaterial, type Material, type TipoClassificacaoMaterial } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
@@ -29,9 +30,12 @@ export interface RegistrarCompraParams {
 }
 
 export async function criarMaterial(novo: NovoMaterial): Promise<number> {
+  return transacaoSincronizada(async () => {
   if (!Number.isFinite(novo.quantidadeEstoque) || novo.quantidadeEstoque < 0) throw new Error('O estoque não pode ser negativo.')
   const id = await db.materiais.add(novo)
   return id as number
+
+  })
 }
 
 export async function listarMateriais(): Promise<Material[]> {
@@ -43,6 +47,7 @@ export async function listarHistoricoPrecosMateriais(): Promise<HistoricoPrecoMa
 }
 
 export async function limparHistoricoPrecosVencido(agora = new Date()): Promise<number> {
+  return transacaoSincronizada(async () => {
   const limite = new Date(agora)
   limite.setFullYear(limite.getFullYear() - 1)
   const vencidos = await db.historicoPrecosMateriais
@@ -50,6 +55,8 @@ export async function limparHistoricoPrecosVencido(agora = new Date()): Promise<
     .toArray()
   await db.historicoPrecosMateriais.bulkDelete(vencidos.map((registro) => registro.id!).filter(Boolean))
   return vencidos.length
+
+  })
 }
 
 async function atualizarEstoqueMaterialInterno(materialId: number, novaQuantidade: number): Promise<void> {
@@ -150,13 +157,19 @@ async function registrarCompraMaterialInterno(params: RegistrarCompraParams): Pr
 }
 
 export async function atualizarMaterial(materialId: number, dados: Omit<NovoMaterial, 'quantidadeEstoque'>): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.materiais.update(materialId, dados)
+
+  })
 }
 
 export async function excluirMaterial(materialId: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.materiais, db.auditoria, async () => {
     await db.materiais.delete(materialId)
     await registrarAuditoria('material', materialId, 'exclusao')
+  })
+
   })
 }
 

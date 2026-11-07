@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db, type TipoTransacao } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
@@ -19,6 +20,7 @@ export interface TransacaoDecifrada {
 }
 
 export async function criarTransacao(nova: NovaTransacao): Promise<number> {
+  return transacaoSincronizada(async () => {
   const valorCriptografado = nova.valor.toString()
   const id = await db.transacoes.add({
     contaId: nova.contaId,
@@ -28,9 +30,12 @@ export async function criarTransacao(nova: NovaTransacao): Promise<number> {
     data: nova.data,
   })
   return id as number
+
+  })
 }
 
 export async function atualizarTransacao(transacaoId: number, dados: NovaTransacao): Promise<void> {
+  return transacaoSincronizada(async () => {
   const valorCriptografado = dados.valor.toString()
   await db.transacoes.update(transacaoId, {
     contaId: dados.contaId,
@@ -39,12 +44,17 @@ export async function atualizarTransacao(transacaoId: number, dados: NovaTransac
     descricao: dados.descricao,
     data: dados.data,
   })
+
+  })
 }
 
 export async function excluirTransacao(transacaoId: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.transacoes, db.auditoria, async () => {
     await db.transacoes.delete(transacaoId)
     await registrarAuditoria('transacao', transacaoId, 'exclusao')
+  })
+
   })
 }
 

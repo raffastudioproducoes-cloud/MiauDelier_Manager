@@ -4,6 +4,7 @@ import { supabase } from './supabase'
 import { syncPerfisFromSupabase } from './perfisRepo'
 import { logError, logWarn } from './logger'
 import { CHAVE_USUARIO_NUVEM } from './auth'
+import { enviarEventosComReenvio, type EventoSincronizado } from './reenvioEventos'
 export let isApplyingRemote = false
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -22,29 +23,32 @@ let hasPendingLocalChanges = false
 /** Flag para evitar sync concorrente */
 let isSyncing = false
 
-// Transações existentes frequentemente não incluem syncQueue no seu escopo.
-// Só enfileiramos após o commit da transação raiz, para que operações abortadas
-// não produzam eventos fantasmas. Isso não elimina a janela entre commit e fila.
+// Dado e evento compartilham a transação raiz; uma falha na fila aborta ambos.
 const eventosPorTransacao = new WeakMap<Transaction, Map<string, SyncEvent>>()
+const transacoesRemotas = new WeakSet<Transaction>()
 let ultimoTimestampLocal = 0
 
-function addSyncQueueEvent(transacao: Transaction, event: SyncEvent) {
+function transacaoRaiz(transacao: Transaction): Transaction {
   let raiz = transacao
   while (raiz.parent) raiz = raiz.parent
+  return raiz
+}
+
+function marcarTransacaoRemota(): void {
+  const transacao = Dexie.currentTransaction
+  if (!transacao) throw new Error('A aplicação remota exige uma transação.')
+  transacoesRemotas.add(transacaoRaiz(transacao))
+}
+
+function addSyncQueueEvent(transacao: Transaction, event: SyncEvent) {
+  const raiz = transacaoRaiz(transacao)
   let eventos = eventosPorTransacao.get(raiz)
   if (!eventos) {
     eventos = new Map()
     eventosPorTransacao.set(raiz, eventos)
-    const confirmados = eventos
     raiz.on('complete', () => {
-      const lote = [...confirmados.values()].sort((a, b) => a.timestamp - b.timestamp)
-      if (!lote.length) return
-      Dexie.ignoreTransaction(() => db.syncQueue.bulkAdd(lote)).then(() => {
-        hasPendingLocalChanges = true
-        resetInactivityTimer()
-      }).catch(err => {
-        console.error('[DEBUG FATAL] ERRO ao adicionar eventos confirmados na fila de sincronização:', err)
-      })
+      hasPendingLocalChanges = true
+      resetInactivityTimer()
     })
   }
   ultimoTimestampLocal = Math.max(Date.now(), ultimoTimestampLocal + 1)
@@ -52,7 +56,9 @@ function addSyncQueueEvent(transacao: Transaction, event: SyncEvent) {
   const chave = `${event.tabela}:${event.registroId}`
   const anterior = eventos.get(chave)
   if (anterior?.acao === 'insert' && event.acao === 'update') event.acao = 'insert'
+  if (anterior) event.id = anterior.id
   eventos.set(chave, event)
+  void raiz.table('syncQueue').put(event).catch(() => raiz.abort())
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -93,6 +99,7 @@ export async function prepareLocalCacheForUser(userId: string): Promise<void> {
     hasPendingLocalChanges = false
 
     await db.transaction('rw', db.tables, async () => {
+      marcarTransacaoRemota()
       for (const table of db.tables) await table.clear()
       await db.configuracoes.add({ chave: CHAVE_USUARIO_NUVEM, valor: userId })
     })
@@ -113,7 +120,7 @@ export function registerDexieHooks() {
     const table = db.table(tableName)
 
     table.hook('creating', function (_primKey, obj, transacao) {
-      if (isApplyingRemote) return
+      if (transacoesRemotas.has(transacaoRaiz(transacao))) return
       this.onsuccess = function (realPrimKey) {
         addSyncQueueEvent(transacao, {
           id: crypto.randomUUID(),
@@ -128,7 +135,7 @@ export function registerDexieHooks() {
     })
 
     table.hook('updating', function (_modifications, primKey, _obj, transacao) {
-      if (isApplyingRemote) return
+      if (transacoesRemotas.has(transacaoRaiz(transacao))) return
       this.onsuccess = function (updatedObj) {
         if (!updatedObj) return
         addSyncQueueEvent(transacao, {
@@ -144,7 +151,7 @@ export function registerDexieHooks() {
     })
 
     table.hook('deleting', function (primKey, obj, transacao) {
-      if (isApplyingRemote) return
+      if (transacoesRemotas.has(transacaoRaiz(transacao))) return
       this.onsuccess = function () {
         addSyncQueueEvent(transacao, {
           id: crypto.randomUUID(),
@@ -272,7 +279,9 @@ async function uploadWithPerfilId(perfil_id: number): Promise<void> {
   const BATCH_SIZE = 50
   for (let i = 0; i < pending.length; i += BATCH_SIZE) {
     const batch = pending.slice(i, i + BATCH_SIZE)
-    const payloads = batch.map((event) => ({
+    const payloads: EventoSincronizado[] = batch.map((event) => {
+      if (!event.id) throw new Error('Evento sem identificador; sincronização interrompida para preservar a fila.')
+      return {
           id: event.id,
           perfil_id,
           tabela: event.tabela,
@@ -280,14 +289,19 @@ async function uploadWithPerfilId(perfil_id: number): Promise<void> {
           acao: event.acao,
           dados_criptografados: event.dadosString === '{}' ? '' : event.dadosString,
           timestamp: event.timestamp,
-        }))
+        }
+    })
 
-    const { error } = await supabase.from('sync_events').insert(payloads)
-    
-    if (error) {
-      console.error("🚨 ERRO CRÍTICO SUPABASE:", error)
-      throw error // Arremessa o erro para não ser engolido
-    }
+    await enviarEventosComReenvio(payloads, async (eventos) => {
+      const { error } = await supabase.from('sync_events').insert(eventos)
+      return error
+    }, async (id) => {
+      const { data, error } = await supabase.from('sync_events')
+        .select('id,perfil_id,tabela,registro_id,acao,dados_criptografados,timestamp')
+        .eq('id', id).eq('perfil_id', perfil_id).maybeSingle()
+      if (error) throw error
+      return data as EventoSincronizado | null
+    })
     
     // Se não houve erro, apaga da fila local
     const ids = batch.map((p) => p.id!)
@@ -373,6 +387,7 @@ async function downloadRemoteEvents(perfil_id: number): Promise<void> {
       // 3. Atomicidade do Timestamp
       // Executamos a aplicação do lote E a atualização do timestamp dentro de UMA ÚNICA transação
       await db.transaction('rw', [...TABLES_TO_SYNC, 'syncMetadata'], async () => {
+        marcarTransacaoRemota()
         let maxTsInBatch = highestTsSeen
 
         for (const { event, obj } of preparedEvents) {

@@ -6,6 +6,7 @@ import { getRouter } from './router'
 import { inicializarLoggerGlobal } from './lib/logger'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { registerDexieHooks, syncWithSupabase } from './lib/syncService'
+import { acompanharAtualizacaoPwa } from './lib/atualizacaoPwa'
 
 // Inicializa a captura global de falhas e eventos do sistema
 inicializarLoggerGlobal()
@@ -37,8 +38,7 @@ registerSW({
   onRegisteredSW(_url, registration) {
     if (!registration) return
 
-    void registration.update()
-    window.setInterval(() => void registration.update(), 60 * 60 * 1000)
+    acompanharAtualizacaoPwa(registration)
   },
 })
 

@@ -149,6 +149,7 @@ export async function importarBackupGestoraX(json: string): Promise<RelatorioImp
       db.transacoes,
       db.notificacoes,
       db.configuracoes,
+      db.syncQueue,
     ],
     async () => {
 const MAPA_NOMES_CATEGORIA_GESTORAX: Record<string, string> = {

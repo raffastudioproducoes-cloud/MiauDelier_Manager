@@ -47,7 +47,7 @@ export async function recuperarPendenciaEstoque(): Promise<void> {
         (data.estado === 'estornada' && (data.saldos.length !== idsEsperados.size || idsRecebidos.size !== idsEsperados.size || [...idsEsperados].some(id => !idsRecebidos.has(id))))) {
       throw new Error('Resposta inválida ao reconciliar o estoque. A operação permanece pendente.')
     }
-    await db.transaction('rw', db.materiais, async () => {
+    await db.transaction('rw', db.materiais, db.syncQueue, async () => {
       for (const item of data.saldos as Array<{ materialId: string | number; saldo: string | number }>) {
         const id = Number(item.materialId)
         const saldo = Number(item.saldo)

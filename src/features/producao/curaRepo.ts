@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db, type Peca } from '../../db/schema'
 
 export function calcularTerminoCura(peca: Peca): number | null {
@@ -36,6 +37,7 @@ export function formatarTempoRestanteCura(restanteMs: number): string {
 }
 
 export async function iniciarCura(pecaId: number, minutos: number, tipoProcesso = 'cura'): Promise<void> {
+  return transacaoSincronizada(async () => {
   const agora = Date.now()
   await db.pecas.update(pecaId, {
     status: 'curando',
@@ -49,9 +51,12 @@ export async function iniciarCura(pecaId: number, minutos: number, tipoProcesso 
     descricao: `Processo de ${tipoProcesso} iniciado (${minutos} min).`,
     criadoEm: new Date(agora).toISOString(),
   })
+
+  })
 }
 
 export async function adicionarTempoCura(pecaId: number, minutosAdicionais: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   const peca = await db.pecas.get(pecaId)
   if (!peca) throw new Error(`Peça ${pecaId} não encontrada`)
 
@@ -72,18 +77,34 @@ export async function adicionarTempoCura(pecaId: number, minutosAdicionais: numb
     descricao: `Adicionado mais tempo de cura (${minutosAdicionais} min). Novo tempo total de cura: ${novosMinutos} min.`,
     criadoEm: new Date(agora).toISOString(),
   })
+
+  })
 }
 
 export async function verificarCurasConcluidas(agora = Date.now()): Promise<Peca[]> {
   const pecasEmCura = await db.pecas.where('status').equals('curando').toArray()
+  const candidatas = pecasEmCura.filter((peca) => {
+    const termino = calcularTerminoCura(peca)
+    return Boolean(peca.id && termino && agora >= termino)
+  })
+  if (candidatas.length === 0) return []
+  const notificacoes = await db.notificacoes.toArray()
+  const mensagemPara = (peca: Peca) => `A peça "${peca.nome}" finalizou o tempo de cura e está pronta para inspeção/desmolde!`
+  if (candidatas.every((peca) => notificacoes.some((n) => n.mensagem === mensagemPara(peca)))) return candidatas
+
+  // Revalida após adquirir a transação de escrita: a peça ou notificações podem
+  // ter mudado entre a leitura rápida e esta operação.
+  return db.transaction('rw', [db.pecas, db.notificacoes, db.eventosPeca, db.syncQueue], async () => {
   const concluidas: Peca[] = []
 
-  for (const peca of pecasEmCura) {
-    if (!peca.id) continue
+  for (const candidata of candidatas) {
+    if (!candidata.id) continue
+    const peca = await db.pecas.get(candidata.id)
+    if (!peca || peca.status !== 'curando' || !peca.id) continue
     const termino = calcularTerminoCura(peca)
     if (!termino || agora < termino) continue
 
-    const mensagemChave = `A peça "${peca.nome}" finalizou o tempo de cura e está pronta para inspeção/desmolde!`
+    const mensagemChave = mensagemPara(peca)
 
     const todasNotifs = await db.notificacoes.toArray()
     const notificacaoExistente = todasNotifs.find((n) => n.mensagem === mensagemChave)
@@ -118,4 +139,6 @@ export async function verificarCurasConcluidas(agora = Date.now()): Promise<Peca
   }
 
   return concluidas
+
+  })
 }

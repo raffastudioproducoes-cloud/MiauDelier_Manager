@@ -115,7 +115,7 @@ export async function importarBackup(json: string, targetDb?: MiauDelierDB): Pro
       validarLinhasDaTabela(nomeTabela, parsed.dados[nomeTabela] ?? [])
     }
 
-    await dbAlvo.transaction('rw', TABELAS.map((nome) => dbAlvo.table(nome)), async () => {
+    await dbAlvo.transaction('rw', [...TABELAS.map((nome) => dbAlvo.table(nome)), dbAlvo.syncQueue], async () => {
       for (const nomeTabela of TABELAS) {
         // Backups mais antigos não incluem essas tabelas; preservar os dados
         // atuais é mais seguro do que interpretá-los como listas vazias.
@@ -161,7 +161,9 @@ export async function zerarDadosManterPerfil(): Promise<void> {
   try {
     await deleteUserData()
     
-    await db.transaction('rw', TABELAS_PARA_ZERAR.map((nome) => db.table(nome)), async () => {
+    await db.transaction('rw', [...TABELAS_PARA_ZERAR.map((nome) => db.table(nome)), db.syncQueue], async () => {
+      // As criações antigas não podem ser reenviadas depois da exclusão remota.
+      await db.syncQueue.clear()
       for (const nomeTabela of TABELAS_PARA_ZERAR) {
         await db.table(nomeTabela).clear()
       }

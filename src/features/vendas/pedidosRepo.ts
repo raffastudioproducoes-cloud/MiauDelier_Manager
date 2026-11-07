@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db, type Pedido, type StatusPedido } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
@@ -12,6 +13,7 @@ export interface PedidoComCliente extends Pedido {
 }
 
 export async function criarPedido(novo: NovoPedido): Promise<number> {
+  return transacaoSincronizada(async () => {
   const id = await db.pedidos.add({
     clienteId: novo.clienteId,
     pecaIds: novo.pecaIds,
@@ -19,6 +21,8 @@ export async function criarPedido(novo: NovoPedido): Promise<number> {
     criadoEm: new Date().toISOString(),
   })
   return id as number
+
+  })
 }
 
 export async function listarPedidos(): Promise<PedidoComCliente[]> {
@@ -36,6 +40,7 @@ export async function listarPedidos(): Promise<PedidoComCliente[]> {
 }
 
 export async function editarPecasPedido(pedidoId: number, pecaIds: number[]): Promise<void> {
+  return transacaoSincronizada(async () => {
   if (!pecaIds.length || pecaIds.some(id => !Number.isSafeInteger(id) || id <= 0) || new Set(pecaIds).size !== pecaIds.length) throw new Error('Selecione ao menos uma peça válida.')
   await db.transaction('rw', db.pedidos, db.pecas, async () => {
     const pedido = await db.pedidos.get(pedidoId)
@@ -51,9 +56,12 @@ export async function editarPecasPedido(pedidoId: number, pecaIds: number[]): Pr
     }
     await db.pedidos.update(pedidoId, { pecaIds })
   })
+
+  })
 }
 
 export async function concluirVendaPedido(pedidoId: number, contaId: number, valorEsperado: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', [db.pedidos, db.pecas, db.contas, db.transacoes, db.eventosPeca, db.auditoria], async () => {
     const pedido = await db.pedidos.get(pedidoId)
     if (!pedido) throw new Error('Pedido não encontrado.')
@@ -76,14 +84,19 @@ export async function concluirVendaPedido(pedidoId: number, contaId: number, val
     await db.pedidos.update(pedidoId, { vendaRegistradaEm: data, transacaoVendaId, valorVenda: valor })
     await registrarAuditoria('pedido', pedidoId, 'venda', undefined, valor.toString())
   })
+
+  })
 }
 
 export async function atualizarStatusPedido(pedidoId: number, status: StatusPedido): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.pedidos, async () => {
     const pedido = await db.pedidos.get(pedidoId)
     if (!pedido) throw new Error('Pedido não encontrado.')
     if (pedido.vendaRegistradaEm && status === 'cancelado') throw new Error('Este pedido possui uma venda registrada. O cancelamento exige tratar a venda primeiro.')
     await db.pedidos.update(pedidoId, { status })
+  })
+
   })
 }
 
@@ -91,7 +104,10 @@ export async function atualizarProgressoPedido(
   pedidoId: number,
   dados: { prazoEntrega?: string; etapa?: string; progresso?: number },
 ): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.pedidos.update(pedidoId, dados)
+
+  })
 }
 
 export async function listarPecaIdsJaVinculadas(): Promise<number[]> {
@@ -100,10 +116,13 @@ export async function listarPecaIdsJaVinculadas(): Promise<number[]> {
 }
 
 export async function excluirPedido(pedidoId: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.pedidos, db.auditoria, async () => {
     const pedido = await db.pedidos.get(pedidoId)
     if (pedido?.vendaRegistradaEm) throw new Error('Não é possível excluir um pedido com venda registrada.')
     await db.pedidos.delete(pedidoId)
     await registrarAuditoria('pedido', pedidoId, 'exclusao')
+  })
+
   })
 }

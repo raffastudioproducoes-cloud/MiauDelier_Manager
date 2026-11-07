@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db, type Taxa } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
@@ -10,6 +11,7 @@ export interface NovaTaxa {
 }
 
 export async function criarTaxa(nova: NovaTaxa): Promise<number> {
+  return transacaoSincronizada(async () => {
   const agora = new Date().toISOString()
   const id = await db.taxas.add({
     nome: nova.nome,
@@ -20,6 +22,8 @@ export async function criarTaxa(nova: NovaTaxa): Promise<number> {
     criadoEm: agora,
   })
   return id as number
+
+  })
 }
 
 export async function listarTaxas(): Promise<Taxa[]> {
@@ -27,6 +31,7 @@ export async function listarTaxas(): Promise<Taxa[]> {
 }
 
 export async function atualizarTaxa(id: number, dados: NovaTaxa): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.taxas.update(id, {
     nome: dados.nome,
     percentual: dados.percentual,
@@ -34,12 +39,17 @@ export async function atualizarTaxa(id: number, dados: NovaTaxa): Promise<void> 
     precoMinimo: dados.precoMinimo,
     precoMaximoExclusivo: dados.precoMaximoExclusivo,
   })
+
+  })
 }
 
 export async function excluirTaxa(id: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.taxas, db.auditoria, async () => {
     await db.taxas.delete(id)
     await registrarAuditoria('taxa', id, 'exclusao')
+  })
+
   })
 }
 

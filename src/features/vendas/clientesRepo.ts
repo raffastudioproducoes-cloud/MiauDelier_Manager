@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db } from '../../db/schema'
 import { registrarAuditoria } from '../auditoria/auditoriaRepo'
 
@@ -13,8 +14,11 @@ export interface ClienteDecifrado {
 }
 
 export async function criarCliente(novo: NovoCliente): Promise<number> {
+  return transacaoSincronizada(async () => {
   const id = await db.clientes.add(novo)
   return id as number
+
+  })
 }
 
 export async function listarClientes(): Promise<ClienteDecifrado[]> {
@@ -29,12 +33,18 @@ export async function listarClientes(): Promise<ClienteDecifrado[]> {
 }
 
 export async function atualizarCliente(clienteId: number, novo: NovoCliente): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.clientes.update(clienteId, novo)
+
+  })
 }
 
 export async function excluirCliente(clienteId: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.transaction('rw', db.clientes, db.auditoria, async () => {
     await db.clientes.delete(clienteId)
     await registrarAuditoria('cliente', clienteId, 'exclusao')
+  })
+
   })
 }

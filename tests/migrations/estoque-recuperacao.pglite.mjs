@@ -12,7 +12,7 @@ insert into public.perfis values (1,'11111111-1111-4111-8111-111111111111'), (2,
 set app.user_id = '11111111-1111-4111-8111-111111111111';
 insert into public.sync_events values ('00000000-0000-4000-8000-000000000001',1,'materiais','1','insert','{"quantidadeEstoque":10}',1);`)
 await db.exec(await readFile(new URL('20261104220000_estoque_operacao_atomica.sql', root), 'utf8'))
-await db.exec(await readFile(new URL('20261106180000_recuperar_estoque_pendente.sql', root), 'utf8'))
+await db.exec(await readFile(new URL('20261107034548_recuperar_estoque_pendente.sql', root), 'utf8'))
 const q = async (query,params=[]) => (await db.query(query, params)).rows[0].v
 const op='11111111-0000-4000-8000-000000000001', rev='11111111-0000-4000-8000-000000000002', absent='11111111-0000-4000-8000-000000000003', rev2='11111111-0000-4000-8000-000000000004'
 const m=JSON.stringify([{materialId:1,diferenca:-2}]);

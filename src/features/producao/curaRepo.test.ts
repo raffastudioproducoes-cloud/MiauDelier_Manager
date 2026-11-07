@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '../../db/schema'
 import {
   calcularTerminoCura,
@@ -102,5 +102,22 @@ describe('serviço de cura persistente', () => {
     const notificacoes = await db.notificacoes.toArray()
     expect(notificacoes.length).toBe(1)
     expect(notificacoes[0].titulo).toContain('Cura Concluída!')
+  })
+
+  it('não abre transação de escrita periódica quando não há notificações novas', async () => {
+    const transacao = vi.spyOn(db, 'transaction')
+    try {
+      expect(await verificarCurasConcluidas()).toEqual([])
+      expect(transacao).not.toHaveBeenCalled()
+      const id = await db.pecas.add({ nome: 'Peça', formaId: 1, status: 'curando', criadaEm: new Date().toISOString(), curaIniciadaEm: 1000, curaMinutos: 1 })
+      await verificarCurasConcluidas(100000)
+      expect(await db.eventosPeca.where('pecaId').equals(Number(id)).count()).toBe(1)
+      transacao.mockClear()
+      await verificarCurasConcluidas(100001)
+      expect(transacao).not.toHaveBeenCalled()
+      expect(await db.eventosPeca.where('pecaId').equals(Number(id)).count()).toBe(1)
+    } finally {
+      transacao.mockRestore()
+    }
   })
 })

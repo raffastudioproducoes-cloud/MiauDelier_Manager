@@ -1,3 +1,4 @@
+import { transacaoSincronizada } from '../../lib/transacaoSincronizada'
 import { db, type CategoriaMaterial, type TipoClassificacaoMaterial } from '../../db/schema'
 
 export async function criarCategoriaMaterial(
@@ -5,9 +6,12 @@ export async function criarCategoriaMaterial(
   categoriaPaiId?: number,
   tipoClassificacao?: TipoClassificacaoMaterial,
 ): Promise<number> {
+  return transacaoSincronizada(async () => {
   jaInicializadoPadrao = true
   const id = await db.categoriasMaterial.add({ nome, categoriaPaiId, tipoClassificacao })
   return id as number
+
+  })
 }
 
 export const CATEGORIAS_PADRAO_SUGERIDAS: { nome: string; tipoClassificacao: TipoClassificacaoMaterial }[] = [
@@ -24,6 +28,7 @@ export function resetarInicializacaoCategoriasPadrao(): void {
 }
 
 export async function garantirCategoriasPadrao(): Promise<void> {
+  return transacaoSincronizada(async () => {
   if (jaInicializadoPadrao) return
   if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
     jaInicializadoPadrao = true
@@ -51,6 +56,8 @@ export async function garantirCategoriasPadrao(): Promise<void> {
     await db.configuracoes.add({ chave: 'categorias_padrao_criadas', valor: 'true' })
   }
   jaInicializadoPadrao = true
+
+  })
 }
 
 export async function listarCategoriasMaterial(): Promise<CategoriaMaterial[]> {
@@ -64,10 +71,14 @@ export async function atualizarCategoriaMaterial(
   categoriaPaiId?: number,
   tipoClassificacao?: TipoClassificacaoMaterial,
 ): Promise<void> {
+  return transacaoSincronizada(async () => {
   await db.categoriasMaterial.update(categoriaId, { nome, categoriaPaiId, tipoClassificacao })
+
+  })
 }
 
 export async function excluirCategoriaMaterial(categoriaId: number): Promise<void> {
+  return transacaoSincronizada(async () => {
   const quantidadeMateriaisCat = await db.materiais.where('categoriaId').equals(categoriaId).count()
   const quantidadeMateriaisSubcat = await db.materiais.where('subcategoriaId').equals(categoriaId).count()
   if (quantidadeMateriaisCat > 0 || quantidadeMateriaisSubcat > 0) {
@@ -78,4 +89,6 @@ export async function excluirCategoriaMaterial(categoriaId: number): Promise<voi
     throw new Error('Não é possível excluir uma categoria que possui subcategorias vinculadas. Exclua as subcategorias primeiro.')
   }
   await db.categoriasMaterial.delete(categoriaId)
+
+  })
 }
