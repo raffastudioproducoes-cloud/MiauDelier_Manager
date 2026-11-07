@@ -2,6 +2,10 @@
 
 # MiauDelier Manager
 
+> **Status do projeto — 07/11/2026:** a entrega de peças, formas, vida útil e estoque foi encerrada na versão **1.9.0**. Não há tarefa aberta neste escopo. Qualquer solicitação futura deve ser tratada como uma nova tarefa, com leitura prévia de `docs/STATUS-ENTREGA-PECAS-ESTOQUE-2026-11-07.md` e `docs/PECAS-MULTIPLAS-FORMAS-2026-11-06.md`.
+
+
+
 ### Gestão de produção, custos e financeiro para quem trabalha com resina epóxi e moldes de silicone.
 
 [![Version](https://img.shields.io/badge/version-1.1.0-2563EB)](package.json)
