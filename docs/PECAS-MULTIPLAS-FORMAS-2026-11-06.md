@@ -1,6 +1,6 @@
 # Fabricação de peças e vida útil — trabalho em andamento
 
-Estado em 06/11/2026: implementação em branch de trabalho; não publicada nem conectada a banco produtivo atualizado. Este documento descreve o código em análise, não uma garantia de funcionamento no ambiente real.
+Estado em 07/11/2026: o aplicativo do commit d5e00fa foi publicado no GitHub Pages; as duas migrações de recuperação foram aplicadas no Supabase. Testes automatizados, build e publicação passaram; os fluxos com dados reais ainda dependem de conferência no ateliê.
 
 ## Formas, consumos e identificação
 
@@ -25,8 +25,8 @@ Estado em 06/11/2026: implementação em branch de trabalho; não publicada nem 
 - A migração `20261107085548_impedir_estorno_duplicado.sql`, aplicada em 07/11/2026, impede recuperar a mesma operação com outro identificador de reversão. Operações anteriores à atualização são tratadas como ambíguas e exigem conciliação; não são estornadas automaticamente. A implementação foi verificada em PostgreSQL isolado e suas permissões foram conferidas no banco real.
 - Não foi demonstrada concorrência real entre sessões. Se uma entrada incerta já tiver sido consumida por outra operação, a compensação pode ser recusada por saldo insuficiente; o registro permanece pendente para reconciliação, sem fabricar saldo.
 - A fila foi integrada às transações das operações de negócio identificadas; em caso de falha ou rollback, dado e evento devem ser revertidos juntos. O upload trata duplicatas confirmando o conteúdo completo no servidor antes de remover o evento. Os testes cobrem transações, recuperação, backup e edição local durante download. A integração não transforma o servidor em fonte autoritativa para saldos: snapshots antigos, outros dispositivos e clientes legados ainda podem substituir saldos. Não há garantia de consistência global entre dispositivos.
-- Clientes antigos não conhecem a tabela `registrosVidaUtil` e podem interromper a sincronização ao recebê-la. O cliente atualizado procura atualizações ao retornar ao aplicativo ou recuperar conexão, mas não força aplicativos antigos offline a atualizar. É necessário resolver compatibilidade e atualização de versões antes de publicar. Não promover enquanto essas condições não forem resolvidas e testadas.
-- A migração adiciona uma função de recuperação ao esquema de produção; nenhum estoque, conta ou registro de usuário foi alterado nos testes isolados. O site novo ainda não foi publicado.
+- Clientes antigos não conhecem a tabela `registrosVidaUtil` e podem interromper a sincronização ao recebê-la. O cliente atualizado procura atualizações ao retornar ao aplicativo ou recuperar conexão, mas não força aplicativos antigos offline a atualizar. É necessário resolver compatibilidade e atualização de versões antes de publicar. A atualização automática não impede clientes antigos offline de voltar a sincronizar. Use a versão atualizada e mantenha os dados locais pendentes para conciliação.
+- A migração adiciona uma função de recuperação ao esquema de produção; nenhum estoque, conta ou registro de usuário foi alterado nos testes isolados. O site novo foi publicado no GitHub Pages no commit d5e00fa.
 
 ## Próximos passos
 
