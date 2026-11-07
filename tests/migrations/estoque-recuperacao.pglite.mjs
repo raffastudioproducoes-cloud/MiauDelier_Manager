@@ -13,6 +13,7 @@ set app.user_id = '11111111-1111-4111-8111-111111111111';
 insert into public.sync_events values ('00000000-0000-4000-8000-000000000001',1,'materiais','1','insert','{"quantidadeEstoque":10}',1);`)
 await db.exec(await readFile(new URL('20261104220000_estoque_operacao_atomica.sql', root), 'utf8'))
 await db.exec(await readFile(new URL('20261107034548_recuperar_estoque_pendente.sql', root), 'utf8'))
+await db.exec(await readFile(new URL('20261107085548_impedir_estorno_duplicado.sql', root), 'utf8'))
 const q = async (query,params=[]) => (await db.query(query, params)).rows[0].v
 const op='11111111-0000-4000-8000-000000000001', rev='11111111-0000-4000-8000-000000000002', absent='11111111-0000-4000-8000-000000000003', rev2='11111111-0000-4000-8000-000000000004'
 const m=JSON.stringify([{materialId:1,diferenca:-2}]);
@@ -20,6 +21,7 @@ assert.equal((await q('select public.movimentar_estoque_atomico(1,$1,$2::jsonb) 
 assert.equal((await q('select public.movimentar_estoque_atomico(1,$1,$2::jsonb) v',[op,m]))[0].saldo,8)
 let r=await q('select public.recuperar_movimentacao_estoque(1,$1,$2,$3::jsonb) v',[op,rev,m]); assert.equal(r.estado,'estornada'); assert.equal(r.saldos[0].saldo,10)
 r=await q('select public.recuperar_movimentacao_estoque(1,$1,$2,$3::jsonb) v',[op,rev,m]); assert.equal(r.saldos[0].saldo,10)
+await assert.rejects(q('select public.recuperar_movimentacao_estoque(1,$1,$2,$3::jsonb) v',[op,rev2,m]), /outro identificador/i)
 r=await q('select public.recuperar_movimentacao_estoque(1,$1,$2,$3::jsonb) v',[absent,rev2,m]); assert.equal(r.estado,'nao_encontrada')
 assert.equal(await q('select public.movimentar_estoque_atomico(1,$1,$2::jsonb) v',[absent,m]),null)
 await assert.rejects(q('select public.recuperar_movimentacao_estoque(2,$1,$2,$3::jsonb) v',[op,rev,m]), /não autorizado/i)

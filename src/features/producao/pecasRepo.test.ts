@@ -264,6 +264,28 @@ describe('repositório de peças', () => {
     expect(registro).toBeDefined()
   })
 
+  it('protege venda direta contra cancelamento, exclusão e alteração do preço', async () => {
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
+    const materialId = await criarMaterial({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 5 })
+    const pecaId = await criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 2 }] })
+    const contaId = await criarConta({ nome: 'Caixa', saldoInicial: 0 })
+    await registrarVendaPeca(pecaId, 50, contaId, 'Venda direta')
+
+    await expect(atualizarStatusPeca(pecaId, 'cancelada')).rejects.toThrow(/venda registrada/i)
+    await expect(atualizarStatusPeca(pecaId, 'pronta')).rejects.toThrow(/venda registrada/i)
+    await expect(excluirPeca(pecaId)).rejects.toThrow(/venda registrada/i)
+    await expect(atualizarPrecoVendaPeca(pecaId, 80)).rejects.toThrow(/venda registrada/i)
+    await expect(registrarVendaPeca(pecaId, 50, contaId, 'Venda repetida')).rejects.toThrow(/já foi registrada/i)
+
+    expect((await db.pecas.get(pecaId))?.status).toBe('vendida')
+    expect((await db.pecas.get(pecaId))?.precoVenda).toBe(50)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
+    expect((await db.formas.get(formaId))?.usosRealizados).toBe(1)
+    const transacoes = await db.transacoes.where('contaId').equals(contaId).toArray()
+    expect(transacoes).toHaveLength(1)
+    expect(Number(transacoes[0].valorCriptografado)).toBe(50)
+  })
+
   it('registrarVendaPeca não deixa a peça "vendida" órfã se a escrita da transação falhar (atomicidade)', async () => {
     const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {}, volumeDiretoMl: 10 })
     const pecaId = await criarPeca({ nome: 'Peça falha', formaId, consumos: [] })

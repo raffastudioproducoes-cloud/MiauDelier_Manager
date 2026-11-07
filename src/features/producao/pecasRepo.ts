@@ -206,7 +206,7 @@ async function atualizarStatusPecaInterno(pecaId: number, novoStatus: StatusPeca
 
     const statusAnterior = peca.status
     if (statusAnterior === novoStatus) return
-    if (statusAnterior === 'vendida' && (await db.pedidos.toArray()).some(pedido => pedido.vendaRegistradaEm && pedido.pecaIds.includes(pecaId))) throw new Error('Esta peça pertence a um pedido com venda registrada.')
+    if (statusAnterior === 'vendida') throw new Error('Esta peça possui venda registrada. Trate a venda antes de alterar o status.')
 
     // Se transicionando PARA 'cancelada' (e antes não era cancelada): devolve material ao estoque e estorna o uso da forma
     if (novoStatus === 'cancelada' && statusAnterior !== 'cancelada') {
@@ -267,6 +267,7 @@ export async function atualizarPrecoVendaPeca(pecaId: number, precoVenda: number
   return transacaoSincronizada(async () => {
   await db.transaction('rw', db.pecas, db.auditoria, async () => {
     const pecaAnterior = await db.pecas.get(pecaId)
+    if (pecaAnterior?.status === 'vendida') throw new Error('Esta peça possui venda registrada. O preço da venda não pode ser alterado.')
     await db.pecas.update(pecaId, { precoVenda })
     await registrarAuditoria(
       'peca',
@@ -316,6 +317,7 @@ async function excluirPecaInterno(pecaId: number): Promise<void> {
   await db.transaction('rw', [db.pecas, db.consumosPeca, db.eventosPeca, db.materiais, db.formas, db.auditoria, db.pedidos], async () => {
     const peca = await db.pecas.get(pecaId)
     if ((await db.pedidos.toArray()).some(pedido => pedido.vendaRegistradaEm && pedido.pecaIds.includes(pecaId))) throw new Error('Não é possível excluir uma peça de pedido com venda registrada.')
+    if (peca?.status === 'vendida') throw new Error('Não é possível excluir uma peça com venda registrada. Trate a venda antes de excluir.')
     // Se a peça NÃO estava cancelada, devolve o material ao estoque e estorna o uso do molde
     if (peca && peca.status !== 'cancelada') {
       const consumos = await db.consumosPeca.where('pecaId').equals(pecaId).toArray()
