@@ -1,6 +1,6 @@
 # Status de entrega — peças, formas, vida útil e estoque
 
-Data de fechamento: 07/11/2026. Banco de produção: migração `20261107091546`. Código de produção: `main`.
+Data de fechamento: 07/11/2026. Banco de produção: migração `20261107091546`. Código de produção: versão `1.9.0` na `main`.
 
 | Entrega solicitada | Estado | Resultado |
 | --- | --- | --- |
