@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase'
 import { getPerfilAtivo } from '../../lib/perfisRepo'
 import Dexie from 'dexie'
 import { db } from '../../db/schema'
+import { enviarEventosComReenvio, type EventoSincronizado } from '../../lib/reenvioEventos'
 
 export interface MovimentoEstoque {
   materialId: number
@@ -17,6 +18,39 @@ interface OperacaoPendente {
 
 function chavePendencia(): string { return `miaudelier_estoque_pendente:${db.name}` }
 function chaveMarcador(id: string): string { return `estoque_confirmado:${id}` }
+
+/** Envia apenas cadastros ainda pendentes antes de repetir uma baixa recusada. */
+async function sincronizarCadastrosPendentes(materialIds: Set<number>): Promise<boolean> {
+  const fila = await db.syncQueue.where('tabela').equals('materiais').toArray()
+  const pendentes = []
+  for (const evento of fila) {
+    if (evento.acao !== 'insert' || !evento.id) continue
+    const materialId = Number(evento.registroId)
+    if (materialIds.has(materialId) && Number.isSafeInteger(materialId) && materialId > 0 && await db.materiais.get(materialId)) pendentes.push(evento)
+  }
+  if (!pendentes.length) return false
+  const perfil = await getPerfilAtivo()
+  if (!perfil.supabaseId) throw new Error('Sincronize o perfil antes de movimentar o estoque.')
+  const perfilId = perfil.supabaseId
+  pendentes.sort((a, b) => a.timestamp - b.timestamp || String(a.id).localeCompare(String(b.id)))
+  const payloads: EventoSincronizado[] = pendentes.map(evento => ({
+    id: evento.id!, perfil_id: perfilId, tabela: evento.tabela, registro_id: evento.registroId,
+    acao: evento.acao, dados_criptografados: evento.dadosString === '{}' ? '' : evento.dadosString,
+    timestamp: evento.timestamp,
+  }))
+  await enviarEventosComReenvio(payloads, async eventos => {
+    const { error } = await supabase.from('sync_events').insert(eventos)
+    return error
+  }, async id => {
+    const { data, error } = await supabase.from('sync_events')
+      .select('id,perfil_id,tabela,registro_id,acao,dados_criptografados,timestamp')
+      .eq('id', id).eq('perfil_id', perfilId).maybeSingle()
+    if (error) throw error
+    return data as EventoSincronizado | null
+  })
+  await db.syncQueue.bulkDelete(pendentes.map(evento => evento.id!))
+  return true
+}
 
 /** Reconciliacao é sempre feita sob a trava de perfil do servidor. */
 export async function recuperarPendenciaEstoque(): Promise<void> {
@@ -67,7 +101,7 @@ export async function transacaoComEstoque<T>(executar: () => Promise<T>): Promis
   const processar = async () => {
   await recuperarPendenciaEstoque()
   let operacaoId: string | undefined
-  const resultadoFinal = await db.transaction('rw', db.tables, async () => {
+  const executarTransacao = () => db.transaction('rw', db.tables, async () => {
     const anteriores = new Map((await db.materiais.toArray()).map(m => [m.id, m.quantidadeEstoque]))
     const resultado = await executar()
     const movimentos = (await db.materiais.toArray()).flatMap(m => {
@@ -89,6 +123,25 @@ export async function transacaoComEstoque<T>(executar: () => Promise<T>): Promis
     }
     return resultado
   })
+  let resultadoFinal: T
+  try {
+    resultadoFinal = await executarTransacao()
+  } catch (falha) {
+    if (!(falha instanceof Error) || !/material não encontrado no servidor/i.test(falha.message)) throw falha
+    // A recusa do servidor reverteu a operação local. O journal precisa ser
+    // reconciliado antes de cadastrar o material e repetir a baixa.
+    let materialIds: Set<number>
+    try {
+      const pendente = JSON.parse(localStorage.getItem(chavePendencia()) || 'null') as OperacaoPendente | null
+      if (!pendente || !Array.isArray(pendente.movimentos)) throw new Error('journal ausente', { cause: falha })
+      materialIds = new Set(pendente.movimentos.map(item => item.materialId))
+    } catch {
+      throw new Error('Não foi possível identificar os materiais da operação pendente. A fila foi preservada.', { cause: falha })
+    }
+    await recuperarPendenciaEstoque()
+    if (!await sincronizarCadastrosPendentes(materialIds)) throw falha
+    resultadoFinal = await executarTransacao()
+  }
   // Se a limpeza falhar, a operação local já foi confirmada; o marcador impede
   // qualquer compensação indevida na próxima tentativa de limpeza.
   if (operacaoId) {

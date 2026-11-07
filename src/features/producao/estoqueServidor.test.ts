@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { rpc, getPerfilAtivo } = vi.hoisted(() => ({ rpc: vi.fn(), getPerfilAtivo: vi.fn() }))
-vi.mock('../../lib/supabase', () => ({ supabase: { rpc } }))
+const { rpc, getPerfilAtivo, inserir } = vi.hoisted(() => ({ rpc: vi.fn(), getPerfilAtivo: vi.fn(), inserir: vi.fn() }))
+vi.mock('../../lib/supabase', () => ({ supabase: { rpc, from: () => ({ insert: inserir }) } }))
 vi.mock('../../lib/perfisRepo', () => ({ getPerfilAtivo }))
 import { confirmarMovimentosEstoque, recuperarPendenciaEstoque } from './estoqueServidor'
 import { db } from '../../db/schema'
@@ -100,6 +100,52 @@ describe('salvamento de molde com confirmação no servidor', () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'Estoque insuficiente para material 1' } })
     await expect(recuperarPendenciaEstoque()).rejects.toThrow(/precisa de conciliação/i)
     expect(JSON.parse(localStorage.getItem(chave)!)).toEqual(pendente)
+  })
+
+  it('sincroniza apenas cadastro necessário e repete baixa após recusa por material ausente', async () => {
+    const materialId = (await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 10 }))!
+    const outroId = (await db.materiais.add({ nome: 'Outro', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 10 }))!
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    const evento = (id: string, registroId: number) => ({ id, tabela: 'materiais', registroId: String(registroId), acao: 'insert' as const, dadosString: JSON.stringify({ id: registroId, quantidadeEstoque: 10 }), timestamp: 1, sincronizado: false })
+    await db.syncQueue.bulkAdd([evento('necessario', materialId), evento('outro', outroId)])
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'Material não encontrado no servidor' } })
+    rpc.mockResolvedValueOnce({ data: { estado: 'nao_encontrada', saldos: [] }, error: null })
+    rpc.mockResolvedValueOnce({ data: [{ materialId, saldo: 8 }], error: null })
+    inserir.mockResolvedValue({ error: null })
+    const id = await criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 2 }] })
+    expect(await db.pecas.get(id)).toBeDefined()
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(8)
+    expect(inserir).toHaveBeenCalledOnce()
+    expect(inserir.mock.calls[0][0]).toEqual([expect.objectContaining({ id: 'necessario', registro_id: String(materialId) })])
+    expect(await db.syncQueue.get('necessario')).toBeUndefined()
+    expect(await db.syncQueue.get('outro')).toBeDefined()
+    expect(rpc.mock.calls.map(x => x[0])).toEqual(['movimentar_estoque_atomico', 'recuperar_movimentacao_estoque', 'movimentar_estoque_atomico'])
+  })
+
+  it('preserva fila e dados se sincronização do cadastro necessário falhar', async () => {
+    const materialId = (await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 10 }))!
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    await db.syncQueue.add({ id: 'necessario', tabela: 'materiais', registroId: String(materialId), acao: 'insert', dadosString: JSON.stringify({ id: materialId, quantidadeEstoque: 10 }), timestamp: 1, sincronizado: false })
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'Material não encontrado no servidor' } })
+    rpc.mockResolvedValueOnce({ data: { estado: 'nao_encontrada', saldos: [] }, error: null })
+    inserir.mockResolvedValue({ error: { message: 'Rede indisponível' } })
+    await expect(criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 2 }] })).rejects.toThrow(/rede indisponível/i)
+    expect(await db.syncQueue.get('necessario')).toBeDefined()
+    expect(await db.pecas.count()).toBe(0)
+    expect((await db.materiais.get(materialId))?.quantidadeEstoque).toBe(10)
+    expect(rpc.mock.calls.map(x => x[0])).toEqual(['movimentar_estoque_atomico', 'recuperar_movimentacao_estoque'])
+  })
+
+  it('não tenta sincronizar ou repetir uma baixa recusada por saldo insuficiente', async () => {
+    const materialId = (await db.materiais.add({ nome: 'Resina', categoriaId: 1, unidade: 'kg', quantidadeEstoque: 10, custoUnitario: 10 }))!
+    const formaId = await criarForma({ nome: 'Molde', geometria: 'direto', dimensoesCm: {} })
+    await db.syncQueue.add({ id: 'necessario', tabela: 'materiais', registroId: String(materialId), acao: 'insert', dadosString: JSON.stringify({ id: materialId, quantidadeEstoque: 10 }), timestamp: 1, sincronizado: false })
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'Estoque insuficiente' } })
+    await expect(criarPeca({ nome: 'Peça', formaId, consumos: [{ materialId, quantidade: 2 }] })).rejects.toThrow(/estoque insuficiente/i)
+    expect(inserir).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledTimes(1)
+    expect(await db.syncQueue.get('necessario')).toBeDefined()
+    expect(await db.pecas.count()).toBe(0)
   })
 
   it('debita a quantidade usada e grava o saldo confirmado', async () => {

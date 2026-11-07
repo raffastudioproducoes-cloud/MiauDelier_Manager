@@ -35,5 +35,11 @@ await q('select public.movimentar_estoque_atomico(1,$1,$2::jsonb) v',[entrada,en
 await q('select public.movimentar_estoque_atomico(1,$1,$2::jsonb) v',['11111111-0000-4000-8000-000000000008',JSON.stringify([{materialId:1,diferenca:-18}])])
 await assert.rejects(q('select public.recuperar_movimentacao_estoque(1,$1,$2,$3::jsonb) v',[entrada,revEntrada,entradaMov]), /estoque insuficiente/i)
 assert.equal((await q("select dados_criptografados::jsonb v from sync_events where perfil_id=1 and tabela='materiais' order by timestamp desc, id desc limit 1")).quantidadeEstoque,1)
+// Quando um lote inclui material ainda não sincronizado, a exceção reverte
+// também os movimentos anteriores do mesmo lote; não há baixa parcial remota.
+const incompleto='11111111-0000-4000-8000-000000000009'
+await assert.rejects(q('select public.movimentar_estoque_atomico(1,$1,$2::jsonb) v',[incompleto,JSON.stringify([{materialId:1,diferenca:-1},{materialId:2,diferenca:-1}])]),/Material não encontrado/i)
+assert.equal((await q("select dados_criptografados::jsonb v from sync_events where perfil_id=1 and tabela='materiais' and registro_id='1' order by timestamp desc, id desc limit 1")).quantidadeEstoque,1)
+assert.equal(Number((await db.query('select count(*) as total from estoque_operacoes where perfil_id=1 and operacao_id=$1',[incompleto])).rows[0].total),0)
 console.log('OK: execução, repetição, compensação, repetição da compensação, tombstone, requisição atrasada, isolamento de perfil, requisição divergente e saldo final')
 await db.close()

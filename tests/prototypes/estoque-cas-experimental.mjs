@@ -34,6 +34,12 @@ await assert.rejects(ins(8,'delete'),/Exclusão/);
 const compra='11111111-0000-4000-8000-000000000002';
 await db.query('select public.movimentar_estoque_atomico(1,$1,$2::jsonb)',[compra,JSON.stringify([{materialId:1,diferenca:5}])]);
 await assert.rejects(ins(13,'update',1,'materiais',latest),/Revisão divergente/);
+// Mesmo com revisão atual, restaurar diretamente um saldo anterior é uma
+// movimentação e não pode passar como simples atualização de metadados.
+const revisaoAtual=(await db.query("select id from public.sync_events where perfil_id=1 and tabela='materiais' and registro_id='1' order by timestamp desc,id desc limit 1")).rows[0].id;
+await assert.rejects(ins(10,'update',1,'materiais',revisaoAtual),/Saldo divergente/);
+// Um cadastro local que ainda não subiu não pode ser debitado pela RPC.
+await assert.rejects(db.query('select public.movimentar_estoque_atomico(1,$1,$2::jsonb)',['11111111-0000-4000-8000-000000000003',JSON.stringify([{materialId:2,diferenca:-1}])]),/Material não encontrado/);
 let rows=(await db.query("select timestamp, (dados_criptografados::jsonb->>'quantidadeEstoque')::numeric saldo from public.sync_events where tabela='materiais' order by timestamp")).rows;
 assert.equal(rows.length,4); assert.equal(rows[3].saldo,'13');assert.ok(Number(rows[0].timestamp)<Number(rows[1].timestamp)); assert.ok(Number(rows[1].timestamp)<Number(rows[2].timestamp));assert.ok(Number(rows[0].timestamp)<9999999999999);
 console.log('OK: CAS, criação, replay, saldo divergente rejeitado, isolamento, baixa, versão antiga rejeitada, metadados, exclusão bloqueada e ordenação do servidor');await db.close();
