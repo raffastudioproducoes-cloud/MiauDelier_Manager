@@ -21,3 +21,7 @@ Data de fechamento: 07/11/2026. Banco de produção: migração `20261107091546`
 - PWA antigo/offline não pode ser removido remotamente. Se enviar um saldo divergente, o servidor o rejeita e preserva a fila para conciliação.
 - Registros históricos sem UUID não são renumerados; a garantia de identidade integral vale para peças novas.
 - Uso de ferramenta exige cadastro unitário; estoque em lote não identifica qual unidade sofreu desgaste.
+
+## Encerramento
+
+Esta entrega foi formalmente encerrada em 07/11/2026, na versão `1.9.0`. Não há tarefa aberta neste escopo. Qualquer demanda futura deve abrir uma nova tarefa e começar pela leitura deste documento, de `PECAS-MULTIPLAS-FORMAS-2026-11-06.md` e do registro de encerramento no Vault.
